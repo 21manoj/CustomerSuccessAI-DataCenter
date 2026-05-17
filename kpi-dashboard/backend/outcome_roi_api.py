@@ -110,23 +110,43 @@ def get_historical_roi():
         return jsonify({'error': 'Revenue Intelligence not enabled'}), 403
 
     try:
+        import os
         from outcome_roi_engine import calculate_historical_roi, learn_investment_from_actuals
 
         period = request.args.get('period', '6m')
         months = {'3m': 3, '6m': 6, '12m': 12}.get(period, 6)
+
+        # Option A (stable-window baseline) — opt-in via env var or ?stable=N
+        # Default 0 keeps legacy trailing-window behaviour; Option C's auditor
+        # disclosure already covers the freshly-onboarded case automatically.
+        try:
+            skip_unstable_months = int(
+                request.args.get('stable')
+                or os.environ.get('ROI_HISTORICAL_SKIP_UNSTABLE_MONTHS', '0')
+                or '0'
+            )
+        except (TypeError, ValueError):
+            skip_unstable_months = 0
 
         # Get actual metric values from health trends
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
 
-        metric_actuals, data_source = _extract_historical_actuals(accounts, months, customer_id=customer_id)
+        metric_actuals, data_source = _extract_historical_actuals(
+            accounts, months, customer_id=customer_id,
+            skip_unstable_months=skip_unstable_months,
+        )
 
         # Learn investment model from execution history
         learned_investment = learn_investment_from_actuals(customer_id, account_ids, months)
 
         # Determine vertical from first account
         acct_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
+        historical_period_basis = (
+            "stable_window" if skip_unstable_months > 0 else "trailing_window"
+        )
 
         result = calculate_historical_roi(
             metric_actuals=metric_actuals,
@@ -135,6 +155,7 @@ def get_historical_roi():
             vertical=acct_vertical,
             learned_investment=learned_investment,
             data_source=data_source,
+            period_basis=historical_period_basis,
         )
 
         from outcome_roi_engine import _result_to_dict
@@ -604,12 +625,23 @@ def _is_calibrated(customer_id):
     return bool(cfg and cfg.dc2s_kpi_weights)
 
 
-def _extract_historical_actuals(accounts, months, customer_id=None):
+def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstable_months=0):
     """
     Extract historical metric actuals from DB.
 
     Priority: DC2SKPI (actual measurements) → HealthTrend (SaaS) → PillarScore → baseline.
     Falls back to demo data only if no path has sufficient data.
+
+    Args:
+        accounts: List of Account rows for the customer.
+        months: Trailing-window size for the historical view (e.g. 6 means
+            "last 6 months of measurements").
+        customer_id: Optional customer id used to detect Wizard-C calibration.
+        skip_unstable_months: Option-A stable-window control. When > 0 we drop
+            the earliest N distinct months of measurements per KPI before
+            computing the baseline anchor. Default 0 preserves legacy
+            behaviour. Set to 3 to skip the typical onboarding-ramp phase
+            on freshly-loaded synthetic tenants (decline → recovery arcs).
 
     Returns:
         tuple: (metric_actuals dict, data_source string)
@@ -622,6 +654,7 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
     account_ids = [a.account_id for a in accounts]
     calibrated = _is_calibrated(customer_id)
     cal_suffix = "_calibrated" if calibrated else "_benchmark"
+    skip_n = max(0, int(skip_unstable_months or 0))
 
     # ── Path 0: DC2SKPI (actual KPI measurements) ──
     from models import DC2SKPI as _DC2SKPI
@@ -646,6 +679,15 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
         kpi_latest = {}    # kpi_code → avg value at latest month
         for kpi_code, measurements in kpi_by_code.items():
             measurements.sort(key=lambda x: x[0])
+            distinct_months = sorted({m[0].strftime('%Y-%m') for m in measurements})
+            # Option A: skip the first N distinct months to anchor the baseline
+            # past the onboarding-ramp / synthetic-decline phase. Guard against
+            # eating all available data — leave at least 2 distinct months.
+            if skip_n > 0 and len(distinct_months) > skip_n + 1:
+                stable_months = set(distinct_months[skip_n:])
+                measurements = [m for m in measurements if m[0].strftime('%Y-%m') in stable_months]
+                if not measurements:
+                    continue
             earliest_month = measurements[0][0].strftime('%Y-%m')
             latest_month = measurements[-1][0].strftime('%Y-%m')
             if earliest_month == latest_month and len(measurements) > 1:
@@ -714,7 +756,8 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
                         "baseline": POWER_OF_1_METRICS[metric_id].baseline,
                         "current": POWER_OF_1_METRICS[metric_id].baseline,
                     }
-            return metric_actuals, f'kpi_actuals{cal_suffix}'
+            stable_tag = f"_stable_skip{skip_n}" if skip_n > 0 else ""
+            return metric_actuals, f'kpi_actuals{cal_suffix}{stable_tag}'
 
     # ── Path 1: HealthTrend (SaaS customers) ──
     trends = HealthTrend.query.filter(
@@ -729,6 +772,9 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
             month_buckets[(t.year, t.month)].append(t)
 
         sorted_months = sorted(month_buckets.keys())
+        # Option A: skip first N months to anchor baseline on stable region
+        if skip_n > 0 and len(sorted_months) > skip_n + 1:
+            sorted_months = sorted_months[skip_n:]
         if len(sorted_months) >= 2:
             earliest_key = sorted_months[0]
             latest_key = sorted_months[-1]
@@ -779,28 +825,36 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
                         "current": POWER_OF_1_METRICS[metric_id].baseline,
                     }
 
-            return metric_actuals, f'health_trends{cal_suffix}'
+            stable_tag = f"_stable_skip{skip_n}" if skip_n > 0 else ""
+            return metric_actuals, f'health_trends{cal_suffix}{stable_tag}'
 
     # ── Path 2: PillarScore (DC2S customers) ──
     cutoff = datetime.now() - timedelta(days=months * 30)
 
-    # Get earliest and latest months with pillar data in the period
-    earliest_month = db.session.query(
-        db.func.min(PillarScore.measurement_month)
+    # Build the set of distinct months in the window so we can apply
+    # Option-A stable-window skip without losing the trailing-window cutoff.
+    distinct_months_rows = db.session.query(
+        PillarScore.measurement_month
     ).filter(
         PillarScore.account_id.in_(account_ids),
         PillarScore.measurement_month >= cutoff,
-    ).scalar()
+    ).distinct().order_by(PillarScore.measurement_month.asc()).all()
+    distinct_months = [r[0] for r in distinct_months_rows]
 
-    # Fallback: use all available data if none in period
-    if not earliest_month:
-        earliest_month = db.session.query(
-            db.func.min(PillarScore.measurement_month)
-        ).filter(PillarScore.account_id.in_(account_ids)).scalar()
+    # Fallback: use all available data if none in window
+    if not distinct_months:
+        distinct_months_rows = db.session.query(
+            PillarScore.measurement_month
+        ).filter(
+            PillarScore.account_id.in_(account_ids),
+        ).distinct().order_by(PillarScore.measurement_month.asc()).all()
+        distinct_months = [r[0] for r in distinct_months_rows]
 
-    latest_month = db.session.query(
-        db.func.max(PillarScore.measurement_month)
-    ).filter(PillarScore.account_id.in_(account_ids)).scalar()
+    if skip_n > 0 and len(distinct_months) > skip_n + 1:
+        distinct_months = distinct_months[skip_n:]
+
+    earliest_month = distinct_months[0] if distinct_months else None
+    latest_month = distinct_months[-1] if distinct_months else None
 
     if not earliest_month or not latest_month:
         return _get_baseline_actuals(), 'baseline_defaults'
@@ -889,7 +943,8 @@ def _extract_historical_actuals(accounts, months, customer_id=None):
                 "current": POWER_OF_1_METRICS[metric_id].baseline,
             }
 
-    return metric_actuals, f'pillar_scores{cal_suffix}'
+    stable_tag = f"_stable_skip{skip_n}" if skip_n > 0 else ""
+    return metric_actuals, f'pillar_scores{cal_suffix}{stable_tag}'
 
 
 # ── Pillar velocity map: pillar_code → ROI metric_id ──

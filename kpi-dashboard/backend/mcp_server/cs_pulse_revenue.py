@@ -808,6 +808,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
+        import os
         from models import Account
         from outcome_roi_engine import calculate_outcome_story
         from outcome_roi_api import _extract_historical_actuals, _extract_accounts_at_risk
@@ -819,10 +820,28 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
         total_arr = sum(float(a.revenue) for a in accounts if a.revenue) or None
         account_ids = [a.account_id for a in accounts]
 
-        metric_actuals, data_source = _extract_historical_actuals(accounts, 6, customer_id=customer_id)
+        # Option A (stable-window baseline) — opt-in via env var.
+        # Default 0 keeps legacy trailing-window behaviour; Option C's
+        # auditor disclosure already covers the freshly-onboarded case.
+        # Set ROI_HISTORICAL_SKIP_UNSTABLE_MONTHS=3 to anchor baselines past
+        # the typical onboarding ramp on synthetic demo tenants.
+        try:
+            skip_unstable_months = int(os.environ.get('ROI_HISTORICAL_SKIP_UNSTABLE_MONTHS', '0') or '0')
+        except (TypeError, ValueError):
+            skip_unstable_months = 0
+
+        metric_actuals, data_source = _extract_historical_actuals(
+            accounts, 6, customer_id=customer_id,
+            skip_unstable_months=skip_unstable_months,
+        )
         accounts_at_risk = _extract_accounts_at_risk(accounts, customer_id=customer_id)
 
         portfolio_vertical = getattr(accounts[0], 'vertical', None) if accounts else None
+
+        # Tag the basis so the disclosure-builder can record provenance.
+        historical_period_basis = (
+            "stable_window" if skip_unstable_months > 0 else "trailing_window"
+        )
 
         story = calculate_outcome_story(
             metric_actuals=metric_actuals,
@@ -834,6 +853,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
             account_ids=account_ids,
             vertical=portfolio_vertical,
             data_source=data_source,
+            historical_period_basis=historical_period_basis,
         )
 
         return {
@@ -844,6 +864,7 @@ def get_portfolio_roi_summary(customer_id: int) -> dict:
             "arr_basis_value": total_arr,
             "account_count": len(accounts),
             "data_source": data_source,
+            "historical_period_basis": historical_period_basis,
             "story": story,
         }
 
