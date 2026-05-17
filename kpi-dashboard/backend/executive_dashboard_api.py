@@ -590,7 +590,11 @@ def cro_dashboard():
                 'signal_count': signal_counts.get(acct.account_id, 0),
                 # CRO-5: surface CSM owner on at-risk table so CRO can route escalations
                 # without drilling into get_crm_account_data per account.
-                'assigned_csm': acct.assigned_csm or None,
+                # `assigned_csm` lives in Account.profile_metadata (JSON), NOT as a top-level
+                # column — same convention as account_snapshot_api.py:381, cs_pulse_admin.py:101,
+                # and scripts/verify_profile_data.py:65. PR #23 mis-attributed it as a column,
+                # crashing /api/executive/cro-dashboard with AttributeError. Fix-forward #28.
+                'assigned_csm': (acct.profile_metadata or {}).get('assigned_csm'),
             })
 
         avg_health = round(total_weighted_score / total_revenue, 1) if total_revenue > 0 else 0.0
