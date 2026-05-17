@@ -79,6 +79,9 @@ interface RiskAccount {
   classification: 'critical' | 'at_risk' | 'healthy';
   signal_count: number;
   pillar_scores?: Record<string, number>;
+  // CRO-5: CSM owner surfaced on at-risk table — backed by Account.assigned_csm
+  // via the CRO dashboard endpoint. May be null if account is unassigned.
+  assigned_csm?: string | null;
 }
 
 interface ROIScalingPoint {
@@ -566,6 +569,18 @@ const RiskAccountCard: React.FC<{ account: RiskAccount; onClick: () => void; onD
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-white truncate">{account.account_name}</p>
             <p className="text-xs text-gray-500">{formatCompact(account.arr)} ARR</p>
+            {/* CRO-5: CSM owner row — lets CRO route escalations without
+                drilling into get_crm_account_data. Shows "Unassigned" italic
+                when null so a missing CSM is visible, not silently hidden. */}
+            <p className="text-[10px] text-gray-500 mt-1 truncate flex items-center gap-1">
+              <Users className="w-2.5 h-2.5 text-gray-600 flex-shrink-0" />
+              <span className="text-gray-600">CSM:</span>
+              {account.assigned_csm ? (
+                <span className="text-gray-300 font-medium truncate">{account.assigned_csm}</span>
+              ) : (
+                <span className="italic text-gray-600">Unassigned</span>
+              )}
+            </p>
           </div>
           <span
             className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
@@ -858,6 +873,7 @@ const CRODashboard: React.FC = () => {
                 classification: cls,
                 signal_count: a.signal_count || 0,
                 pillar_scores: a.pillar_scores || {},
+                assigned_csm: a.assigned_csm || null,
               };
             }),
             roi_summary: {

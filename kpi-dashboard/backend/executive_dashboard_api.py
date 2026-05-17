@@ -588,6 +588,9 @@ def cro_dashboard():
                 'revenue': rev,
                 'trend': (hs.trend or 'stable') if hs else 'stable',
                 'signal_count': signal_counts.get(acct.account_id, 0),
+                # CRO-5: surface CSM owner on at-risk table so CRO can route escalations
+                # without drilling into get_crm_account_data per account.
+                'assigned_csm': acct.assigned_csm or None,
             })
 
         avg_health = round(total_weighted_score / total_revenue, 1) if total_revenue > 0 else 0.0
