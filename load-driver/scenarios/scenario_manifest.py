@@ -3211,8 +3211,14 @@ class ScenarioManifest(BaseScenario):
     ) -> Dict[str, Any]:
         checks: Dict[str, Any] = {'passed': True, 'errors': [], 'metrics': {}}
 
+        # Discover the platform's actual account IDs — the platform assigns
+        # sequential IDs based on the global accounts sequence, which won't
+        # match the manifest's deterministic IDs (customer_id × 1000 + slot).
+        # All downstream sample/CG validation must use these discovered IDs.
         accounts_resp = self.client.get_accounts() or []
-        actual_ids = []
+        actual_ids: List[int] = []
+        # name → actual_id map (used to relate manifest classification back to discovered IDs)
+        name_to_actual_id: Dict[str, int] = {}
         for row in accounts_resp:
             if not isinstance(row, dict):
                 continue
@@ -3220,49 +3226,102 @@ class ScenarioManifest(BaseScenario):
             if aid is None:
                 continue
             try:
-                actual_ids.append(int(aid))
+                aid_int = int(aid)
             except Exception:
                 continue
+            actual_ids.append(aid_int)
+            row_name = row.get('account_name') or row.get('name') or ''
+            if row_name:
+                name_to_actual_id[row_name] = aid_int
 
-        # Fallback: if DC2S endpoint returned no accounts, use expected IDs
-        # when process-data reported success (accounts exist in DB but
-        # the DC2S endpoint may not return them for non-DC2S verticals).
+        # Fallback: if the accounts endpoint returned nothing but process-data
+        # succeeded, fall back to expected IDs so the rest of the validator
+        # has *something* to iterate. This is a non-DC2S-vertical safety net.
+        used_expected_fallback = False
         if not actual_ids and process_response and process_response.get('status') in ('success', 'warning'):
             pr_accts = process_response.get('execution_state', {}).get('data_loaded')
             if pr_accts or process_response.get('steps_completed'):
-                logger.info('    /api/dc2s/accounts returned empty — using expected IDs (process-data succeeded)')
+                logger.info('    accounts endpoint returned empty — using expected IDs (process-data succeeded)')
                 actual_ids = list(expected_account_ids)
+                used_expected_fallback = True
 
         exp_set = set(expected_account_ids)
         act_set = set(actual_ids)
-        missing_ids = sorted(exp_set - act_set)
         checks['metrics']['accounts_expected'] = len(expected_account_ids)
         checks['metrics']['accounts_found'] = len(act_set)
-        checks['metrics']['missing_account_ids'] = missing_ids[:20]
-        if missing_ids:
-            # Server assigns sequential IDs that won't match manifest-generated IDs.
-            # If we got the right account count, treat as warning not failure.
+        # Surface the ID-drift as an informational warning only when count matches —
+        # the platform's --register flow legitimately assigns its own IDs, and the
+        # post-validation phase no longer depends on the manifest IDs to do its job.
+        if exp_set != act_set:
             if len(act_set) >= len(exp_set):
                 checks['warnings'] = checks.get('warnings', [])
                 checks['warnings'].append(
-                    f'Account IDs differ from manifest (server-assigned): '
-                    f'expected {missing_ids[:5]}, got {sorted(act_set)[:5]}'
+                    f'Account IDs differ from manifest (server-assigned, expected): '
+                    f'manifest={sorted(exp_set)[:3]}…, actual={sorted(act_set)[:3]}…'
                 )
             else:
+                # Genuine shortfall — fewer accounts in platform than manifest declared.
+                missing_ids = sorted(exp_set - act_set)
+                checks['metrics']['missing_account_ids'] = missing_ids[:20]
                 checks['passed'] = False
-                checks['errors'].append(f'Missing expected account IDs: {missing_ids[:10]}')
+                checks['errors'].append(
+                    f'Account count shortfall: manifest={len(exp_set)} actual={len(act_set)}'
+                )
 
-        sample_ids = expected_account_ids[:max(1, min(sample_size, len(expected_account_ids)))]
-        id_to_manifest: Dict[int, str] = {}
-        for i, aid in enumerate(expected_account_ids):
-            if i < len(manifest_accounts):
-                id_to_manifest[aid] = self._manifest_class_for_account(manifest_accounts[i])
-            else:
-                id_to_manifest[aid] = 'healthy'
+        # Build manifest-name → manifest-class map so we can compute the expected
+        # health distribution for whichever sample IDs we pick from the platform.
+        name_to_manifest_class: Dict[str, str] = {}
+        for m_acct in manifest_accounts:
+            m_name = m_acct.get('name') or ''
+            if m_name:
+                name_to_manifest_class[m_name] = self._manifest_class_for_account(m_acct)
+
+        # Build actual_id → manifest_class via the platform's name field.
+        actual_id_to_manifest_class: Dict[int, str] = {}
+        for row in accounts_resp:
+            if not isinstance(row, dict):
+                continue
+            row_name = row.get('account_name') or row.get('name') or ''
+            aid = row.get('account_id') or row.get('source_account_id') or row.get('id')
+            if aid is None or not row_name:
+                continue
+            try:
+                aid_int = int(aid)
+            except Exception:
+                continue
+            cls = name_to_manifest_class.get(row_name)
+            if cls is None:
+                # Fuzzy match (mirrors _execute_manifest_playbooks)
+                for m_name, m_cls in name_to_manifest_class.items():
+                    if row_name.lower() in m_name.lower() or m_name.lower() in row_name.lower():
+                        cls = m_cls
+                        break
+            actual_id_to_manifest_class[aid_int] = cls or 'healthy'
+
+        # Pick sample IDs from discovered IDs (deterministic — sorted asc).
+        # If we fell back to expected IDs above, this naturally degrades to the old behaviour.
+        ids_for_sampling: List[int] = sorted(actual_ids) if actual_ids else list(expected_account_ids)
+        sample_ids = ids_for_sampling[:max(1, min(sample_size, len(ids_for_sampling)))]
+
+        # Map sample IDs back to their manifest-declared classification for the
+        # distribution-drift check. Falls back to positional pairing if the
+        # name-based lookup is empty (e.g. expected-fallback path).
         expected_sample_manifest = {'critical': 0, 'at_risk': 0, 'healthy': 0}
-        for aid in sample_ids:
-            c = id_to_manifest.get(aid, 'healthy')
-            expected_sample_manifest[c] += 1
+        if actual_id_to_manifest_class:
+            for aid in sample_ids:
+                cls = actual_id_to_manifest_class.get(aid, 'healthy')
+                expected_sample_manifest[cls] += 1
+        else:
+            # Legacy positional pairing (expected_account_ids[i] ↔ manifest_accounts[i]).
+            id_to_manifest_legacy: Dict[int, str] = {}
+            for i, aid in enumerate(expected_account_ids):
+                if i < len(manifest_accounts):
+                    id_to_manifest_legacy[aid] = self._manifest_class_for_account(manifest_accounts[i])
+                else:
+                    id_to_manifest_legacy[aid] = 'healthy'
+            for aid in sample_ids:
+                cls = id_to_manifest_legacy.get(aid, 'healthy')
+                expected_sample_manifest[cls] += 1
 
         endpoint_failures = []
         actual_distribution = {'critical': 0, 'at_risk': 0, 'healthy': 0}
@@ -3391,10 +3450,13 @@ class ScenarioManifest(BaseScenario):
             logger.warning(f'    Health summary check failed (non-fatal): {e}')
 
         # ── Context graph validation (if CG was enabled) ──
+        # Iterate over discovered platform IDs, not manifest-guessed IDs —
+        # otherwise this loop hits "Account not found" 404s on every probe.
         try:
             if self.client.is_context_graph_enabled(customer_id):
+                cg_probe_ids = ids_for_sampling[:3] if ids_for_sampling else []
                 cg_found = False
-                for sample_aid in expected_account_ids[:3]:
+                for sample_aid in cg_probe_ids:
                     graph = self.client.get_context_graph_summary(sample_aid)
                     if graph and graph.get('total_nodes', 0) > 0:
                         total_nodes = graph['total_nodes']
@@ -3405,7 +3467,7 @@ class ScenarioManifest(BaseScenario):
                         }
                         cg_found = True
                         break
-                if not cg_found:
+                if not cg_found and cg_probe_ids:
                     checks['metrics']['context_graph_warning'] = (
                         'Context graph enabled but no nodes found for sample accounts'
                     )
