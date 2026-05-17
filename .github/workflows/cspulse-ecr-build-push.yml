@@ -61,6 +61,18 @@ jobs:
           pip install pytest
           pip install -r kpi-dashboard/backend/requirements-core.txt 2>/dev/null || true
 
+      # Static audit: catches Python code accessing Account.<column> where
+      # <column> is not actually a column on the Account ORM model.
+      # Pays for itself the next time someone writes acct.<something> the
+      # model doesn't have -- 3 such bugs shipped in the last six weeks
+      # (PR #21 acct.health_score, PR #28 acct.assigned_csm, session 11
+      # journey_data vs journey_json). Runs in ~2s. Self-test (`--self-test`)
+      # pins the regressions in-repo.
+      - name: Audit Account ORM column access
+        run: |
+          python scripts/audit_account_column_access.py --self-test
+          python scripts/audit_account_column_access.py --verbose
+
       - name: Run unit tests
         working-directory: kpi-dashboard/backend
         run: |
