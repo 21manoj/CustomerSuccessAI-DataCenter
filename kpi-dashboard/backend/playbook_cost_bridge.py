@@ -82,6 +82,7 @@ class CostBridgeResult:
     arr_basis: float = 10_000_000
     arr_tier: str = 'mid'
     effort_multiplier: float = 1.0
+    vertical: str = 'dc2_s'   # 'dc2_s' or 'saas_premium' — added May 17 2026
 
 
 # ---------------------------------------------------------------------------
@@ -90,12 +91,20 @@ class CostBridgeResult:
 # ---------------------------------------------------------------------------
 
 _PRIMARY_METRIC_MAP = {
+    # DC2S
     'PB-01': 'TTFV',
     'PB-02': 'ticket_resolution_time',
     'PB-03': 'product_adoption',
     'PB-04': 'expansion_rate',
     'PB-05': 'GRR',
     'PB-06': 'expansion_rate',
+    # SaaS Premium (added May 17 2026 — bug B-5 fix)
+    'activation-blitz': 'TTFV',
+    'voc-sprint': 'NRR',
+    'expansion-accelerator': 'expansion_rate',
+    'renewal-safeguard': 'GRR',
+    'sla-stabilizer': 'ticket_resolution_time',
+    'health-check': 'GRR',
 }
 
 
@@ -103,27 +112,66 @@ _PRIMARY_METRIC_MAP = {
 # Core bridge calculation
 # ---------------------------------------------------------------------------
 
+def _load_playbook_config_for_vertical(vertical: str):
+    """Return the (PLAYBOOK_CONFIG dict, vertical_label) tuple for the vertical.
+
+    Mirrors mcp_server.cs_pulse_mcp_server._get_playbook_config but at this
+    module level so callers without the MCP module loaded (HTTP routes,
+    background jobs) get the same routing. Falls back to DC2S only when
+    nothing matches — never silently for `saas_premium`.
+    """
+    from utils.vertical_registry import normalize_vertical
+    v = normalize_vertical(vertical or 'dc2_s')
+    if v == 'saas_premium':
+        from verticals.saas_premium.vertical_config import PLAYBOOK_CONFIG as SAAS_PB
+        return SAAS_PB, 'saas_premium'
+    # Default: DC2S (legacy)
+    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG as DC2S_PB
+    return DC2S_PB, 'dc2_s'
+
+
+def _linked_playbooks_for_vertical(metric, vertical: str) -> List[str]:
+    """Return the list of playbook IDs that serve a metric for the given vertical."""
+    from utils.vertical_registry import normalize_vertical
+    v = normalize_vertical(vertical or 'dc2_s')
+    if v == 'dc2_s':
+        return metric.dc2s_linked_playbooks or []
+    # saas_premium and other non-DC verticals use the generic linked_playbooks
+    return metric.linked_playbooks or []
+
+
 def calculate_cost_bridge(
     account_arr: Optional[float] = None,
     csm_rate_override: Optional[float] = None,
+    vertical: str = 'dc2_s',
 ) -> CostBridgeResult:
     """
-    Build the complete playbook-to-ROI cost bridge.
+    Build the complete playbook-to-ROI cost bridge for a given vertical.
+
+    Vertical routing (added May 17 2026 — closes bug B-5 from FDE eval):
+      - dc2_s: uses metric.dc2s_linked_playbooks (PB-01..PB-06) and the DC2S
+               PLAYBOOK_CONFIG hours.
+      - saas_premium: uses metric.linked_playbooks (activation-blitz,
+               expansion-accelerator, voc-sprint, renewal-safeguard,
+               sla-stabilizer) and the SaaS PLAYBOOK_CONFIG hours.
 
     For each metric in power_of_1_economics.json:
-      - Get dc2s_linked_playbooks (the playbooks that serve this metric)
+      - Get the vertical-appropriate linked playbooks
       - Equal-split the cs_initiative_cost budget across N playbooks
       - Derive affordable_runs, lift_per_run, impact_per_run, roi_per_run
 
     Args:
         account_arr: Customer ARR for scaling (default: $10M baseline)
         csm_rate_override: Override CSM hourly rate (default: from resource_rates.json)
+        vertical: Tenant vertical ('dc2_s' or 'saas_premium'). Default 'dc2_s'
+                 for backward-compat — callers should pass the resolved vertical.
 
     Returns:
-        CostBridgeResult with per-metric and per-playbook economics
+        CostBridgeResult with per-metric and per-playbook economics, tagged
+        with the resolved vertical.
     """
     # Lazy imports to avoid circular dependencies
-    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
+    PLAYBOOK_CONFIG, resolved_vertical = _load_playbook_config_for_vertical(vertical)
     from power_of_1_model import POWER_OF_1_METRICS
 
     # Get CSM rate
@@ -147,6 +195,7 @@ def calculate_cost_bridge(
         arr_basis=arr,
         arr_tier=arr_tier,
         effort_multiplier=effort_mult,
+        vertical=resolved_vertical,
     )
 
     total_csm = 0.0
@@ -154,7 +203,7 @@ def calculate_cost_bridge(
     total_misc = 0.0
 
     for metric_id, metric in POWER_OF_1_METRICS.items():
-        linked_pbs = metric.dc2s_linked_playbooks
+        linked_pbs = _linked_playbooks_for_vertical(metric, resolved_vertical)
         if not linked_pbs:
             continue
 
@@ -272,18 +321,20 @@ def get_playbook_economics(
     playbook_id: str,
     metric_id: Optional[str] = None,
     account_arr: Optional[float] = None,
+    vertical: str = 'dc2_s',
 ) -> Optional[PlaybookEconomics]:
     """
     Get economics for a single playbook.
 
     If metric_id is not specified, uses the primary metric from _PRIMARY_METRIC_MAP.
-    This is the function called by CSM daily actions to enrich each action
-    with cost context.
+    Vertical-aware: pass 'saas_premium' for SaaS tenants so the cost bridge
+    loads the SaaS playbook catalog instead of DC2S (closes bug B-5).
 
     Args:
-        playbook_id: e.g. "PB-05"
+        playbook_id: e.g. "PB-05" (DC2S) or "renewal-safeguard" (SaaS)
         metric_id: e.g. "GRR" (optional, auto-resolved)
         account_arr: Customer ARR for scaling
+        vertical: Tenant vertical — 'dc2_s' or 'saas_premium'
 
     Returns:
         PlaybookEconomics or None if not found
@@ -293,7 +344,7 @@ def get_playbook_economics(
     if not metric_id:
         return None
 
-    bridge = calculate_cost_bridge(account_arr=account_arr)
+    bridge = calculate_cost_bridge(account_arr=account_arr, vertical=vertical)
     key = f"{playbook_id}:{metric_id}"
     return bridge.playbooks.get(key)
 
@@ -334,6 +385,7 @@ def bridge_to_dict(result: CostBridgeResult) -> Dict:
         'arr_basis': result.arr_basis,
         'arr_tier': result.arr_tier,
         'effort_multiplier': result.effort_multiplier,
+        'vertical': result.vertical,
     }
 
 
