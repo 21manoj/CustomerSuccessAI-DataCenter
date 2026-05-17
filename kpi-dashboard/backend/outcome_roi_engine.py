@@ -389,6 +389,20 @@ class OutcomeROIResult:
     metric_outcomes: List[MetricOutcome]
     investment_breakdown: Dict
     top_outcomes: List[Dict]  # Top 3 ranked by $ impact
+    # Auditor-defensibility disclosure. Populated when the historical window
+    # surfaces non-repeatable, one-time gains (e.g. fresh-tenant decline→recovery
+    # trajectories). Structured so the frontend can render a prominent tile-level
+    # caveat without re-parsing free-text narratives.
+    #
+    # Shape when populated:
+    #   {
+    #       "non_repeatable": bool,        # true when one-time gains dominate
+    #       "period_basis": str,           # "since_onboarding" | "trailing_window" | "stable_window"
+    #       "headline": str,               # short auditor-facing label
+    #       "detail": str,                 # full disclosure paragraph
+    #       "recommended_label": str,      # what the tile/narrative should display
+    #   }
+    disclosure: Optional[Dict] = None
 
 
 # ============================================================
@@ -405,6 +419,8 @@ def calculate_historical_roi(
     vertical: Optional[str] = None,
     learned_investment: Optional[LearnedInvestment] = None,
     data_source: str = "benchmark",
+    period_basis: str = "trailing_window",
+    forward_steady_state_pct: Optional[float] = None,
 ) -> OutcomeROIResult:
     """
     Calculate realized ROI from actual metric movements.
@@ -418,6 +434,17 @@ def calculate_historical_roi(
         investment_override: Override the learned/default investment
         period_label: Display label for the period
         learned_investment: Empirical investment data from learn_investment_from_actuals()
+        period_basis: How the baseline anchor was selected. One of
+            'trailing_window' (default; baseline = earliest measurement in the
+            requested N-month window, can drift on fresh tenants),
+            'since_onboarding' (baseline = first available measurement, with
+            explicit disclosure that gains include one-time onboarding lift), or
+            'stable_window' (baseline = earliest measurement after skipping the
+            early unstable phase — Option A path).
+        forward_steady_state_pct: The steady-state forward improvement-pct used
+            in the companion forward projection. Used purely to decide whether
+            the historical view is reporting non-repeatable, one-time gains
+            (heuristic: avg historical improvement > 2× forward steady-state).
     """
     arr_scale = 1.0
     if account_arr is not None:
@@ -549,9 +576,25 @@ def calculate_historical_roi(
         improvement_pct_avg=round(avg_improvement, 2),
     )
 
+    # ── Auditor-defensibility disclosure ──
+    # Detect when the historical window is reporting one-time gains that won't
+    # repeat (typical on freshly-onboarded tenants whose 18-month synthetic
+    # trajectory carries a decline → recovery arc, anchored at the low point).
+    # The CFO/auditor litmus test is: "Would I report this number to my board?"
+    # If the improvement is wildly above steady-state forward, it's a one-time
+    # turnaround — say so explicitly.
+    disclosure, effective_period_label = _build_historical_disclosure(
+        period_label=period_label,
+        period_basis=period_basis,
+        roi_pct=roi_pct,
+        improvement_pct_avg=avg_improvement,
+        forward_steady_state_pct=forward_steady_state_pct,
+        data_source=data_source,
+    )
+
     return OutcomeROIResult(
         view_type="historical",
-        period_label=period_label,
+        period_label=effective_period_label,
         period_start=period_start or (now - timedelta(days=180)).strftime("%Y-%m-%d"),
         period_end=period_end or now.strftime("%Y-%m-%d"),
         summary=summary,
@@ -562,7 +605,95 @@ def calculate_historical_roi(
             "platform": round(investment * plat_pct, 2),
         },
         top_outcomes=top_outcomes,
+        disclosure=disclosure,
     )
+
+
+def _build_historical_disclosure(
+    period_label: str,
+    period_basis: str,
+    roi_pct: float,
+    improvement_pct_avg: float,
+    forward_steady_state_pct: Optional[float],
+    data_source: str,
+) -> tuple:
+    """
+    Compute the auditor-facing disclosure for a historical ROI result.
+
+    Returns (disclosure_dict, effective_period_label). The disclosure dict is
+    None when the historical view is repeat-able (i.e. the gains are
+    incremental, the window is stable). When populated it carries:
+
+      * non_repeatable: True if the historical gain is dominated by one-time
+        turnaround moves (fresh tenant onboarding lift, decline→recovery arc).
+      * period_basis: provenance of the baseline anchor.
+      * headline: short auditor-facing label.
+      * detail: full paragraph (safe to surface verbatim on a CFO tile).
+      * recommended_label: what the tile should display in place of the raw
+        "Last 6 Months" framing.
+
+    Heuristic for non_repeatable:
+      * ROI > 500% (well above steady-state CS ROI, which sits in 200–500%
+        range per Bain/TSIA benchmarks), AND
+      * avg historical improvement > 2× forward steady-state (or > 2.0pp
+        absolute when no forward signal is supplied — steady-state Power of 1
+        target is 1pp/period).
+    """
+    # Steady-state threshold for "improvement that could repeat next period"
+    if forward_steady_state_pct is not None and forward_steady_state_pct > 0:
+        steady_state_threshold = max(2.0, forward_steady_state_pct * 2.0)
+    else:
+        steady_state_threshold = 2.0
+
+    non_repeatable = (
+        roi_pct > 500.0
+        and improvement_pct_avg > steady_state_threshold
+    )
+
+    # If neither condition fires AND the caller didn't ask for a specific
+    # basis other than 'trailing_window', no disclosure is needed — the
+    # number is defensible as-is.
+    if not non_repeatable and period_basis == "trailing_window":
+        return None, period_label
+
+    if non_repeatable:
+        basis = "since_onboarding"
+        recommended_label = f"{period_label} (since onboarding — includes one-time gains)"
+        headline = "Includes one-time onboarding gains"
+        detail = (
+            f"This historical ROI ({roi_pct:.0f}%) reflects the full improvement "
+            f"trajectory since the portfolio was onboarded — average lift of "
+            f"{improvement_pct_avg:.1f}% per KPI, which materially exceeds "
+            f"steady-state Power-of-1 improvement (~{forward_steady_state_pct or 1.0:.1f}% per period). "
+            "These gains are now captured in the current baseline and will not "
+            "repeat at the same magnitude. Forward projections assume incremental, "
+            "steady-state improvement on the new, higher baseline and are the "
+            "repeatable number to report. Where the buyer requires a strict "
+            "trailing-window proof, regenerate with a stable-window baseline "
+            "(skip the first 3 months of onboarding ramp)."
+        )
+    else:
+        # Caller explicitly tagged a non-default basis. Surface it without
+        # the non-repeatable warning.
+        basis = period_basis
+        recommended_label = period_label
+        headline = (
+            "Baseline anchored on stable window" if period_basis == "stable_window"
+            else f"Baseline anchored on '{period_basis}'"
+        )
+        detail = (
+            f"Historical baseline was anchored using '{period_basis}' rather than the "
+            f"default trailing window. ROI ({roi_pct:.0f}%) reflects this anchor."
+        )
+
+    return {
+        "non_repeatable": non_repeatable,
+        "period_basis": basis,
+        "headline": headline,
+        "detail": detail,
+        "recommended_label": recommended_label,
+        "data_source": data_source,
+    }, recommended_label
 
 
 # ============================================================
@@ -783,6 +914,7 @@ def calculate_outcome_story(
     per_metric_pcts: Optional[Dict[str, float]] = None,
     learned_investment: Optional[LearnedInvestment] = None,
     data_source: str = "benchmark",
+    historical_period_basis: str = "trailing_window",
 ) -> Dict:
     """
     Build the complete outcome story: historical proof + forward projection.
@@ -793,23 +925,12 @@ def calculate_outcome_story(
     The learned_investment parameter feeds the empirical cost model into both
     the historical and forward ROI calculations.
     """
-    # Historical ROI — uses learned investment for actual cost
-    historical = calculate_historical_roi(
-        metric_actuals=metric_actuals,
-        account_arr=account_arr,
-        investment_override=investment_override,
-        period_label=historical_period_label,
-        vertical=vertical,
-        learned_investment=learned_investment,
-        data_source=data_source,
-    )
-
-    # Extract current values from actuals for forward projection
+    # Forward ROI first — we use its steady-state improvement to decide whether
+    # the historical view is reporting non-repeatable, one-time gains.
     current_values = {}
     for metric_id, actuals in metric_actuals.items():
         current_values[metric_id] = actuals.get("current", POWER_OF_1_METRICS[metric_id].baseline)
 
-    # Forward ROI — extrapolates investment from learned cost curve
     forward = calculate_forward_roi(
         current_values=current_values,
         target_improvement_pct=target_improvement_pct,
@@ -820,6 +941,21 @@ def calculate_outcome_story(
         per_metric_pcts=per_metric_pcts,
         learned_investment=learned_investment,
         data_source=data_source,
+    )
+
+    # Historical ROI — uses learned investment for actual cost, with auditor
+    # disclosure when one-time gains dominate (heuristic anchored on forward
+    # steady-state).
+    historical = calculate_historical_roi(
+        metric_actuals=metric_actuals,
+        account_arr=account_arr,
+        investment_override=investment_override,
+        period_label=historical_period_label,
+        vertical=vertical,
+        learned_investment=learned_investment,
+        data_source=data_source,
+        period_basis=historical_period_basis,
+        forward_steady_state_pct=forward.summary.improvement_pct_avg,
     )
 
     # Combined totals
@@ -1124,7 +1260,7 @@ def _build_implementation_roadmap(
 
 def _result_to_dict(result: OutcomeROIResult) -> Dict:
     """Serialize an OutcomeROIResult for API response."""
-    return {
+    payload = {
         "view_type": result.view_type,
         "period_label": result.period_label,
         "period_start": result.period_start,
@@ -1162,6 +1298,11 @@ def _result_to_dict(result: OutcomeROIResult) -> Dict:
         "investment_breakdown": result.investment_breakdown,
         "top_outcomes": result.top_outcomes,
     }
+    # Surface the auditor-facing disclosure as a top-level field so the
+    # frontend tile can render it without parsing free-text narratives.
+    if result.disclosure is not None:
+        payload["disclosure"] = result.disclosure
+    return payload
 
 
 # ============================================================
@@ -1234,13 +1375,24 @@ def _build_bridge_narrative(
     # Sort by total dollar impact
     momentum_metrics.sort(key=lambda m: m["total_dollars"], reverse=True)
 
-    return {
+    bridge = {
         "momentum_metrics": momentum_metrics[:3],
         "historical_roi_pct": historical.summary.roi_pct,
         "forward_roi_pct": forward.summary.roi_pct,
         "trajectory": "accelerating" if forward.summary.roi_pct > historical.summary.roi_pct else "sustaining",
         "narrative": _generate_narrative(historical, forward),
     }
+    # Hoist the historical disclosure to the bridge level so callers reading
+    # only the bridge (e.g. Ask AI summaries, slide-deck pulls) see the caveat
+    # without having to descend into historical.disclosure.
+    if historical.disclosure is not None:
+        bridge["historical_disclosure"] = historical.disclosure
+        # When the historical view is non-repeatable, recommend forward ROI as
+        # the headline number a CFO/board should quote.
+        if historical.disclosure.get("non_repeatable"):
+            bridge["recommended_headline_roi_pct"] = forward.summary.roi_pct
+            bridge["recommended_headline_basis"] = "forward_steady_state"
+    return bridge
 
 
 def _build_graph_enrichment(
@@ -1385,8 +1537,14 @@ def _generate_narrative(
             f"is projected to deliver {forward_dollar} ({f.roi_pct:.0f}% ROI)."
         )
 
-    # Explain the ROI differential if historical >> forward
-    if h.roi_pct > 0 and f.roi_pct > 0 and h.roi_pct > f.roi_pct * 3:
+    # Surface the auditor disclosure when one-time gains dominate. Prefer the
+    # structured disclosure (single source of truth) over re-deriving the
+    # heuristic in narrative form.
+    if historical.disclosure and historical.disclosure.get("non_repeatable"):
+        parts.append(historical.disclosure.get("detail", ""))
+    elif h.roi_pct > 0 and f.roi_pct > 0 and h.roi_pct > f.roi_pct * 3:
+        # Legacy fallback for paths that bypass the structured disclosure
+        # (e.g. callers that build a historical view via the older entry point).
         parts.append(
             f"The historical ROI includes one-time turnaround gains from accounts "
             f"that moved from critical to healthy — these gains are now captured in "
