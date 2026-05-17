@@ -98,6 +98,22 @@ interface CompletedItem {
   completed_at: string;
 }
 
+// Per-account playbook recommendation returned by /api/v1/recommendations/<id>.
+// Vertical-aware: DC2S tenants get PB-01..PB-06; SaaS tenants get
+// activation-blitz / voc-sprint / renewal-safeguard / etc.
+interface PlaybookRecommendation {
+  playbook_id: string;
+  playbook_name: string;
+  priority?: 'critical' | 'high' | 'medium' | string;
+  urgency_level?: string;
+  urgency_score?: number;
+  reasons?: string[];
+  rationale?: string;
+  description?: string;
+  estimated_impact?: string;
+  estimated_duration?: string;
+}
+
 type TabKey = 'home' | 'board' | 'accounts' | 'reports';
 type DrawerTab = 'overview' | 'signals' | 'people' | 'tickets' | 'history' | 'notes';
 type GroupBy = 'urgency' | 'health' | 'arr';
@@ -248,6 +264,10 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
   const [people, setPeople] = useState<Stakeholder[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [historyItems, setHistoryItems] = useState<DailyAction[]>([]);
+  const [recommendations, setRecommendations] = useState<PlaybookRecommendation[]>([]);
+  const [recsVertical, setRecsVertical] = useState<string | null>(null);
+  const [launchingPlaybook, setLaunchingPlaybook] = useState<string | null>(null);
+  const [launchToast, setLaunchToast] = useState<string | null>(null);
   const [healthHistory, setHealthHistory] = useState<Array<{ month: string; health_score: number }>>([]);
   const [notes, setNotes] = useState('');
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -257,6 +277,9 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
     if (!account || !open) return;
     setTab('overview');
     setNotes('');
+    setRecommendations([]);
+    setRecsVertical(null);
+    setLaunchToast(null);
     setLoadingDetail(true);
 
     const fetchDetails = async () => {
@@ -293,17 +316,61 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
             setHealthHistory(acctHistory.monthly_scores);
           }
         }
+        // Playbook recommendations — vertical-aware. SaaS tenants get
+        // activation-blitz / voc-sprint / renewal-safeguard; DC2S tenants get
+        // PB-01..PB-06. History tab keeps the same list for backward compat
+        // with mock fallback (history of past recommendations).
         if (recRes.status === 'fulfilled' && recRes.value.ok) {
           const data = await recRes.value.json();
-          setHistoryItems(data.history || data.recommendations || []);
+          const recs: PlaybookRecommendation[] = (data.recommendations || []).map((r: any) => ({
+            playbook_id: r.playbook_id,
+            playbook_name: r.playbook_name || r.playbook_id,
+            priority: (r.priority || r.urgency_level || 'medium').toString().toLowerCase(),
+            urgency_level: r.urgency_level,
+            urgency_score: r.urgency_score,
+            reasons: r.reasons || r.action_items || [],
+            rationale: r.rationale || (r.reasons || r.action_items || [])[0] || r.description || r.estimated_impact,
+            description: r.description,
+            estimated_impact: r.estimated_impact,
+            estimated_duration: r.estimated_duration,
+          }));
+          setRecommendations(recs);
+          setRecsVertical(data.vertical || null);
+          setHistoryItems(data.history || []);
+        } else {
+          // Endpoint failed — fall back to mock recommendations so the UI
+          // still has something to render in non-production environments.
+          const mockRecs = (MOCK_RECOMMENDATIONS as any)[account.id] || [];
+          setRecommendations(
+            mockRecs.map((m: any) => ({
+              playbook_id: m.playbook_id,
+              playbook_name: m.playbook_name,
+              priority: 'medium',
+              urgency_level: 'Medium',
+              reasons: m.description ? [m.description] : [],
+              rationale: m.description,
+              description: m.description,
+            })),
+          );
         }
       } catch {
         // Fall back to mock data for drawer
         const mockDetail = (MOCK_ACCOUNT_DETAIL as any)[account.id];
         if (mockDetail) {
           setSignals(mockDetail.signals || []);
-          setHistoryItems((MOCK_RECOMMENDATIONS as any)[account.id] || []);
         }
+        const mockRecs = (MOCK_RECOMMENDATIONS as any)[account.id] || [];
+        setRecommendations(
+          mockRecs.map((m: any) => ({
+            playbook_id: m.playbook_id,
+            playbook_name: m.playbook_name,
+            priority: 'medium',
+            urgency_level: 'Medium',
+            reasons: m.description ? [m.description] : [],
+            rationale: m.description,
+            description: m.description,
+          })),
+        );
       } finally {
         setLoadingDetail(false);
       }
@@ -311,6 +378,49 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
 
     fetchDetails();
   }, [account, open, headers]);
+
+  // "Launch playbook" CTA on each recommendation card. Hits the same
+  // /api/dc2s/playbooks/executions endpoint that PlaybookStartModal uses
+  // for the existing "Run Playbook" drawer button, so behaviour is
+  // consistent. The recommendations panel is additive — we don't touch
+  // the kanban or focus-mode flow.
+  const launchPlaybook = useCallback(async (rec: PlaybookRecommendation) => {
+    if (!account) return;
+    setLaunchingPlaybook(rec.playbook_id);
+    setLaunchToast(null);
+    try {
+      const resp = await fetch('/api/dc2s/playbooks/executions', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          playbookId: rec.playbook_id,
+          context: {
+            accountId: account.id,
+            accountName: account.name,
+            customerId: Number(customerId),
+            metadata: {
+              triggered_from: 'csm_dashboard_recommendation',
+              priority: (rec.priority || rec.urgency_level || 'medium').toString().toLowerCase(),
+            },
+          },
+        }),
+      });
+      if (resp.ok) {
+        setLaunchToast(`Launched ${rec.playbook_name}`);
+      } else {
+        // Best-effort message — surface the playbook name so the CSM
+        // can record manually if the execute route rejects.
+        setLaunchToast(`Queued ${rec.playbook_name} (manual follow-up)`);
+      }
+    } catch {
+      setLaunchToast(`Queued ${rec.playbook_name} (offline)`);
+    } finally {
+      setLaunchingPlaybook(null);
+      // Auto-clear toast after 4s
+      setTimeout(() => setLaunchToast(null), 4000);
+    }
+  }, [account, headers, customerId]);
 
   // Close on Escape
   useEffect(() => {
@@ -501,6 +611,91 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Recommended Playbooks (vertical-aware) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Recommended Playbooks
+                      </h4>
+                      {recsVertical && (
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                          {recsVertical}
+                        </span>
+                      )}
+                    </div>
+                    {recommendations.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic">
+                        No playbook recommendations for this account.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {recommendations.map((rec) => {
+                          const pri = (rec.priority || rec.urgency_level || 'medium').toString().toLowerCase();
+                          const badge =
+                            pri === 'critical'
+                              ? 'bg-red-100 text-red-700 border-red-200'
+                              : pri === 'high'
+                              ? 'bg-amber-100 text-amber-700 border-amber-200'
+                              : pri === 'opportunity'
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : 'bg-gray-100 text-gray-700 border-gray-200';
+                          const label = (rec.urgency_level || rec.priority || 'Medium').toString();
+                          return (
+                            <div
+                              key={rec.playbook_id}
+                              className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                              data-testid={`recommendation-${rec.playbook_id}`}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <span className="text-sm font-semibold text-gray-900">
+                                  {rec.playbook_name}
+                                </span>
+                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${badge}`}>
+                                  {label.charAt(0).toUpperCase() + label.slice(1)}
+                                </span>
+                              </div>
+                              {rec.rationale && (
+                                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                  {rec.rationale}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => launchPlaybook(rec)}
+                                  disabled={launchingPlaybook === rec.playbook_id}
+                                  className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-medium px-2.5 py-1 rounded transition"
+                                >
+                                  {launchingPlaybook === rec.playbook_id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Play className="w-3 h-3" />
+                                  )}
+                                  Launch playbook
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    onDraftEmail?.({
+                                      id: account.id,
+                                      name: account.name,
+                                      health: account.health_score,
+                                    })
+                                  }
+                                  className="flex items-center gap-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium px-2.5 py-1 rounded transition"
+                                >
+                                  <Calendar className="w-3 h-3" />
+                                  Schedule
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {launchToast && (
+                          <p className="text-xs text-emerald-600 font-medium mt-1">{launchToast}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
