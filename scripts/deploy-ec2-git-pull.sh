@@ -135,7 +135,7 @@ fi
   fi
 
   cd \"\$REPO\"
-  chmod +x scripts/ec2-git-pull-rebuild.sh
+  chmod +x scripts/ec2-git-pull-rebuild.sh scripts/ensure-ec2-docker-buildx.sh
   ./scripts/ec2-git-pull-rebuild.sh ${NO_CACHE}
 "
 

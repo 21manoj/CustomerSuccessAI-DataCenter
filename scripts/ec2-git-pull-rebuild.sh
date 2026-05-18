@@ -38,6 +38,7 @@ git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
 
 cd "$DASH"
+"${REPO_ROOT}/scripts/ensure-ec2-docker-buildx.sh"
 echo "Building on EC2 ($(uname -m))..."
 "${COMPOSE[@]}" build "${NO_CACHE[@]}"
 "${COMPOSE[@]}" up -d
