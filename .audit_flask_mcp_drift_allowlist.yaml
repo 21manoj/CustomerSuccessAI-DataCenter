@@ -1,0 +1,81 @@
+# audit_flask_mcp_drift allowlist
+#
+# Pairs in this file are *intentional* MCP/Flask differences. They will not
+# fail CI. Every entry needs a reason. Reviewers: if a reason no longer
+# applies, delete the entry and align the implementations.
+#
+# Format (whitespace-significant; the parser is YAML-ish but not real YAML):
+#
+#   - kind:   signature_drift | response_key_drift | helper_drift
+#     mcp:    <relpath_from_repo_root>:<mcp_function_name>
+#     flask:  <relpath_from_repo_root>:<flask_function_name>
+#     reason: |
+#       Free-form explanation. One paragraph minimum.
+#
+# DO NOT add entries here just to silence noise — use the baseline file
+# (scripts/audit_flask_mcp_drift_baseline.txt) for pre-existing real drift
+# that hasn't been fixed yet.
+
+- kind:   signature_drift
+  mcp:    kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:get_playbook_recommendations
+  flask:  kpi-dashboard/backend/playbook_recommendations_api.py:get_playbook_recommendations
+  reason: |
+    Same function name, different concepts. MCP get_playbook_recommendations
+    answers "what playbooks should I run on account X?" (input: account_id,
+    output: list of recommended playbook IDs). Flask
+    get_playbook_recommendations under POST /api/playbooks/recommendations/
+    <playbook_id> answers the inverse — "which accounts is playbook X
+    relevant for?" (input: playbook_id, output: list of account_ids).
+    Not a drift; rename one in a future PR to make the audit pair correctly.
+
+- kind:   signature_drift
+  mcp:    kpi-dashboard/backend/mcp_server/common.py:get_kpi_definitions
+  flask:  kpi-dashboard/backend/verticals/dc2_s/api_routes.py:get_dc2s_kpi_definitions
+  reason: |
+    Flask handler is intentionally DC2S-only — it serves the /api/dc2s/kpis
+    endpoint and is hardcoded to the DC2S catalog. The MCP tool takes a
+    vertical kwarg because it's tenant-aware. The vertical-aware HTTP entry
+    is /api/v1/* (api_v1_routes.py). DC2S route stays around as an alias.
+
+- kind:   signature_drift
+  mcp:    kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:get_outcome_roi_story
+  flask:  kpi-dashboard/backend/outcome_roi_api.py:get_outcome_story
+  reason: |
+    Same logical operation, intentionally different parameter NAMES across
+    the two layers. MCP uses target_improvement_pct/projection_months
+    (descriptive). Flask uses improvement_pct/months (short, URL-query-
+    friendly) plus extra knobs (mode, pillar_boost) that the MCP layer
+    intentionally hides — Claude.ai is not the place to expose flat-vs-
+    velocity mode. If someone renames a param on either side, the audit
+    will fire — that's the intent. Today's snapshot is stable.
+
+- kind:   response_key_drift
+  mcp:    kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts
+  flask:  kpi-dashboard/backend/verticals/dc2_s/api_routes.py:get_dc2s_accounts
+  reason: |
+    MCP list_accounts is a *portfolio summary* tool (avg_health_score,
+    total_arr, portfolio_summary). Flask get_dc2s_accounts is a *table
+    view* for the UI — one row per account, no rollup. Shared key:
+    'accounts'. Different concerns; not a drift. Future audit hit means
+    one side started leaning into the other's territory — investigate.
+
+- kind:   response_key_drift
+  mcp:    kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts
+  flask:  kpi-dashboard/backend/verticals/saas_premium/api_routes.py:list_saas_accounts
+  reason: |
+    Same pattern as the DC2S list_accounts pair — the SaaS Premium Flask
+    handler returns a plain {accounts: [...]} shape for the UI table; the
+    MCP tool returns portfolio summary metadata for Claude.ai. Intentional.
+
+- kind:   response_key_drift
+  mcp:    kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:get_team_capacity
+  flask:  kpi-dashboard/backend/verticals/dc2_s/api_routes.py:get_team_capacity_api
+  reason: |
+    PR #30 deliberately made the Flask team-capacity richer than the MCP
+    version — the VP CS dashboard needs per-CSM hours/FTE/bottleneck
+    rollup (per_csm_breakdown, csm_count, hours_committed). The MCP tool
+    keeps a leaner portfolio_context for Claude.ai conversational use.
+    BOTH paths route through the same models.PlaybookExecutionV2 query
+    and ht.healthy_min() — no math drift, just presentation difference.
+    Future TODO: extract a common ``team_capacity_core()`` helper so the
+    audit reduces to "do both layers return the core fields?".
