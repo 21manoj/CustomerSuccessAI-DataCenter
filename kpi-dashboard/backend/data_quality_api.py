@@ -205,16 +205,28 @@ def get_kpi_range_discrepancies():
 def seed_missing_products():
     """Ensure every account has at least one product by seeding a default."""
     accounts = Account.query.all()
+    # Account has no `products` ORM relationship — querying acct.products
+    # raised AttributeError the moment this route was hit. Compute the set of
+    # accounts that already have ≥1 Product in one query, then seed for the
+    # complement.
+    account_ids_with_products = {
+        row[0]
+        for row in db.session.query(Product.account_id)
+        .filter(Product.account_id.in_([a.account_id for a in accounts]))
+        .distinct()
+        .all()
+    }
     created = 0
     for acct in accounts:
-        if len(acct.products or []) == 0:
-            p = Product(
-                account_id=acct.account_id,
-                customer_id=acct.customer_id,
-                product_name=f"Default Product for {acct.account_name}"
-            )
-            db.session.add(p)
-            created += 1
+        if acct.account_id in account_ids_with_products:
+            continue
+        p = Product(
+            account_id=acct.account_id,
+            customer_id=acct.customer_id,
+            product_name=f"Default Product for {acct.account_name}"
+        )
+        db.session.add(p)
+        created += 1
     if created > 0:
         db.session.commit()
     return jsonify({'status': 'success', 'created_products': created})

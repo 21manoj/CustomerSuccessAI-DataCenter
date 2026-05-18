@@ -6,10 +6,53 @@ Manages playbook trigger configurations and evaluates trigger conditions
 
 from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
-from models import db, PlaybookTrigger, Account, KPI
+from models import db, PlaybookTrigger, Account, KPI, HealthScore
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import json
+
+
+def _load_latest_health_scores(account_ids):
+    """Return {account_id: float(health_score)} for the latest measurement_month per account.
+
+    Account has NO health_score column — scores live in the separate HealthScore
+    table. This helper batch-loads the latest row per account_id (one query, one
+    join) so callers don't trigger N+1 or, worse, AttributeError on
+    Account.health_score (the historical bug). Cold-start tenants with no
+    HealthScore rows get an empty dict; callers must handle missing IDs.
+
+    Same pattern as cs_pulse_revenue.get_team_capacity (the canonical reference).
+    """
+    if not account_ids:
+        return {}
+    try:
+        latest_month_sq = (
+            HealthScore.query
+            .with_entities(
+                HealthScore.account_id,
+                func.max(HealthScore.measurement_month).label('latest_month'),
+            )
+            .filter(HealthScore.account_id.in_(account_ids))
+            .group_by(HealthScore.account_id)
+            .subquery()
+        )
+        rows = (
+            HealthScore.query
+            .join(
+                latest_month_sq,
+                (HealthScore.account_id == latest_month_sq.c.account_id)
+                & (HealthScore.measurement_month == latest_month_sq.c.latest_month),
+            )
+            .all()
+        )
+        return {
+            r.account_id: float(r.health_score)
+            for r in rows
+            if r.health_score is not None
+        }
+    except Exception:
+        # Cold-start safety: no HealthScore rows / table → empty dict, no 500.
+        return {}
 
 playbook_triggers_api = Blueprint('playbook_triggers_api', __name__)
 
@@ -191,42 +234,47 @@ def evaluate_voc_triggers(customer_id, triggers):
     
     # Get all accounts for this customer
     accounts = Account.query.filter_by(customer_id=customer_id).all()
-    
+    # Latest health_score lives in the HealthScore table (Account has no
+    # health_score column). Batch-load once; default missing IDs to None so a
+    # cold-start tenant returns "no triggers" instead of 500ing.
+    health_by_account = _load_latest_health_scores([a.account_id for a in accounts])
+
     triggered_accounts = []
     trigger_reasons = []
-    
+
     for account in accounts:
         account_triggers = []
-        
+        hs = health_by_account.get(account.account_id)
+
         # Check NPS (simulated - you would get this from actual NPS data)
         # For now, we'll use health_score as a proxy
-        if account.health_score < nps_threshold * 10:  # Scale to 0-100
-            account_triggers.append(f"Low health score ({account.health_score:.1f}) as NPS proxy")
-        
+        if hs is not None and hs < nps_threshold * 10:  # Scale to 0-100
+            account_triggers.append(f"Low health score ({hs:.1f}) as NPS proxy")
+
         # Check CSAT (simulated - you would get this from actual CSAT data)
         # Using health_score / 20 as CSAT proxy (0-5 scale)
-        csat_proxy = account.health_score / 20
-        if csat_proxy < csat_threshold:
+        csat_proxy = (hs / 20) if hs is not None else None
+        if csat_proxy is not None and csat_proxy < csat_threshold:
             account_triggers.append(f"Low CSAT proxy ({csat_proxy:.2f})")
-        
+
         # Check churn risk (simulated)
         if account.account_status == 'At Risk':
             account_triggers.append("Account marked as 'At Risk'")
-        
+
         # Check health score drop (would need historical data)
         try:
             import utils.health_thresholds as _ht
             _at_risk_min = _ht.at_risk_min()
         except ImportError:
             _at_risk_min = 50
-        if account.health_score < _at_risk_min:  # Centralized threshold
-            account_triggers.append(f"Low health score ({account.health_score:.1f})")
-        
+        if hs is not None and hs < _at_risk_min:  # Centralized threshold
+            account_triggers.append(f"Low health score ({hs:.1f})")
+
         if account_triggers:
             triggered_accounts.append({
                 'account_id': account.account_id,
                 'account_name': account.account_name,
-                'health_score': account.health_score,
+                'health_score': hs,
                 'triggers': account_triggers
             })
     
@@ -254,31 +302,40 @@ def evaluate_activation_triggers(customer_id, triggers):
     
     # Get all accounts for this customer
     accounts = Account.query.filter_by(customer_id=customer_id).all()
-    
+    # See note in evaluate_voc_triggers: Account has no health_score column;
+    # batch-load latest from HealthScore once.
+    health_by_account = _load_latest_health_scores([a.account_id for a in accounts])
+
     triggered_accounts = []
-    
+
     for account in accounts:
         account_triggers = []
-        
-        # Check adoption index (using health_score as proxy)
-        adoption_proxy = account.health_score
-        if adoption_proxy < adoption_index_threshold:
+        hs = health_by_account.get(account.account_id)
+
+        # Check adoption index (using health_score as proxy).
+        # No HealthScore row yet (cold-start) → skip this proxy rather than 500.
+        adoption_proxy = hs
+        if adoption_proxy is not None and adoption_proxy < adoption_index_threshold:
             account_triggers.append(f"Low adoption index ({adoption_proxy:.1f})")
-        
+
         # Check active users (simulated - would come from usage data)
         # For now, we'll simulate based on account size
         active_users_proxy = int(account.revenue / 1000) if account.revenue else 0
         if active_users_proxy < active_users_threshold:
             account_triggers.append(f"Low active users (~{active_users_proxy})")
-        
+
         # Check DAU/MAU (simulated)
         try:
             import utils.health_thresholds as _ht2
             _healthy_min_proxy = _ht2.healthy_min()
         except ImportError:
             _healthy_min_proxy = 70
-        dau_mau_proxy = 0.15 if account.health_score < _healthy_min_proxy else 0.30
-        if dau_mau_proxy < dau_mau_threshold:
+        if hs is None:
+            # Cold-start: skip DAU/MAU proxy entirely.
+            dau_mau_proxy = None
+        else:
+            dau_mau_proxy = 0.15 if hs < _healthy_min_proxy else 0.30
+        if dau_mau_proxy is not None and dau_mau_proxy < dau_mau_threshold:
             account_triggers.append(f"Low DAU/MAU ratio (~{dau_mau_proxy:.2f})")
         
         # Check for unused features (simulated)

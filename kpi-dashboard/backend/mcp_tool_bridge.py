@@ -70,22 +70,39 @@ class MCPToolBridge:
                 except Exception as e:
                     logger.warning(f"MCP Salesforce fetch failed, using fallback: {e}")
 
-            # Fallback: pull from local DB
+            # Fallback: pull from local DB.
+            # NOTE: Account has columns (account_name, account_status) — NOT
+            # (name, status). And it has NO health_score column — latest score
+            # lives in the HealthScore table (one row per account per
+            # measurement_month). Reading those wrong attrs raised
+            # AttributeError → silent fallback to {"source": "unavailable"}.
             try:
+                from sqlalchemy import func as _sa_func
                 from extensions import db
-                from models import Account
+                from models import Account, HealthScore
                 account = Account.query.filter_by(
                     account_id=int(account_id), customer_id=customer_id
                 ).first()
                 if account:
+                    latest_hs = (
+                        HealthScore.query
+                        .filter_by(account_id=account.account_id)
+                        .order_by(HealthScore.measurement_month.desc())
+                        .first()
+                    )
+                    health_score_val = (
+                        float(latest_hs.health_score)
+                        if latest_hs and latest_hs.health_score is not None
+                        else None
+                    )
                     return {
                         "source": "local_fallback",
                         "data": {
                             "account_id": account.account_id,
-                            "name": account.name,
+                            "name": account.account_name,
                             "revenue": float(account.revenue) if account.revenue else None,
-                            "health_score": account.health_score,
-                            "status": account.status,
+                            "health_score": health_score_val,
+                            "status": account.account_status,
                         },
                     }
             except Exception as e:

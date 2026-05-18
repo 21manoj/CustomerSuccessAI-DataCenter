@@ -76,7 +76,9 @@ jobs:
       - name: Run unit tests
         working-directory: kpi-dashboard/backend
         run: |
-          python -m pytest tests/test_score_calculator.py -v --tb=short
+          python -m pytest tests/test_score_calculator.py \
+                            tests/test_account_column_drain_regression.py \
+                            -v --tb=short
 
   # ──────────────────────────────────────────────
   # Build: only runs if tests pass
