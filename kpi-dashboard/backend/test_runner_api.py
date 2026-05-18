@@ -673,7 +673,14 @@ def get_platform_state():
     if not customer:
         return jsonify({'error': f'Customer {customer_id} not found'}), 404
 
-    accounts = Account.query.filter_by(customer_id=customer_id, is_active=True).all()
+    # Account model columns: account_id, account_name, account_status, revenue.
+    # There is NO `is_active`, `id`, `name`, or `arr` column — the previous
+    # code would AttributeError the moment this endpoint was hit on any tenant.
+    accounts = (
+        Account.query
+        .filter_by(customer_id=customer_id, account_status='active')
+        .all()
+    )
 
     account_list = []
     total_arr = 0
@@ -685,7 +692,7 @@ def get_platform_state():
         # Get latest precalculated score
         latest_score = (
             PrecalculatedScore.query
-            .filter_by(account_id=acct.id, customer_id=customer_id)
+            .filter_by(account_id=acct.account_id, customer_id=customer_id)
             .order_by(PrecalculatedScore.calculated_at.desc())
             .first()
         )
@@ -698,12 +705,12 @@ def get_platform_state():
         # Count context graph nodes for this account
         cg_count = (
             ContextNode.query
-            .filter_by(account_id=acct.id, customer_id=customer_id)
+            .filter_by(account_id=acct.account_id, customer_id=customer_id)
             .count()
         )
         total_cg_nodes += cg_count
 
-        arr = float(acct.arr or 0)
+        arr = float(acct.revenue or 0)
         total_arr += arr
 
         if health_score is not None:
@@ -724,8 +731,8 @@ def get_platform_state():
             latest_kpi_date = latest_score.calculated_at.isoformat()
 
         account_list.append({
-            'account_id': acct.id,
-            'account_name': acct.name,
+            'account_id': acct.account_id,
+            'account_name': acct.account_name,
             'health_score': round(health_score, 1) if health_score else None,
             'status': status,
             'arr': arr,
@@ -966,14 +973,19 @@ def _simulation_thread(customer_id: int, interval_seconds: int, num_days: int, d
                 except Exception:
                     enabled_kpis = [f'P{p}-KPI{k}' for p in range(1, 6) for k in range(1, 9)]
 
-            accounts = Account.query.filter_by(customer_id=customer_id, is_active=True).all()
+            # Account columns: account_id + account_status (NOT id / is_active).
+            accounts = (
+                Account.query
+                .filter_by(customer_id=customer_id, account_status='active')
+                .all()
+            )
             if not accounts:
                 with _sim_lock:
                     _simulations[sim_key]['status'] = 'error'
                     _simulations[sim_key]['error'] = f'No active accounts for customer {customer_id}'
                 return
 
-            account_ids = [a.id for a in accounts]
+            account_ids = [a.account_id for a in accounts]
 
             # Load KPI definitions for targets
             kpi_targets = {}
