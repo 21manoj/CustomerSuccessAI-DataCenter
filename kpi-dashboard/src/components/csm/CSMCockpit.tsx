@@ -255,10 +255,18 @@ interface DrawerProps {
   onClose: () => void;
   customerId: string;
   headers: Record<string, string>;
+  /**
+   * Vertical-aware pillar display names sourced from /api/v1/accounts response
+   * (injected by api_v1_routes._inject_vertical_context). e.g.
+   *   DC2S        → { P1: 'Deployment Velocity', P2: 'Operational Stability', ... }
+   *   SaaS Premium→ { P1: 'Product Adoption & Usage', P2: 'Customer Engagement', ... }
+   * If undefined/empty, the drawer falls back to the legacy DC2S map.
+   */
+  pillarLabels?: Record<string, string>;
   onDraftEmail?: (acct: { id: number; name: string; health: number }) => void;
 }
 
-const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customerId, headers, onDraftEmail }) => {
+const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customerId, headers, pillarLabels, onDraftEmail }) => {
   const [tab, setTab] = useState<DrawerTab>('overview');
   const [signals, setSignals] = useState<Signal[]>([]);
   const [people, setPeople] = useState<Stakeholder[]>([]);
@@ -440,13 +448,23 @@ const AccountDrawer: React.FC<DrawerProps> = ({ account, open, onClose, customer
     { key: 'notes', label: 'Notes', icon: <MessageSquare className="w-3.5 h-3.5" /> },
   ];
 
-  const pillarNames: Record<string, string> = {
+  // Vertical-aware pillar display names.
+  // Source of truth: /api/v1/accounts response (`pillar_labels` map injected by
+  // api_v1_routes._inject_vertical_context, which reads from
+  // utils.vertical_registry → kpi_definitions per the tenant's vertical).
+  // Fallback only for offline/mock mode: legacy DC2S labels (kept to avoid
+  // showing raw "P1"/"P2" if the API ever fails or for fully-mock dev sessions).
+  const FALLBACK_DC2S_PILLAR_NAMES: Record<string, string> = {
     P1: 'AI/ML Performance',
     P2: 'Infrastructure',
     P3: 'Cloud & DevOps',
     P4: 'Customer Engagement',
     P5: 'Commercial',
   };
+  const pillarNames: Record<string, string> =
+    pillarLabels && Object.keys(pillarLabels).length > 0
+      ? pillarLabels
+      : FALLBACK_DC2S_PILLAR_NAMES;
 
   return (
     <>
@@ -867,6 +885,12 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
   const [completedToday, setCompletedToday] = useState<CompletedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Tenant-wide vertical-aware pillar display names (P1..P5 → label).
+  // Populated from /api/v1/accounts response (`pillar_labels` map injected by
+  // api_v1_routes._inject_vertical_context). Passed to AccountDrawer so the
+  // drill drawer's PILLAR BREAKDOWN section renders SaaS labels for SaaS
+  // tenants instead of the hardcoded DC2S map (B-4/B-5/#33 fix family).
+  const [pillarLabels, setPillarLabels] = useState<Record<string, string>>({});
 
   // Board controls
   const [groupBy, setGroupBy] = useState<GroupBy>('urgency');
@@ -994,6 +1018,14 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
         if (mapped.length > 0) {
           setAccounts(mapped);
           acctLoaded = true;
+        }
+        // Pillar labels are vertical-aware and tenant-wide (DC2S / SaaS
+        // Premium / etc.) — injected by api_v1_routes._inject_vertical_context.
+        // Reset on each load so a vertical change between sessions is reflected.
+        if (data && typeof data === 'object' && data.pillar_labels) {
+          setPillarLabels(data.pillar_labels);
+        } else {
+          setPillarLabels({});
         }
       }
       if (!acctLoaded) {
@@ -1753,6 +1785,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
         onClose={closeDrawer}
         customerId={customerId}
         headers={headers}
+        pillarLabels={pillarLabels}
         onDraftEmail={(acct) => setEmailDraftAccount(acct)}
       />
 
