@@ -34,7 +34,7 @@ from models import (
     ContextNode, ContextEdge, PlaybookExecutionV2, ROISnapshot,
 )
 import utils.health_thresholds as ht
-from utils.context_graph import aggregate_revenue_across_accounts
+from utils.context_graph import aggregate_revenue_across_accounts, aggregate_revenue_with_provenance
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +262,11 @@ def _aggregate_revenue_from_context_graph(customer_id, account_ids):
     Delegates to the shared utils.context_graph.aggregate_revenue_across_accounts().
     """
     return aggregate_revenue_across_accounts(customer_id, account_ids)
+
+
+def _revenue_bundle_from_context_graph(customer_id, account_ids):
+    """Totals + trace samples for dashboard tiles (MVP audit trail)."""
+    return aggregate_revenue_with_provenance(customer_id, account_ids)
 
 
 def _build_story_arcs(customer_id, account_ids):
@@ -614,8 +619,10 @@ def cro_dashboard():
         prev_avg = prev_weighted / prev_total_rev if prev_total_rev > 0 else avg_health
         health_change = round(avg_health - prev_avg, 1)
 
-        # ── Revenue from context graph ──
-        revenue_data = _aggregate_revenue_from_context_graph(customer_id, account_ids)
+        # ── Revenue from context graph (with trace samples for UI drill-down) ──
+        revenue_bundle = _revenue_bundle_from_context_graph(customer_id, account_ids)
+        revenue_data = revenue_bundle
+        context_graph_provenance = revenue_bundle.get('provenance')
 
         # ── Story arcs ──
         story_arcs = _build_story_arcs(customer_id, account_ids)
@@ -838,6 +845,7 @@ def cro_dashboard():
             'expansion_pipeline': revenue_data['expansion_pipeline'],
             'revenue_risk_type': 'confirmed',
             'revenue_risk_label': 'Confirmed Risk (Context Graph)',
+            'context_graph_provenance': context_graph_provenance,
             # ARR Exposure — surface-level risk (health-score based)
             'arr_exposure': round(arr_exposure, 2),
             'arr_exposure_label': 'Exposure (ARR in at-risk accounts)',
@@ -899,8 +907,10 @@ def cfo_dashboard():
         # ── Total ARR ──
         total_arr = sum(_safe_float(a.revenue) for a in accounts)
 
-        # ── Revenue from context graph ──
-        revenue_data = _aggregate_revenue_from_context_graph(customer_id, account_ids)
+        # ── Revenue from context graph (with trace samples for UI drill-down) ──
+        revenue_bundle = _revenue_bundle_from_context_graph(customer_id, account_ids)
+        revenue_data = revenue_bundle
+        context_graph_provenance = revenue_bundle.get('provenance')
 
         # ── CS Investment ──
         cs_investment = _get_playbook_investment(customer_id)
@@ -1284,7 +1294,7 @@ def cfo_dashboard():
                     'lens': 'historical_actuals',
                     'engine': 'raw_outcomes',
                     'time_direction': 'backward',
-                    'source': 'context_nodes.source=observed (your uploaded data)',
+                    'source': 'context graph OUTCOME nodes (uploaded outcomes · not GL-reconciled)',
                 }
         except Exception as e:
             logger.warning(f"CFO historical_actuals computation failed: {e}")
@@ -1400,10 +1410,14 @@ def cfo_dashboard():
             # ── PREDICTOR v3: forward point forecast (per-account aggregated) ──
             'predictor_v3_portfolio_nrr': predictor_v3_portfolio_nrr,
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
+            # graph_* totals match CRO dashboard (aggregate_revenue_across_accounts).
+            # Distinct from proof_data.revenue_protected (playbook executions).
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
+            'expansion_pipeline': revenue_data['expansion_pipeline'],
             'revenue_risk_type': 'confirmed',
             'revenue_risk_label': 'Confirmed Risk (Context Graph)',
+            'context_graph_provenance': context_graph_provenance,
             # Cost of Inaction
             'cost_of_inaction': {
                 'arr_at_risk': round(total_arr_at_risk, 0),
@@ -1666,8 +1680,9 @@ def ceo_dashboard():
 
         avg_health = round(total_weighted / total_rev, 1) if total_rev > 0 else 0
 
-        # Revenue from context graph
-        revenue_data = _aggregate_revenue_from_context_graph(customer_id, account_ids)
+        revenue_bundle = _revenue_bundle_from_context_graph(customer_id, account_ids)
+        revenue_data = revenue_bundle
+        context_graph_provenance = revenue_bundle.get('provenance')
 
         # NRR derived from health
         if avg_health >= 70:
@@ -1723,6 +1738,7 @@ def ceo_dashboard():
                 'revenue_protected': revenue_data['revenue_protected'],
                 'expansion_pipeline': revenue_data['expansion_pipeline'],
             },
+            'context_graph_provenance': context_graph_provenance,
             'highest_risk_accounts': account_details[:5],
             'quarter_label': _current_quarter_label(),
             'last_updated': datetime.utcnow().isoformat(),
@@ -1848,7 +1864,9 @@ PERSONA_PROMPTS = {
         'focus': 'CS investment ROI, cost efficiency, payback periods, budget allocation',
         'tone': 'Think like a CFO — every insight should connect to investment returns. '
                 'Show ROI ratios, cost-per-account, payback periods. '
-                'Compare actual vs projected. Flag inefficient spend.',
+                'Compare actual vs projected. Flag inefficient spend. '
+                'Distinguish context-graph confirmed $ at risk vs playbook-attributed $ '
+                'vs modeled churn exposure. Name the NRR lens (historical / Wizard B / forward).',
         'suggested': [
             'What is our CS investment returning per dollar?',
             'Which pillars have the worst ROI and should we reallocate?',
@@ -1900,199 +1918,10 @@ def executive_ask():
         # Validate persona
         persona_config = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS['cro'])
 
-        # ── 1. Assemble executive context from DB ────────────────────────
+        # ── 1–2. Load context graph + portfolio (same engine as dashboards) ──
+        from utils.context_graph_ask_context import build_ask_context_graph_block
 
-        accounts = Account.query.filter_by(customer_id=customer_id).all()
-        account_ids = [a.account_id for a in accounts]
-        account_lookup = {a.account_id: a for a in accounts}
-
-        # Health scores (latest per account)
-        health_rows = (
-            db.session.query(HealthScore)
-            .filter(HealthScore.account_id.in_(account_ids))
-            .order_by(HealthScore.measurement_month.desc())
-            .all()
-        )
-        latest_health = {}
-        for h in health_rows:
-            if h.account_id not in latest_health:
-                latest_health[h.account_id] = h
-
-        # Pillar scores (latest per account)
-        pillar_rows = (
-            db.session.query(PillarScore)
-            .filter(PillarScore.account_id.in_(account_ids))
-            .order_by(PillarScore.measurement_month.desc())
-            .all()
-        )
-        pillars_by_account = {}
-        for p in pillar_rows:
-            if p.account_id not in pillars_by_account:
-                pillars_by_account[p.account_id] = {}
-            pc = p.pillar_code
-            if pc not in pillars_by_account[p.account_id]:
-                pillars_by_account[p.account_id][pc] = p.pillar_score
-
-        # Context graph nodes (all types)
-        ctx_nodes = (
-            ContextNode.query
-            .filter(ContextNode.customer_id == customer_id)
-            .order_by(ContextNode.occurred_at.desc())
-            .limit(200)
-            .all()
-        )
-
-        # Context graph edges (for causal chains)
-        node_ids = [n.node_id for n in ctx_nodes]
-        ctx_edges = []
-        if node_ids:
-            ctx_edges = (
-                ContextEdge.query
-                .filter(
-                    ContextEdge.from_node_id.in_(node_ids),
-                    ContextEdge.to_node_id.in_(node_ids),
-                )
-                .limit(300)
-                .all()
-            )
-
-        # ROI snapshot
-        roi_snap = (
-            ROISnapshot.query
-            .filter_by(customer_id=customer_id)
-            .order_by(ROISnapshot.created_at.desc())
-            .first()
-        )
-
-        # Playbook executions (recent, V2)
-        recent_playbooks = (
-            PlaybookExecutionV2.query
-            .filter(PlaybookExecutionV2.account_id.in_(account_ids))
-            .order_by(PlaybookExecutionV2.triggered_at.desc())
-            .limit(30)
-            .all()
-        )
-
-        # ── 2. Build structured context string ───────────────────────────
-
-        ctx_parts = []
-
-        # Portfolio summary
-        total_arr = sum(a.revenue or 0 for a in accounts)
-        critical = [a for a in accounts if latest_health.get(a.account_id) and ht.classify(latest_health[a.account_id].health_score) == 'critical']
-        at_risk = [a for a in accounts if latest_health.get(a.account_id) and ht.classify(latest_health[a.account_id].health_score) == 'at_risk']
-        healthy = [a for a in accounts if latest_health.get(a.account_id) and ht.classify(latest_health[a.account_id].health_score) == 'healthy']
-
-        ctx_parts.append(f"""=== PORTFOLIO SUMMARY ===
-Total accounts: {len(accounts)} | Total ARR: ${total_arr:,.0f}
-Critical: {len(critical)} accounts | At-Risk: {len(at_risk)} | Healthy: {len(healthy)}
-Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()})""")
-
-        # Account details with pillar scores
-        ctx_parts.append("\n=== ACCOUNT DETAILS ===")
-        for acc in sorted(accounts, key=lambda a: latest_health.get(a.account_id, type('', (), {'health_score': 50})).health_score):
-            hs = latest_health.get(acc.account_id)
-            score = hs.health_score if hs else 50
-            status = ht.classify(score)
-            pillars = pillars_by_account.get(acc.account_id, {})
-            pillar_str = ', '.join(f"{k}={v:.0f}" for k, v in pillars.items()) if pillars else 'no pillar data'
-            ctx_parts.append(
-                f"  {acc.account_name}: ARR=${acc.revenue or 0:,.0f}, Health={score:.0f} ({status}), "
-                f"Pillars: [{pillar_str}]"
-            )
-
-        # Context graph: revenue intelligence
-        revenue_at_risk = sum(n.revenue_impact or 0 for n in ctx_nodes if n.revenue_impact_type == 'at_risk')
-        revenue_protected = sum(n.revenue_impact or 0 for n in ctx_nodes if n.revenue_impact_type == 'protected')
-        revenue_expansion = sum(n.revenue_impact or 0 for n in ctx_nodes if n.revenue_impact_type == 'expansion')
-
-        ctx_parts.append(f"""\n=== REVENUE INTELLIGENCE (Context Graph) ===
-Revenue at Risk: ${revenue_at_risk:,.0f}
-Revenue Protected: ${revenue_protected:,.0f}
-Expansion Pipeline: ${revenue_expansion:,.0f}""")
-
-        # Context graph: key signals, decisions, outcomes
-        signals = [n for n in ctx_nodes if n.node_type == 'SIGNAL'][:20]
-        decisions = [n for n in ctx_nodes if n.node_type == 'DECISION'][:10]
-        outcomes = [n for n in ctx_nodes if n.node_type == 'OUTCOME'][:10]
-        stakeholders = [n for n in ctx_nodes if n.node_type == 'STAKEHOLDER'][:10]
-
-        if signals:
-            ctx_parts.append("\n=== KEY SIGNALS ===")
-            for s in signals:
-                acct_name = account_lookup.get(s.account_id, type('', (), {'account_name': '?'})).account_name
-                ctx_parts.append(
-                    f"  [{acct_name}] {s.title or s.node_subtype}: "
-                    f"confidence={s.confidence or 0:.0%}, "
-                    f"revenue_impact=${s.revenue_impact or 0:,.0f} ({s.revenue_impact_type or 'n/a'})"
-                )
-
-        if decisions:
-            ctx_parts.append("\n=== KEY DECISIONS ===")
-            for d in decisions:
-                acct_name = account_lookup.get(d.account_id, type('', (), {'account_name': '?'})).account_name
-                ctx_parts.append(f"  [{acct_name}] {d.title or d.node_subtype}")
-
-        if outcomes:
-            ctx_parts.append("\n=== KEY OUTCOMES ===")
-            for o in outcomes:
-                acct_name = account_lookup.get(o.account_id, type('', (), {'account_name': '?'})).account_name
-                ctx_parts.append(
-                    f"  [{acct_name}] {o.title or o.node_subtype}: "
-                    f"${o.revenue_impact or 0:,.0f} ({o.revenue_impact_type or 'n/a'})"
-                )
-
-        if stakeholders:
-            ctx_parts.append("\n=== KEY STAKEHOLDERS ===")
-            for sh in stakeholders:
-                acct_name = account_lookup.get(sh.account_id, type('', (), {'account_name': '?'})).account_name
-                props = sh.properties or {}
-                ctx_parts.append(
-                    f"  [{acct_name}] {sh.title or sh.node_subtype}: "
-                    f"sentiment={props.get('sentiment', 'n/a')}, influence={props.get('influence', 'n/a')}"
-                )
-
-        # Causal chains (top 5 by revenue impact)
-        if ctx_edges:
-            node_map = {n.node_id: n for n in ctx_nodes}
-            ctx_parts.append("\n=== CAUSAL CHAINS (cause → effect) ===")
-            edge_with_impact = []
-            for e in ctx_edges:
-                to_node = node_map.get(e.to_node_id)
-                impact = abs(to_node.revenue_impact or 0) if to_node else 0
-                edge_with_impact.append((e, impact))
-            edge_with_impact.sort(key=lambda x: x[1], reverse=True)
-            for edge, impact in edge_with_impact[:10]:
-                from_n = node_map.get(edge.from_node_id)
-                to_n = node_map.get(edge.to_node_id)
-                if from_n and to_n:
-                    ctx_parts.append(
-                        f"  {from_n.node_type}:{from_n.title or from_n.node_subtype} "
-                        f"──{edge.edge_type}──> "
-                        f"{to_n.node_type}:{to_n.title or to_n.node_subtype} "
-                        f"(${impact:,.0f})"
-                    )
-
-        # ROI data
-        if roi_snap:
-            ctx_parts.append(f"""\n=== ROI DATA ===
-Historical ROI: {roi_snap.historical_roi_pct:.0f}%
-Investment: ${roi_snap.historical_investment:,.0f}
-Impact: ${roi_snap.historical_impact:,.0f}
-Forward ROI: {roi_snap.forward_roi_pct:.0f}%
-Forward Impact: ${roi_snap.forward_impact:,.0f}""")
-
-        # Recent playbook activity
-        if recent_playbooks:
-            ctx_parts.append("\n=== RECENT PLAYBOOK ACTIVITY ===")
-            for pb in recent_playbooks[:15]:
-                acct_name = account_lookup.get(pb.account_id, type('', (), {'account_name': '?'})).account_name
-                ctx_parts.append(
-                    f"  [{acct_name}] {pb.playbook_id}: status={pb.status}, "
-                    f"started={pb.started_at.strftime('%Y-%m-%d') if pb.started_at else 'n/a'}"
-                )
-
-        context = '\n'.join(ctx_parts)
+        context, ctx_stats = build_ask_context_graph_block(customer_id)
 
         # ── 3. Build conversation history ─────────────────────────────────
 
@@ -2115,11 +1944,13 @@ STYLE: {persona_config['tone']}
 
 CRITICAL RULES:
 1. ONLY reference data provided in the context below. Never invent accounts or numbers.
-2. Always quantify: use dollar amounts, percentages, account counts.
-3. Connect cause to effect: use context graph chains to explain WHY things are happening.
-4. Be actionable: every answer should end with a clear "do this next" recommendation.
-5. Be concise: lead with the insight, support with 2-3 data points, close with action.
-6. When discussing health scores: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()}).
+2. Revenue at risk / protected / expansion MUST match REVENUE INTELLIGENCE (context graph OUTCOME aggregation).
+3. When citing a specific signal or outcome, include its node_id from the context block.
+4. Always quantify: use dollar amounts, percentages, account counts.
+5. Connect cause to effect: use context graph chains to explain WHY things are happening.
+6. Be actionable: every answer should end with a clear "do this next" recommendation.
+7. Be concise: lead with the insight, support with 2-3 data points, close with action.
+8. When discussing health scores: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()}).
 
 FORMAT:
 - Use **bold** for key numbers and account names
@@ -2185,15 +2016,8 @@ Answer as the {persona_config['role']}'s AI advisor. Be specific, quantified, an
             'persona': persona,
             'query': query_text,
             'elapsed_ms': elapsed_ms,
-            'context_stats': {
-                'accounts': len(accounts),
-                'signals': len(signals),
-                'decisions': len(decisions),
-                'outcomes': len(outcomes),
-                'stakeholders': len(stakeholders),
-                'causal_edges': len(ctx_edges),
-                'total_arr': total_arr,
-            },
+            'context_stats': ctx_stats,
+            'context_graph_loaded': True,
             'suggested_followups': _generate_followups(query_text, persona_config),
         })
 

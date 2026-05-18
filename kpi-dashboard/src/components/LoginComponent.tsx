@@ -63,9 +63,9 @@ const LoginComponent: React.FC<LoginProps> = ({ onLogin }) => {
 
       const session = {
         customer_id: data.user?.customer_id || data.customer_id || 1,
-        customer_name: data.user?.customer_name || undefined,
+        customer_name: data.user?.customer_name || data.customer_name || undefined,
         user_id: data.user?.user_id?.toString() || data.user_id?.toString() || '1',
-        user_name: data.user?.user_name || data.user_name || data.user?.customer_name || 'User',
+        user_name: data.user?.user_name || data.user_name || 'User',
         email: data.user?.email || data.email || '',
         vertical: sessionVertical,
         dashboard_family: dashboardFamily,
