@@ -2,6 +2,9 @@
 # Rehydrate EC2: start instance (if stopped), pull all images from ECR, run platform + postgres + load-driver.
 # Uses ECR only (no S3). Requires: AWS CLI, SSH key (cspulse-v6-key.pem), instance role with ECR read.
 #
+# For faster day-to-day deploys (no Mac buildx / ECR push), prefer:
+#   ./scripts/deploy-ec2-git-pull.sh
+#
 # Usage:
 #   ./scripts/rehydrate-ec2-ecr.sh [INSTANCE_ID]
 #   CSPULSE_EC2_INSTANCE_ID=i-xxxxx ./scripts/rehydrate-ec2-ecr.sh

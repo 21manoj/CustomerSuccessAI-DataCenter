@@ -76,8 +76,11 @@ def main() -> int:
             ("Phase 2 pre-proof", "ROI tiles are Power-of-1 estimates until playbooks close"),
             ("Phase 1 graph strip", "Revenue intelligence (context graph)"),
             ("Phase 3 efficiency panel", "CS Efficiency"),
-            ("Phase 3 modeled badge", "Modeled · Po1"),
-            ("Phase 3 growth_bar from API", "growth_bar: s.growth_bar"),
+        ]
+        # Minified bundles escape middle dot (·) as \xb7; property access is renamed.
+        phase3_bundle_checks = [
+            ("Phase 3 modeled badge", lambda s: "Modeled" in s and "Po1" in s),
+            ("Phase 3 growth_bar from API", lambda s: s.count("growth_bar") >= 2),
         ]
         print("\n--- UI bundle markers ---")
         for label, needle in phase_markers:
@@ -87,6 +90,12 @@ def main() -> int:
                 print(f"  {label}: MISSING ({needle})")
                 if "Phase 3" in label or "Phase 4" in label:
                     ok = False
+        for label, check in phase3_bundle_checks:
+            if check(js):
+                print(f"  {label}: OK")
+            else:
+                print(f"  {label}: MISSING")
+                ok = False
 
     print("\n--- Phase 5: proof path ---")
     proof = cfo.get("proof_data") or {}

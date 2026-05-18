@@ -1,11 +1,41 @@
-# Deployment Pattern: Build → Push → Pull → Run
+# Deployment Pattern: EC2 git pull + build (default) · ECR (releases)
 
-We follow this flow for CS Pulse:
+## Fast path — git pull + build on EC2 (recommended for iteration)
 
-- **Local machine:** `docker build` → `docker push` → **ECR** or **Docker Hub**
-- **EC2:** `docker pull` → `docker run` (via `docker compose`)
+EC2 is **native linux/amd64**, so you skip slow Mac `buildx`, image push, and ECR pull.
 
-No building on EC2 and no S3 tarballs for images. The registry is the single source of truth.
+**From your laptop (after `main` is pushed):**
+
+```bash
+export CSPULSE_SSH_KEY_FILE=~/.ssh/cspulse-v6-key.pem
+export CSPULSE_EC2_INSTANCE_ID=i-019ab6efa55514eb1
+# One-time / CI: read-only GitHub PAT for private repo
+export CSPULSE_GITHUB_TOKEN=ghp_...
+
+./scripts/deploy-ec2-git-pull.sh
+# Full rebuild: ./scripts/deploy-ec2-git-pull.sh --no-cache
+```
+
+**What it does:** start instance if needed → install `git` if missing → clone/pull `~/CustomerSuccessAI-DataCenter` → copy `~/cspulse/.env` → stop the ECR/registry stack (keeps `cspulse_pgdata` volumes) → `docker compose -f docker-compose.ec2-build.yml build && up -d` → health poll.
+
+**On EC2 only (SSH):** `./scripts/ec2-git-pull-rebuild.sh` after the repo is cloned.
+
+**Notes:**
+
+- Reuses the same Docker project name (`cspulse`) and volumes as `rehydrate-ec2-ecr.sh`.
+- Second platform replica (`cs-pulse-b` on :9080) is **ECR-only** today; use `rehydrate-ec2-ecr.sh` if you need that service.
+- First deploy still needs `~/cspulse/.env` (from provisioning) or a copied `kpi-dashboard/.env`.
+
+---
+
+## Release path — Build → Push → Pull → Run (ECR)
+
+Use for **CI artifacts**, sharing images across hosts, or when you are not building on EC2:
+
+- **Local machine or GitHub Actions:** `docker build` → `docker push` → **ECR**
+- **EC2:** `docker pull` → `docker compose up` via `./scripts/rehydrate-ec2-ecr.sh`
+
+No S3 tarballs for images. The registry is the source of truth for that path.
 
 ---
 
@@ -155,11 +185,16 @@ sudo docker compose -f docker-compose.ec2-registry.yml -f docker-compose.ec2-loa
 
 ## Summary
 
-| Step   | Where      | Action |
-|--------|------------|--------|
-| Build  | Local **or** **GitHub Actions** (`ubuntu-latest`) | `docker build` / `buildx` — on Apple Silicon use **CI** or `buildx --platform linux/amd64` |
-| Push   | Local or CI | `docker push` to ECR |
-| Pull   | EC2        | `docker compose pull` (images from registry) |
-| Run    | EC2        | `docker compose up -d` |
+| Path | Build | Deploy command |
+|------|--------|----------------|
+| **Iteration (preferred)** | EC2 (`docker-compose.ec2-build.yml`) | `./scripts/deploy-ec2-git-pull.sh` |
+| **ECR / CI** | Mac `buildx --platform linux/amd64` or GitHub Actions | `./scripts/rehydrate-ec2-ecr.sh` |
+
+| Step (ECR path) | Where | Action |
+|-----------------|-------|--------|
+| Build | Local **or** **GitHub Actions** | `buildx --platform linux/amd64` on Apple Silicon |
+| Push | Local or CI | `docker push` to ECR |
+| Pull | EC2 | `docker compose pull` |
+| Run | EC2 | `rehydrate-ec2-ecr.sh` |
 
 See **EC2_V6_TWO_IMAGES.md** for EC2 setup (SSH, `.env`, CloudFront). Use **docker-compose.ec2-registry.yml** on EC2 so image names come from the `REGISTRY` (and optional tag) in `.env`.

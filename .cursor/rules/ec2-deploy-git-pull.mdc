@@ -1,0 +1,23 @@
+---
+description: Prefer EC2 git pull + native amd64 build for CS Pulse deploys; reserve ECR for CI/releases.
+alwaysApply: true
+---
+
+# EC2 deploy: git pull + build (preferred)
+
+For CS Pulse on **cspulse-v6** EC2, **do not** default to Mac `buildx` → ECR → `rehydrate-ec2-ecr.sh` for routine deploys — it is slow on Apple Silicon.
+
+**Use instead:**
+
+```bash
+./scripts/deploy-ec2-git-pull.sh
+```
+
+After `git push` to `main`. Requires `CSPULSE_GITHUB_TOKEN` (read-only PAT) for first-time clone on EC2, or a one-time manual `git clone` on the host.
+
+**Use ECR path** (`buildx --platform linux/amd64` + `rehydrate-ec2-ecr.sh`) when:
+
+- Publishing images from CI (`.github/workflows/cspulse-ecr-build-push.yml`)
+- You need the **second platform replica** (`cs-pulse-b` on :9080) — not in `docker-compose.ec2-build.yml` yet
+
+Reference: `docs/DEPLOYMENT_PATTERN_REGISTRY.md`, `scripts/deploy-ec2-git-pull.sh`.

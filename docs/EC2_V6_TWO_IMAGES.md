@@ -9,14 +9,11 @@ Use this after provisioning the t3.large with `./scripts/provision-ec2-v6.sh`. L
 | **EC2 (t3.large)** | `cspulse-platform` (Flask + React + Nginx) + `cspulse-postgres` |
 | **Your laptop** | Load driver (point `CS_PULSE_BASE_URL` at EC2 public IP or CloudFront URL) |
 
-## Deployment pattern: Build → Push → Pull → Run
+## Deployment pattern
 
-We use a **registry-based** flow (no building on EC2, no S3 tarballs):
+**Default for day-to-day:** git pull + **native build on EC2** (no ECR) — see **[DEPLOYMENT_PATTERN_REGISTRY.md](DEPLOYMENT_PATTERN_REGISTRY.md)** and run `./scripts/deploy-ec2-git-pull.sh` from your laptop after pushing to `main`.
 
-- **Local:** `docker build` → `docker push` → **ECR** or **Docker Hub**
-- **EC2:** `docker pull` → `docker run` (via `docker compose`)
-
-See **[DEPLOYMENT_PATTERN_REGISTRY.md](DEPLOYMENT_PATTERN_REGISTRY.md)** for full steps (build/push from laptop, pull/run on EC2 using `docker-compose.ec2-registry.yml`).
+**ECR path** (CI / shared images): Mac or Actions `build` → `push` → EC2 `pull` via `./scripts/rehydrate-ec2-ecr.sh` and `docker-compose.ec2-registry.yml`.
 
 ---
 
