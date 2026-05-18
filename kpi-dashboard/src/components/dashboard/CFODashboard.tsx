@@ -22,7 +22,8 @@ import {
   DollarSign, TrendingUp, Shield, Target, BarChart3, Layers,
   FileText, ArrowUpRight, Sparkles, PieChart, Activity,
   Users, Eye, Zap, GitBranch, Clock, AlertTriangle, Info,
-  ChevronDown
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import DashboardTopBar from './DashboardTopBar';
@@ -224,6 +225,42 @@ interface PlaybookEconomicsResponse {
  * Row A of "Past — Three Lenses": raw OUTCOME aggregates from the
  * customer's uploaded data. Audit-grade, reconciles with P&L.
  */
+/** Sample OUTCOME row for context-graph provenance drill-down (Phase 1). */
+interface ContextGraphOutcomeSample {
+  node_id: string;
+  account_id: number;
+  node_subtype?: string | null;
+  revenue_impact?: number | null;
+  revenue_impact_type?: string | null;
+  title?: string | null;
+  occurred_at?: string | null;
+}
+
+interface ContextGraphProvenanceBucket {
+  value: number;
+  label: string;
+  sample_nodes: ContextGraphOutcomeSample[];
+}
+
+interface ContextGraphProvenance {
+  source: string;
+  engine: string;
+  outcome_node_count: number;
+  revenue_at_risk: ContextGraphProvenanceBucket;
+  revenue_protected: ContextGraphProvenanceBucket;
+  expansion_pipeline: ContextGraphProvenanceBucket;
+}
+
+/** Context-graph dollar totals (same engine as CRO). Not playbook attribution. */
+interface ContextGraphRevenue {
+  revenue_at_risk: number;
+  /** OUTCOME aggregate — not proof_data.revenue_protected */
+  graph_revenue_protected: number;
+  expansion_pipeline: number;
+  revenue_risk_label: string;
+  provenance: ContextGraphProvenance | null;
+}
+
 interface HistoricalActuals {
   historical_nrr_pct_ttm: number | null;
   arr_churned: number;
@@ -258,6 +295,7 @@ interface CFODashboardData {
   wizard_b_nrr: WizardBNRR | null;
   predictor_v3_portfolio_nrr: PredictorV3PortfolioNRR | null;
   historical_actuals: HistoricalActuals | null;
+  context_graph_revenue: ContextGraphRevenue | null;
   customer_phase: CustomerPhase;
   // NRR/GRR + Cost of Inaction
   nrr_current: number;
@@ -315,13 +353,17 @@ const SOURCES = {
   /** Aggregated from accounts.revenue (CRM/CSV import). */
   crm: 'Source: CRM (CSV) · not GL-reconciled',
   /** PlaybookExecutionV2 records — CRM-derived, attributed in CS Pulse. */
-  csPulseProof: 'Source: CS Pulse · CRM-derived · not GL-reconciled',
+  csPulseProof: 'Source: CS Pulse · playbook executions · not GL-reconciled',
   /** Wizard B counterfactual model — directional, not auditable to GL. */
-  wizardB: 'Source: CS Pulse (Wizard B model) · directional',
+  wizardB: 'Source: CS Pulse (Wizard B) · counterfactual model · directional',
   /** Predictor v3 forward forecast — point estimate, not auditable to GL. */
-  predictorV3: 'Source: CS Pulse (Predictor v3) · forward forecast',
+  predictorV3: 'Source: CS Pulse (Predictor v3) · forward forecast · point estimate',
   /** Power-of-1 industry benchmark estimate — not customer data. */
-  benchmark: 'Source: Power-of-1 benchmark · estimated',
+  benchmark: 'Source: Power-of-1 benchmark · estimated · not customer data',
+  /** OUTCOME-node aggregation — same engine as CRO "Confirmed Risk". */
+  contextGraph: 'Source: Context graph · OUTCOME nodes · evidence-weighted',
+  /** Health-score × churn-probability model (Cost of Inaction panel). */
+  modeledExposure: 'Source: CS Pulse · health churn model · modeled · not playbook proof',
 } as const;
 
 type SourceKey = keyof typeof SOURCES;
@@ -1053,7 +1095,7 @@ const InvestmentAllocationWidget: React.FC<{
             </div>
             <div className="flex justify-between text-[10px] border-t border-gray-700/30 pt-1 mt-1">
               <span className="text-gray-400">Return on CS spend</span>
-              <span className="text-white font-semibold">{formatCompact(roiImpact)} protected</span>
+              <span className="text-white font-semibold">{formatCompact(roiImpact)} attributed (modeled)</span>
             </div>
           </div>
 
@@ -1068,6 +1110,257 @@ const InvestmentAllocationWidget: React.FC<{
 };
 
 /** Financial Ratios (right sidebar) */
+/** One-line map so CFOs do not conflate NRR lenses, playbook $, and modeled vs confirmed risk. */
+/** Phase hint for Row C empty state — sets expectations by deployment phase. */
+function expectedProofHint(phase: CustomerPhase): string {
+  switch (phase) {
+    case 'pre_deploy':
+      return 'Expected first attributed saves after ~1–3 closed playbook executions on at-risk accounts (often within the first onboarding quarter).';
+    case 'onboarding':
+      return 'Onboarding phase — Row C fills in as the next 2–5 playbooks close with measurable protected or expanded revenue.';
+    case 'active':
+      return 'Playbooks are running; Row C updates as each execution closes with attributed $';
+    case 'mature':
+      return 'Mature deployment — Row C should reflect steady closed-playbook attribution.';
+    default:
+      return 'Row C populates when playbooks close with measurable protected or expanded revenue.';
+  }
+}
+
+/** Phase 2 — pre-proof honesty: anchor tiles are Po1 until playbooks close. */
+const CFOPreProofBanner: React.FC<{ phase: CustomerPhase }> = ({ phase }) => (
+  <div className="mb-4 rounded-lg border border-amber-700/40 bg-amber-950/25 px-4 py-3">
+    <div className="flex items-start gap-2">
+      <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+      <div className="text-[11px] text-amber-100/90 leading-relaxed">
+        <p className="font-semibold text-amber-200 mb-1">
+          ROI tiles are Power-of-1 estimates until playbooks close
+        </p>
+        <p className="text-amber-100/70">
+          CS spend, protected revenue, and portfolio ROI in the summary row below are{' '}
+          <span className="text-amber-200/90">benchmark-modeled</span>, not bottom-up proof.
+          Confirmed context-graph $ is in the strip above; playbook attribution appears in Row C and
+          the proof table once executions close.
+          <span className="block mt-1 text-[10px] text-amber-100/50">
+            Deployment phase: {phase.replace('_', ' ')} · {expectedProofHint(phase)}
+          </span>
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const CFOMetricGuideBanner: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(true);
+  return (
+    <div className="mb-4 rounded-lg border border-cyan-900/40 bg-cyan-950/20 px-4 py-2.5">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between text-left gap-2"
+      >
+        <span className="text-[10px] font-semibold text-cyan-300/90 uppercase tracking-wide">
+          How to read CFO metrics
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-cyan-500 shrink-0 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
+      </button>
+      {!collapsed && (
+        <ul className="mt-2 space-y-1.5 text-[10px] text-gray-400 list-disc list-inside leading-relaxed">
+          <li>
+            <span className="text-gray-300">NRR %</span> — pick the lens: historical outcomes (Row A), Wizard B counterfactual
+            (“Realized NRR — TTM”), or Predictor v3 forward (“Forecast NRR — Next 12mo”). They are not interchangeable.
+          </li>
+          <li>
+            <span className="text-gray-300">Attributed revenue (playbooks)</span> — bottom-up from closed{' '}
+            <code className="text-[9px] text-gray-500">PlaybookExecutionV2</code> rows (Row C / proof table).
+          </li>
+          <li>
+            <span className="text-gray-300">Revenue intelligence (context graph)</span> — confirmed $ from OUTCOME
+            nodes (strip below). Same totals as CRO Overview.
+          </li>
+          <li>
+            <span className="text-gray-300">Modeled cost of inaction</span> — health-score churn math on unhealthy accounts.
+            Not the same as confirmed context-graph $ at risk.
+          </li>
+          <li>
+            <span className="text-gray-300">Power-of-1 / benchmark tiles</span> — industry estimates until playbook proof populates.
+          </li>
+        </ul>
+      )}
+      {collapsed && (
+        <p className="text-[9px] text-gray-500 mt-1">
+          NRR = lens-specific · Playbook $ ≠ context-graph confirmed risk · expand for definitions
+        </p>
+      )}
+    </div>
+  );
+};
+
+type ProvenanceBucketKey = 'revenue_at_risk' | 'revenue_protected' | 'expansion_pipeline';
+
+const PROVENANCE_BUCKET_TITLES: Record<ProvenanceBucketKey, string> = {
+  revenue_at_risk: 'Confirmed revenue at risk — sample OUTCOMEs',
+  revenue_protected: 'Confirmed revenue protected — sample OUTCOMEs',
+  expansion_pipeline: 'Expansion pipeline (confirmed) — sample OUTCOMEs',
+};
+
+const ContextGraphRevenuePanel: React.FC<{ data: ContextGraphRevenue }> = ({ data }) => {
+  const [modalBucket, setModalBucket] = useState<ProvenanceBucketKey | null>(null);
+  const prov = data.provenance;
+  const nodeCount = prov?.outcome_node_count ?? 0;
+
+  const tiles: Array<{
+    key: ProvenanceBucketKey;
+    label: string;
+    value: number;
+    accent: string;
+    border: string;
+  }> = [
+    {
+      key: 'revenue_at_risk',
+      label: 'Confirmed revenue at risk',
+      value: data.revenue_at_risk,
+      accent: 'text-red-400',
+      border: 'border-t-red-500',
+    },
+    {
+      key: 'revenue_protected',
+      label: 'Confirmed revenue protected',
+      value: data.graph_revenue_protected,
+      accent: 'text-emerald-400',
+      border: 'border-t-emerald-500',
+    },
+    {
+      key: 'expansion_pipeline',
+      label: 'Expansion pipeline (confirmed)',
+      value: data.expansion_pipeline,
+      accent: 'text-cyan-400',
+      border: 'border-t-cyan-500',
+    },
+  ];
+
+  const samples =
+    modalBucket && prov ? prov[modalBucket]?.sample_nodes ?? [] : [];
+
+  return (
+    <>
+      <div className="bg-[#131826] rounded-xl border border-cyan-800/40 p-5 mb-6">
+        <div className="flex items-start justify-between gap-3 mb-4 pb-2 border-b border-gray-700/50">
+          <div className="flex items-center gap-2">
+            <GitBranch className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div>
+              <h3 className="text-[10px] font-bold text-cyan-300/90 uppercase tracking-[2px]">
+                Revenue intelligence (context graph)
+              </h3>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                {data.revenue_risk_label} · {nodeCount} OUTCOME node{nodeCount === 1 ? '' : 's'} with $
+                · same engine as CRO Overview
+              </p>
+            </div>
+          </div>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-semibold shrink-0">
+            Evidence-weighted
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {tiles.map((t) => {
+            const sampleCount = prov?.[t.key]?.sample_nodes?.length ?? 0;
+            return (
+              <div
+                key={t.key}
+                className={`bg-[#1a1f2e] border border-gray-700/50 rounded-lg p-4 border-t-[3px] ${t.border}`}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+                  {t.label}
+                </p>
+                <p className={`text-2xl font-bold mb-1 ${t.accent}`}>{formatCompact(t.value)}</p>
+                <SourceLabel source="contextGraph" className="mb-2" />
+                {sampleCount > 0 && prov && (
+                  <button
+                    type="button"
+                    onClick={() => setModalBucket(t.key)}
+                    className="text-[10px] text-cyan-500 hover:text-cyan-400 font-medium"
+                  >
+                    View {sampleCount} sample outcome{sampleCount === 1 ? '' : 's'} →
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-[9px] text-gray-600 mt-3">
+          Playbook-attributed $ is in Row C / proof table below. Modeled churn exposure is in{' '}
+          <span className="text-gray-500">Modeled cost of inaction</span> — different definitions.
+        </p>
+      </div>
+
+      {modalBucket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cg-provenance-title"
+          onClick={() => setModalBucket(null)}
+        >
+          <div
+            className="bg-[#1a1f2e] border border-gray-600 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700/50">
+              <h4 id="cg-provenance-title" className="text-sm font-semibold text-white">
+                {PROVENANCE_BUCKET_TITLES[modalBucket]}
+              </h4>
+              <button
+                type="button"
+                onClick={() => setModalBucket(null)}
+                className="text-gray-400 hover:text-white p-1"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[60vh] p-4">
+              <p className="text-[10px] text-gray-500 mb-3">
+                Engine: {prov?.engine ?? 'aggregate_revenue_across_accounts'} · Total in bucket:{' '}
+                {formatCompact(prov?.[modalBucket]?.value ?? 0)}
+              </p>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-gray-500 border-b border-gray-700/50">
+                    <th className="text-left py-2 pr-2">node_id</th>
+                    <th className="text-left py-2 pr-2">Account</th>
+                    <th className="text-left py-2 pr-2">Subtype</th>
+                    <th className="text-right py-2">$ impact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {samples.map((s) => (
+                    <tr key={s.node_id} className="border-b border-gray-800/50">
+                      <td className="py-2 pr-2 font-mono text-[10px] text-gray-400 truncate max-w-[100px]">
+                        {s.node_id}
+                      </td>
+                      <td className="py-2 pr-2 text-gray-300">{s.account_id}</td>
+                      <td className="py-2 pr-2 text-gray-400">{s.node_subtype || s.title || '—'}</td>
+                      <td className="py-2 text-right font-mono text-gray-200">
+                        {formatCompact(Math.abs(s.revenue_impact ?? 0))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {samples.length === 0 && (
+                <p className="text-gray-500 text-center py-6 text-sm">No sample nodes in this bucket.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const FinancialRatiosWidget: React.FC<{ ratios: FinancialRatio[] }> = ({ ratios }) => (
   <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
     <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase mb-3">
@@ -1084,20 +1377,30 @@ const FinancialRatiosWidget: React.FC<{ ratios: FinancialRatio[] }> = ({ ratios 
   </div>
 );
 
-/** Cost of Inaction panel — shows formula and per-account math */
-const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction'] }> = ({ data: coi }) => {
+/** Health-based churn model — not CRO context-graph "confirmed revenue at risk". */
+const CostOfInactionPanel: React.FC<{
+  data: CFODashboardData['cost_of_inaction'];
+  compact?: boolean;
+}> = ({ data: coi, compact = false }) => {
   const [showFormula, setShowFormula] = useState(false);
   return (
     <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-red-400" />
-          <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">Cost of Inaction</h3>
+          <div>
+            <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">
+              Modeled cost of inaction
+            </h3>
+            <p className="text-[9px] text-gray-500 normal-case font-normal tracking-normal">
+              If unhealthy accounts churn · not context-graph confirmed $
+            </p>
+          </div>
         </div>
         <button
           onClick={() => setShowFormula(!showFormula)}
-          className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-0.5"
-          title="Show calculation methodology"
+          className="text-[10px] text-teal-500 hover:text-teal-400 flex items-center gap-0.5 shrink-0"
+          title="Show health-based churn model methodology"
         >
           <Info className="w-3 h-3" />
           {showFormula ? 'Hide' : 'How calculated?'}
@@ -1105,21 +1408,23 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
       </div>
       {showFormula && (
         <div className="bg-gray-800/50 rounded-lg p-3 mb-3 text-[10px] text-gray-400 space-y-1">
-          <p className="text-gray-300 font-medium">Methodology</p>
+          <p className="text-gray-300 font-medium">Health-based churn model (modeled)</p>
           <p>Churn probability = max(5%, 50% - health_score × 0.5)</p>
           <p>Annual loss per account = ARR × churn probability</p>
-          <p>Annual churn exposure = sum of all at-risk account losses</p>
-          <p className="text-gray-500 pt-1">Accounts included: health &lt; 70 (at-risk + critical)</p>
+          <p>Modeled annual churn exposure = sum of per-account losses below</p>
+          <p className="text-gray-500 pt-1">Accounts included: health below healthy threshold (at-risk + critical)</p>
+          <p className="text-amber-400/90 pt-1 border-t border-gray-700/50">
+            Evidence-weighted $ at risk: Revenue intelligence (context graph) on this CFO page — same as CRO Overview.
+          </p>
         </div>
       )}
       <div className="flex items-end gap-6 mb-4">
         <div>
-          {/* Issue #9 fix (May 4 2026): clarify scope — at-risk subset, not full portfolio. */}
           <p
             className="text-[9px] text-gray-500 mb-0.5 cursor-help"
-            title="ARR of accounts with health < 70 (at-risk + critical). Excludes healthy accounts. For full portfolio ARR, see Total ARR tile above."
+            title="Sum of ARR for unhealthy accounts. Exposure surface area — not the same as context-graph confirmed revenue at risk."
           >
-            ARR at Risk <span className="text-gray-600">(health &lt; 70)</span>
+            At-risk account ARR
           </p>
           <p className="text-2xl font-bold text-red-400">{formatCompact(coi.arr_at_risk)}</p>
           <SourceLabel source="crm" />
@@ -1127,24 +1432,25 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
         <div>
           <p
             className="text-[9px] text-gray-500 mb-0.5 cursor-help"
-            title="Annual revenue loss expected if no intervention — sum of (ARR × churn_probability) across at-risk + critical accounts."
+            title="Sum of (ARR × modeled churn probability) if no intervention on unhealthy accounts."
           >
-            Annual Churn Exposure
+            Modeled annual churn exposure
           </p>
           <p className="text-2xl font-bold text-orange-400">{formatCompact(coi.annual_churn_exposure)}</p>
-          <SourceLabel source="csPulseProof" />
+          <SourceLabel source="modeledExposure" />
         </div>
         <div>
           <p
             className="text-[9px] text-gray-500 mb-0.5 cursor-help"
-            title="Count of at-risk + critical accounts (health < 70). Healthy accounts excluded from this view."
+            title="Count of accounts below the healthy health-score threshold."
           >
-            At-risk Accounts
+            Unhealthy accounts
           </p>
           <p className="text-2xl font-bold text-gray-300">{coi.account_count}</p>
+          <SourceLabel source="modeledExposure" />
         </div>
       </div>
-      {coi.accounts.length > 0 && (
+      {!compact && coi.accounts.length > 0 && (
         <div className="space-y-1.5">
           {coi.accounts.slice(0, 5).map((a, i) => (
             <div key={i} className="flex items-center justify-between text-xs">
@@ -1155,7 +1461,11 @@ const CostOfInactionPanel: React.FC<{ data: CFODashboardData['cost_of_inaction']
           ))}
         </div>
       )}
-      <p className="text-[9px] text-gray-600 mt-2">Projected annual revenue loss if no intervention on at-risk/critical accounts.</p>
+      <p className="text-[9px] text-gray-600 mt-2 border-t border-gray-700/40 pt-2">
+        Modeled loss if unhealthy accounts churn with no CS action. For evidence-weighted $ at risk,
+        see <span className="text-cyan-400/90">Revenue intelligence (context graph)</span> on this page
+        {compact ? '' : ' (strip above summary cards)'} — same totals as CRO Overview.
+      </p>
     </div>
   );
 };
@@ -1238,6 +1548,28 @@ const LensRow: React.FC<LensRowProps> = ({ letter, title, sourceLabel, accentCol
   );
 };
 
+/** Phase 2 — no sparse zero rows when playbook proof is not yet available. */
+const PlaybookProofEmptyState: React.FC<{ phase: CustomerPhase }> = ({ phase }) => (
+  <div className="bg-[#1a1f2e] rounded-xl border border-dashed border-gray-600/60 p-6 mb-6">
+    <div className="flex items-center gap-2 mb-3">
+      <Shield className="w-4 h-4 text-gray-500" />
+      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Playbook ROI Proof</h3>
+      <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400 font-semibold">Pending</span>
+    </div>
+    <p className="text-sm text-gray-300 mb-2">
+      No closed playbook executions with attributed revenue yet.
+    </p>
+    <p className="text-[11px] text-gray-500 leading-relaxed mb-4">
+      {expectedProofHint(phase)} Until then, use the context-graph strip and modeled cost of inaction —
+      not this table — for risk exposure.
+    </p>
+    <p className="text-[10px] text-cyan-400/90">
+      Next step: trigger playbooks from CSM Cockpit · Today&apos;s Queue on at-risk accounts.
+    </p>
+    <SourceLabel source="benchmark" className="mt-3" />
+  </div>
+);
+
 const PastThreeLensesSection: React.FC<{
   d: CFODashboardData;
   totalArr: number;
@@ -1268,9 +1600,9 @@ const PastThreeLensesSection: React.FC<{
         <LensRow
           letter="A"
           title="Historical Performance (Pre-CS-Pulse)"
-          sourceLabel="Your data · audit-grade"
+          sourceLabel="Uploaded outcomes · context graph"
           accentColor="grey"
-          subtitle={`From your uploaded outcomes data (${ha.source}). Reconciles with P&L. Always shown — same for new and mature customers.`}
+          subtitle={`From your uploaded OUTCOME rows (${ha.source}). Audit trail in CS Pulse — not GL-reconciled until finance connector.`}
           cards={[
             {
               label: 'Historical NRR — TTM',
@@ -1302,9 +1634,9 @@ const PastThreeLensesSection: React.FC<{
         <LensRow
           letter="A"
           title="Historical Performance (Pre-CS-Pulse)"
-          sourceLabel="Your data · audit-grade"
+          sourceLabel="Uploaded outcomes · context graph"
           accentColor="grey"
-          subtitle="From your uploaded outcomes data (context_nodes.source=observed)."
+          subtitle="From context graph OUTCOME nodes (observed uploads). Not GL-reconciled."
           cards={[]}
           emptyState
           emptyStateMessage="No historical OUTCOME data uploaded yet. Upload outcomes.csv during onboarding to populate this row."
@@ -1333,9 +1665,9 @@ const PastThreeLensesSection: React.FC<{
               color: 'amber',
             },
             {
-              label: 'ARR Could\'ve Been Protected',
+              label: 'Counterfactual ARR lift',
               value: formatCompact(wb.arr_protected),
-              sub: 'Wizard B cs_pulse_arr_protected',
+              sub: 'Wizard B · modeled attribution',
               color: 'amber',
             },
             {
@@ -1364,14 +1696,14 @@ const PastThreeLensesSection: React.FC<{
         <LensRow
           letter="C"
           title="Realized — Actual CS Pulse Attribution"
-          sourceLabel="Audit-traceable proof"
+          sourceLabel="Playbook executions · bottom-up"
           accentColor="green"
           subtitle={`Bottom-up sum of PlaybookExecutionV2.revenue_protected across closed playbooks (${proof.length} executions). Per-account attribution to specific saved accounts — full drill-down in the Playbook ROI Proof table below.`}
           cards={[
             {
-              label: 'Revenue Protected',
+              label: 'Attributed revenue (playbooks)',
               value: formatCompact(proofTotalProtected + proofTotalExpanded),
-              sub: `${proof.length} closed playbooks`,
+              sub: `${proof.length} closed playbooks · not context-graph totals`,
               color: 'green',
             },
             {
@@ -1403,7 +1735,7 @@ const PastThreeLensesSection: React.FC<{
           subtitle="Audit-traceable proof, populated as playbooks fire on at-risk accounts."
           cards={[]}
           emptyState
-          emptyStateMessage="CS Pulse hasn't been deployed long enough to attribute saves yet. Once playbooks fire on at-risk accounts, this section will populate. See the Forward Opportunity section below for what's protectable today."
+          emptyStateMessage={`CS Pulse hasn't attributed closed-playbook revenue yet. ${expectedProofHint(d.customer_phase)} See Forecast NRR and the context-graph strip for what's protectable today.`}
         />
       )}
 
@@ -1543,13 +1875,6 @@ const CFODashboard: React.FC = () => {
           // If API returns no scaling projections, leave empty — UI handles gracefully
 
           const csPercent = totalArr > 0 ? ((csInvestment / totalArr) * 100).toFixed(2) : '0';
-          // Use backend pre-computed ratio when available, else compute from projected impact
-          const revPerDollar = json.rev_per_cs_dollar
-            ? json.rev_per_cs_dollar.toFixed(1)
-            : (csInvestment > 0 ? ((isEstimatedInvestment ? roiImpact : (json.revenue_protected || 0)) / csInvestment).toFixed(1) : '0');
-          const paybackMonths = json.payback_months || (roiImpact > 0 ? Math.round((csInvestment / roiImpact) * 12) : 0);
-
-          const revenueProtected = json.revenue_protected || 0;
 
           // ── Proof data: actual playbook economics (bottom-up) ──
           const proof = json.proof_data || {};
@@ -1559,6 +1884,27 @@ const CFODashboard: React.FC = () => {
           const proofRoi = proof.realized_roi || 0;
           const proofExecutions = proof.executions || [];
           const hasProof = proofCost > 0 || proofProtected > 0;
+
+          // Context graph $ (same engine as CRO) — distinct from proof_data.revenue_protected
+          const graphAtRisk = Number(json.revenue_at_risk) || 0;
+          const graphProtected = Number(json.revenue_protected) || 0;
+          const graphExpansion =
+            Number(json.expansion_pipeline) ||
+            Number(json.context_graph_provenance?.expansion_pipeline?.value) ||
+            0;
+          const graphProvenance = (json.context_graph_provenance || null) as ContextGraphProvenance | null;
+          const hasContextGraph =
+            graphAtRisk > 0 ||
+            graphProtected > 0 ||
+            graphExpansion > 0 ||
+            (graphProvenance?.outcome_node_count ?? 0) > 0;
+
+          const revPerDollar = json.rev_per_cs_dollar
+            ? json.rev_per_cs_dollar.toFixed(1)
+            : (csInvestment > 0
+              ? ((hasProof ? proofProtected + proofExpanded : roiImpact) / csInvestment).toFixed(1)
+              : '0');
+          const paybackMonths = json.payback_months || (roiImpact > 0 ? Math.round((csInvestment / roiImpact) * 12) : 0);
 
           // ── Wizard B NRR (backward counterfactual, TTM) ──
           const wb = json.wizard_b_nrr || {};
@@ -1632,12 +1978,33 @@ const CFODashboard: React.FC = () => {
             ] : hasProof ? [
               { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white', source: 'crm' },
               { label: 'Actual CS Spend', value: formatCompact(proofCost), subtitle: `${(totalArr > 0 ? (proofCost / totalArr * 100).toFixed(2) : '0')}% of ARR · ${proof.csm_hours || 0}h CSM time`, accent: 'emerald', source: 'csPulseProof' },
-              { label: 'Revenue Protected', value: formatCompact(proofProtected + proofExpanded), subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`, accent: 'green', source: 'csPulseProof' },
+              {
+                label: 'Attributed revenue (playbooks)',
+                value: formatCompact(proofProtected + proofExpanded),
+                subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`,
+                tooltip: 'Sum of revenue_protected + revenue_expanded on closed PlaybookExecutionV2 rows. Playbook attribution — not the same as context-graph confirmed $ at risk.',
+                accent: 'green',
+                source: 'csPulseProof',
+              },
               { label: 'Portfolio ROI', value: `${proofRoi}x`, subtitle: `${formatCompact(proofCost)} → ${formatCompact(proofProtected + proofExpanded)}`, accent: 'cyan', source: 'csPulseProof' },
             ] : [
               { label: 'Total ARR', value: formatCompact(totalArr), subtitle: `${json.account_count || '—'} active accounts · full portfolio (incl. healthy + new logos)`, accent: 'white', source: 'crm' },
-              { label: 'CS Investment', value: formatCompact(csInvestment), subtitle: 'Power-of-1 benchmark estimate', tag: json.automation_rate ? `${json.automation_rate}% automated` : undefined, accent: 'emerald', estimated: true, source: 'benchmark' },
-              { label: 'Projected Impact', value: formatCompact(roiImpact), subtitle: `GRR: ${grr}%`, accent: 'green', estimated: true, source: 'benchmark' },
+              {
+                label: 'CS Investment (estimated)',
+                value: formatCompact(csInvestment),
+                subtitle: 'Power-of-1 benchmark until playbooks close',
+                accent: 'emerald',
+                estimated: true,
+                source: 'benchmark',
+              },
+              {
+                label: 'Projected impact (Po1)',
+                value: formatCompact(roiImpact),
+                subtitle: `Modeled GRR: ${grr}% · not playbook proof`,
+                accent: 'green',
+                estimated: true,
+                source: 'benchmark',
+              },
               { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true, source: 'benchmark' },
             ],
             power_of_1: po1Metrics,
@@ -1691,6 +2058,15 @@ const CFODashboard: React.FC = () => {
             } : null,
             predictor_v3_portfolio_nrr: v3,
             historical_actuals: json.historical_actuals || null,
+            context_graph_revenue: hasContextGraph
+              ? {
+                  revenue_at_risk: graphAtRisk,
+                  graph_revenue_protected: graphProtected,
+                  expansion_pipeline: graphExpansion,
+                  revenue_risk_label: json.revenue_risk_label || 'Confirmed Risk (Context Graph)',
+                  provenance: graphProvenance,
+                }
+              : null,
             customer_phase: customerPhase,
             // NRR/GRR + Cost of Inaction (fallback to Power-of-1 when no Wizard B)
             nrr_current: hasWizardB ? wb.with_cs_pulse_nrr_pct : (json.nrr_current || nrr),
@@ -1894,6 +2270,14 @@ const CFODashboard: React.FC = () => {
             </div>
           </div>
 
+          <CFOMetricGuideBanner />
+
+          {d.context_graph_revenue && (
+            <ContextGraphRevenuePanel data={d.context_graph_revenue} />
+          )}
+
+          {!d.has_proof && <CFOPreProofBanner phase={d.customer_phase} />}
+
           {/* Row 1: Financial summary cards */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             {d.summary_cards.map((card, i) => (
@@ -1923,6 +2307,13 @@ const CFODashboard: React.FC = () => {
             }
             return null;
           })()}
+
+          {/* Phase 2: keep modeled exposure visible when Predictor v3 hides the legacy 2-col row */}
+          {d.predictor_v3_portfolio_nrr && (
+            <div className="mb-6 max-w-xl">
+              <CostOfInactionPanel data={d.cost_of_inaction} compact />
+            </div>
+          )}
 
           {/* Row 1b (legacy): NRR Before/After + Cost of Inaction
               — hidden when Predictor v3 is active. */}
@@ -2006,7 +2397,7 @@ const CFODashboard: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-[10px]">
-                  <span className="text-green-400">{formatCompact(d.wizard_b_nrr.arr_protected)} ARR protected</span>
+                  <span className="text-green-400">{formatCompact(d.wizard_b_nrr.arr_protected)} counterfactual ARR lift</span>
                   <span className="text-gray-500">&middot;</span>
                   <span className="text-cyan-400">{d.wizard_b_nrr.accounts_saved} accounts saved from churn</span>
                 </div>
@@ -2104,8 +2495,10 @@ const CFODashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Row 1d: Playbook ROI Proof Table (when proof data exists) */}
-          {d.proof_executions.length > 0 && (
+          {/* Row 1d: Playbook ROI Proof — table or Phase 2 empty state */}
+          {!d.has_proof ? (
+            <PlaybookProofEmptyState phase={d.customer_phase} />
+          ) : d.proof_executions.length > 0 ? (
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 overflow-hidden mb-6">
               <div className="px-5 py-4 border-b border-gray-700/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -2125,7 +2518,7 @@ const CFODashboard: React.FC = () => {
                     <th className="text-left px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Account</th>
                     <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Health &Delta;</th>
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Cost</th>
-                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Protected</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase" title="Playbook-attributed revenue protected">Protected (PB)</th>
                     <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase">Expanded</th>
                     <th className="text-right px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase">ROI</th>
                   </tr>
@@ -2189,7 +2582,7 @@ const CFODashboard: React.FC = () => {
                           <span className="text-gray-500">&middot;</span>
                           <span className="text-cyan-400">{d.wizard_b_nrr.accounts_saved} accounts saved from churn</span>
                           <span className="text-gray-500">&middot;</span>
-                          <span className="text-green-400">{formatCompact(d.wizard_b_nrr.arr_protected)} ARR protected</span>
+                          <span className="text-green-400">{formatCompact(d.wizard_b_nrr.arr_protected)} counterfactual ARR lift</span>
                         </div>
                       </td>
                     </tr>
@@ -2198,7 +2591,7 @@ const CFODashboard: React.FC = () => {
               </table>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Renewals at Risk Banner */}
           {d.renewals_at_risk.length > 0 && (
@@ -2207,7 +2600,7 @@ const CFODashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-yellow-500" />
                   <h3 className="text-xs font-semibold text-white uppercase tracking-wide">
-                    Renewals at Risk &middot; Next 90 Days
+                    Contract renewals due &middot; next 90 days
                   </h3>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
                     {d.renewals_at_risk.length}
@@ -2292,10 +2685,11 @@ const CFODashboard: React.FC = () => {
                   <thead>
                     <tr className="border-b border-gray-700/50 text-gray-500">
                       <th className="text-left py-2 pr-3">Account</th>
+                      <th className="text-center py-2 px-2">Source</th>
                       <th className="text-right py-2 px-2">ARR</th>
                       <th className="text-right py-2 px-2">Health</th>
                       <th className="text-right py-2 px-2">Cost</th>
-                      <th className="text-right py-2 px-2">Protected</th>
+                      <th className="text-right py-2 px-2" title="Playbook-attributed">Protected (PB)</th>
                       <th className="text-right py-2 px-2">Expanded</th>
                       <th className="text-right py-2 px-2">ROI</th>
                       <th className="text-right py-2 pl-2">Runs</th>
@@ -2328,6 +2722,23 @@ const CFODashboard: React.FC = () => {
                           <tr key={a.account_id} className="border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors">
                             <td className="py-2 pr-3">
                               <div className="text-white font-medium truncate max-w-[180px]">{a.account_name}</div>
+                            </td>
+                            <td className="text-center py-2 px-2">
+                              {hasActual ? (
+                                <span
+                                  className="text-[8px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400"
+                                  title="Playbook execution rows for this account"
+                                >
+                                  actual
+                                </span>
+                              ) : (
+                                <span
+                                  className="text-[8px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-700/40 text-gray-500"
+                                  title="ARR-weighted benchmark allocation until playbooks close"
+                                >
+                                  benchmark
+                                </span>
+                              )}
                             </td>
                             <td className="text-right py-2 px-2 text-gray-400">{formatCompact(a.arr)}</td>
                             <td className={`text-right py-2 px-2 font-medium ${healthColor}`}>{a.health_score.toFixed(0)}</td>

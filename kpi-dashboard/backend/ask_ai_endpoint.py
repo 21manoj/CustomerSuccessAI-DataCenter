@@ -68,7 +68,11 @@ PERSONA_PROMPTS = {
                 'Compare actual vs projected. Flag inefficient spend. '
                 'When citing industry benchmarks: CS spend 0.8–2.5% of ARR, '
                 'ROI typically 5–15×, payback 3–6 months. Use the wider range '
-                'unless the customer has a defined target.',
+                'unless the customer has a defined target. '
+                'Never conflate: (1) context-graph confirmed revenue at risk, '
+                '(2) playbook-attributed revenue protected, (3) modeled churn exposure '
+                'from unhealthy accounts. Name which lens you use. For NRR, state whether '
+                'historical actuals, Wizard B TTM counterfactual, or Predictor v3 forward.',
     },
     'ceo': {
         'role': 'Chief Executive Officer',
@@ -178,13 +182,18 @@ INSTRUCTIONS:
   An honest "we'll have this in Q3 + here's the data we have today" beats
   an invented answer.
 
+- CONTEXT GRAPH FIRST: The CONTEXT GRAPH section in PORTFOLIO CONTEXT was
+  loaded from the database before this turn. For revenue at risk / protected /
+  expansion totals, cite those numbers first; use tools for drill-down or
+  account-level detail. Include node_id when referencing a specific signal/outcome.
+
 - FOUNDATIONAL-QUESTION TOOL-CALL ENFORCEMENT (Apr 25 2026, Sprint 1.2 decoupled):
   For any question that asks about (a) revenue at risk, (b) ROI / payback /
   CS investment, (c) at-risk accounts, (d) portfolio NRR, you MUST call
-  the appropriate tool BEFORE producing a numeric answer. The PORTFOLIO
-  CONTEXT block above is a starting orientation, NOT a substitute for a
-  fresh tool call. Numeric answers without a corresponding tool call will
-  be treated as hallucinated.
+  the appropriate tool BEFORE producing a numeric answer when the CONTEXT
+  GRAPH block does not already contain the needed account-level detail.
+  The PORTFOLIO CONTEXT block is authoritative for portfolio-level context
+  graph dollar totals; tools validate and extend it.
   Call as many tools as the analysis requires — analytical personas
   (CRO, CFO, VP CS, CSM) often need to triangulate across 3-5 tools to
   produce a defensible answer. Do NOT self-throttle on tool count.
@@ -298,10 +307,10 @@ def _build_portfolio_summary(customer_id: int) -> str:
         rev_expansion = 0
         try:
             from utils.context_graph import aggregate_revenue_across_accounts
-            rev_data = aggregate_revenue_across_accounts(customer_id)
-            rev_at_risk = rev_data.get('at_risk', 0)
-            rev_protected = rev_data.get('protected', 0)
-            rev_expansion = rev_data.get('expansion', 0)
+            rev_data = aggregate_revenue_across_accounts(customer_id, account_ids)
+            rev_at_risk = rev_data.get('revenue_at_risk', 0)
+            rev_protected = rev_data.get('revenue_protected', 0)
+            rev_expansion = rev_data.get('expansion_pipeline', 0)
         except Exception:
             pass
 
@@ -380,9 +389,14 @@ def ask_v2():
                 'fallback': True,  # Signal frontend to use v1 endpoint
             }), 503
 
-        # Build system prompt with lightweight portfolio summary
+        # Portfolio summary + full context graph block (loaded before any tool/LLM turn)
         portfolio_summary = _build_portfolio_summary(customer_id)
-        system_prompt = _build_system_prompt(persona, portfolio_summary)
+        from utils.context_graph_ask_context import build_ask_context_graph_block
+        graph_context, graph_stats = build_ask_context_graph_block(customer_id)
+        system_prompt = _build_system_prompt(
+            persona,
+            f"{portfolio_summary}\n\n=== CONTEXT GRAPH (authoritative — cite node_id when referencing) ===\n{graph_context}",
+        )
 
         # Initialize Anthropic client
         import anthropic
@@ -550,10 +564,12 @@ def ask_v2():
             'artifacts': all_artifacts,
             'tools_called': tools_called,
             'context_stats': {
+                **graph_stats,
                 'tool_rounds': min(round_num + 1, max_rounds),
                 'tools_used': len(tools_called),
                 'unique_tools': list(set(tools_called)),
             },
+            'context_graph_loaded': True,
             'suggested_followups': _generate_followups(persona, tools_called),
             'elapsed_ms': elapsed_ms,
             'persona': persona,

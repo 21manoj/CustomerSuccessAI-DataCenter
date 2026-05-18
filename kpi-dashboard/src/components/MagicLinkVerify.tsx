@@ -51,7 +51,7 @@ const MagicLinkVerify: React.FC<MagicLinkVerifyProps> = ({ onLogin }) => {
           customer_id: data.user?.customer_id || 1,
           customer_name: data.user?.customer_name || undefined,
           user_id: data.user?.user_id?.toString() || '1',
-          user_name: data.user?.user_name || data.user?.customer_name || 'User',
+          user_name: data.user?.user_name || 'User',
           email: data.user?.email || '',
           vertical: data.vertical || 'saas_premium',
           dashboard_family: data.dashboard_family || 'saas',

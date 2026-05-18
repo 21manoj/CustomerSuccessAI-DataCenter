@@ -504,38 +504,14 @@ def aggregate_revenue_across_accounts(
     protected = 0.0
     expansion = 0.0
 
-    # Classify by revenue_impact_type OR node_subtype into 3 buckets.
-    # Must match all types used by close_execution, load_driver, and LLM enrichment.
-    RISK_TYPES = {'at_risk', 'lost', 'revenue_at_risk', 'churn_lost', 'churn_risk',
-                  'engagement_decline', 'renewal_uncertainty', 'capacity_constraint',
-                  'partner_friction', 'partial_recovery'}
-    PROTECTED_TYPES = {'protected', 'revenue_protected', 'churn_averted',
-                       'renewal_secured', 'revenue_saved', 'engagement_recovery',
-                       'escalation_resolved', 'intervention_outcome'}
-    EXPANSION_TYPES = {'expansion', 'expansion_closed', 'expansion_opportunity',
-                       'expansion_approved', 'expansion_realized', 'revenue_growth',
-                       'upsell', 'cross_sell'}
-
     for node in outcome_nodes:
-        try:
-            raw = float(node.revenue_impact)
-        except (TypeError, ValueError):
-            continue
-
-        # Check both revenue_impact_type and node_subtype for classification
-        impact_type = (node.revenue_impact_type or '').lower()
-        subtype = (node.node_subtype or '').lower()
-
-        if impact_type in RISK_TYPES or subtype in RISK_TYPES:
-            at_risk += abs(raw)
-        elif impact_type in EXPANSION_TYPES or subtype in EXPANSION_TYPES:
-            expansion += abs(raw)
-        elif impact_type in PROTECTED_TYPES or subtype in PROTECTED_TYPES:
-            protected += abs(raw)
-        elif raw < 0:
-            at_risk += abs(raw)  # negative revenue = at risk
-        elif raw > 0:
-            protected += raw     # positive unclassified = protected
+        bucket, amount = _outcome_revenue_bucket_and_amount(node)
+        if bucket == 'at_risk':
+            at_risk += amount
+        elif bucket == 'expansion':
+            expansion += amount
+        elif bucket == 'protected':
+            protected += amount
 
     return {
         'revenue_at_risk': round(at_risk, 2),
@@ -543,6 +519,124 @@ def aggregate_revenue_across_accounts(
         'expansion_pipeline': round(expansion, 2),
         'node_count': len(outcome_nodes),
     }
+
+
+# Classify OUTCOME revenue_impact into dashboard buckets (shared with provenance).
+_OUTCOME_RISK_TYPES = {
+    'at_risk', 'lost', 'revenue_at_risk', 'churn_lost', 'churn_risk',
+    'engagement_decline', 'renewal_uncertainty', 'capacity_constraint',
+    'partner_friction', 'partial_recovery',
+}
+_OUTCOME_PROTECTED_TYPES = {
+    'protected', 'revenue_protected', 'churn_averted', 'renewal_secured',
+    'revenue_saved', 'engagement_recovery', 'escalation_resolved', 'intervention_outcome',
+}
+_OUTCOME_EXPANSION_TYPES = {
+    'expansion', 'expansion_closed', 'expansion_opportunity', 'expansion_approved',
+    'expansion_realized', 'revenue_growth', 'upsell', 'cross_sell',
+}
+
+
+def _outcome_revenue_bucket_and_amount(node: ContextNode):
+    """Return (bucket, abs_amount) or (None, 0) for an OUTCOME node with revenue_impact."""
+    try:
+        raw = float(node.revenue_impact)
+    except (TypeError, ValueError):
+        return None, 0.0
+
+    impact_type = (node.revenue_impact_type or '').lower()
+    subtype = (node.node_subtype or '').lower()
+
+    if impact_type in _OUTCOME_RISK_TYPES or subtype in _OUTCOME_RISK_TYPES:
+        return 'at_risk', abs(raw)
+    if impact_type in _OUTCOME_EXPANSION_TYPES or subtype in _OUTCOME_EXPANSION_TYPES:
+        return 'expansion', abs(raw)
+    if impact_type in _OUTCOME_PROTECTED_TYPES or subtype in _OUTCOME_PROTECTED_TYPES:
+        return 'protected', abs(raw)
+    if raw < 0:
+        return 'at_risk', abs(raw)
+    if raw > 0:
+        return 'protected', raw
+    return None, 0.0
+
+
+def _outcome_node_trace(node: ContextNode) -> Dict[str, Any]:
+    return {
+        'node_id': node.node_id,
+        'account_id': node.account_id,
+        'node_subtype': node.node_subtype,
+        'revenue_impact': float(node.revenue_impact) if node.revenue_impact is not None else None,
+        'revenue_impact_type': node.revenue_impact_type,
+        'title': node.title,
+        'occurred_at': node.occurred_at.isoformat() if node.occurred_at else None,
+    }
+
+
+def aggregate_revenue_with_provenance(
+    customer_id: int,
+    account_ids: List[int],
+    sample_per_bucket: int = 8,
+) -> Dict[str, Any]:
+    """
+    Same totals as aggregate_revenue_across_accounts, plus trace samples for UI / audit.
+    """
+    base = aggregate_revenue_across_accounts(customer_id, account_ids)
+    empty_prov = {
+        'source': 'context_graph',
+        'engine': 'aggregate_revenue_across_accounts',
+        'outcome_node_count': 0,
+        'revenue_at_risk': {'sample_nodes': []},
+        'revenue_protected': {'sample_nodes': []},
+        'expansion_pipeline': {'sample_nodes': []},
+    }
+    if not account_ids:
+        return {**base, 'provenance': empty_prov}
+
+    outcome_nodes = (
+        ContextNode.query
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.account_id.in_(account_ids),
+            ContextNode.node_type == 'OUTCOME',
+            ContextNode.revenue_impact.isnot(None),
+        )
+        .all()
+    )
+
+    samples = {'at_risk': [], 'protected': [], 'expansion': []}
+    for node in outcome_nodes:
+        bucket, amount = _outcome_revenue_bucket_and_amount(node)
+        if not bucket or amount <= 0:
+            continue
+        key = bucket if bucket != 'expansion' else 'expansion'
+        if bucket == 'at_risk' and len(samples['at_risk']) < sample_per_bucket:
+            samples['at_risk'].append(_outcome_node_trace(node))
+        elif bucket == 'protected' and len(samples['protected']) < sample_per_bucket:
+            samples['protected'].append(_outcome_node_trace(node))
+        elif bucket == 'expansion' and len(samples['expansion']) < sample_per_bucket:
+            samples['expansion'].append(_outcome_node_trace(node))
+
+    provenance = {
+        'source': 'context_graph',
+        'engine': 'aggregate_revenue_across_accounts',
+        'outcome_node_count': len(outcome_nodes),
+        'revenue_at_risk': {
+            'value': base['revenue_at_risk'],
+            'label': 'Confirmed Risk (Context Graph)',
+            'sample_nodes': samples['at_risk'],
+        },
+        'revenue_protected': {
+            'value': base['revenue_protected'],
+            'label': 'Protected (Context Graph OUTCOME nodes)',
+            'sample_nodes': samples['protected'],
+        },
+        'expansion_pipeline': {
+            'value': base['expansion_pipeline'],
+            'label': 'Expansion (Context Graph OUTCOME nodes)',
+            'sample_nodes': samples['expansion'],
+        },
+    }
+    return {**base, 'provenance': provenance}
 
 
 def get_account_graph_summary(account_id: int, include_narrative: bool = False) -> Dict[str, Any]:

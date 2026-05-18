@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Building2 } from 'lucide-react';
 import { useSession } from '../../contexts/SessionContext';
+import { getCustomerIdentifier } from '../../utils/api';
 
 interface DashboardTopBarProps {
   /** Accent color for the left border: 'red' | 'emerald' | 'purple' | 'teal' | 'amber' */
@@ -46,6 +47,12 @@ const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ accent = 'red', custo
   //       without forcing a logout).
   useEffect(() => {
     if (!session || propName) return;
+    if (session.customer_name) {
+      setResolvedName(session.customer_name);
+      setResolvedId(session.customer_id);
+      return;
+    }
+
     const isSuperAdmin = session.customer_id === 1;
     const missingName = !session.customer_name;
     if (!isSuperAdmin && !missingName) return;
@@ -53,14 +60,21 @@ const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ accent = 'red', custo
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     if (isSuperAdmin && session.customer_uuid) {
       headers['X-Customer-ID'] = session.customer_uuid;
+    } else {
+      headers['X-Customer-ID'] = getCustomerIdentifier(session);
     }
 
-    fetch('/api/v1/accounts', { credentials: 'include', headers })
-      .then((r) => r.ok ? r.json() : null)
+    fetch('/api/v1/accounts', {
+      credentials: 'include',
+      headers,
+    })
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.customer_name) {
           setResolvedName(data.customer_name);
-          setResolvedId(data.customer_id);
+        }
+        if (data?.customer_id != null) {
+          setResolvedId(Number(data.customer_id));
         }
       })
       .catch(() => {});

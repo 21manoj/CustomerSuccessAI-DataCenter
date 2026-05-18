@@ -11,7 +11,7 @@
  * - Revenue Timeline for selected accounts
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -31,6 +31,15 @@ import AskAIPortal from '../ai/AskAIPortal';
 import { trackPageView, trackEvent } from '../../utils/activityTracker';
 import { PredictorV3Tile } from '../predictor/PredictorV3Tile';
 import { DashboardErrorState } from '../shared/DashboardErrorState';
+import {
+  type CroPeriod,
+  type QuarterBucket,
+  getCalendarQuarter,
+  monthInPeriod,
+  periodDisplayLabel,
+  periodToAnchorBucket,
+  previousQuarter,
+} from '../../utils/croPeriod';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
@@ -601,13 +610,15 @@ const TransitionAlertBanner: React.FC<{
   transitions: HealthTransition[];
   dismissedKeys: Set<string>;
   onDismissKey: (key: string) => void;
-}> = ({ transitions, dismissedKeys, onDismissKey }) => {
+  period: CroPeriod;
+}> = ({ transitions, dismissedKeys, onDismissKey, period }) => {
   // Filter: only healthy → at_risk OR healthy → critical, and dedupe per
   // account (keep the most recent transition per account in case multiple
   // months flipped within the window — latest is what the CRO cares about).
   const flips = React.useMemo(() => {
     const downward = transitions.filter(
       (t) =>
+        monthInPeriod(t.month, period) &&
         t.from_status === 'healthy' &&
         (t.to_status === 'at_risk' || t.to_status === 'critical')
     );
@@ -618,7 +629,7 @@ const TransitionAlertBanner: React.FC<{
       if (!byAccount.has(t.account_id)) byAccount.set(t.account_id, t);
     }
     return Array.from(byAccount.values());
-  }, [transitions]);
+  }, [transitions, period]);
 
   // The "most recent month" with any flip is the cohort we surface in the
   // banner. Older flips just contribute to the count history.
@@ -707,80 +718,145 @@ interface QuarterlyAtRisk {
   hasData: boolean;
 }
 
+function monthsInQuarterBucket(b: { y: number; q: number }): string[] {
+  const startM = (b.q - 1) * 3 + 1;
+  return [0, 1, 2].map((i) => `${b.y}-${String(startM + i).padStart(2, '0')}`);
+}
+
+function snapshotForBucket(
+  accounts: AccountHistory[],
+  b: { y: number; q: number },
+  healthyMin: number,
+): QuarterlyAtRisk {
+  const candidateMonths = monthsInQuarterBucket(b).reverse();
+  let totalAtRiskArr = 0;
+  let atRiskCount = 0;
+  let anyDataFound = false;
+  for (const acc of accounts) {
+    let scoreInQuarter: MonthlyScore | null = null;
+    for (const m of candidateMonths) {
+      const ms = (acc.monthly_scores || []).find((x) => x.month === m);
+      if (ms) {
+        scoreInQuarter = ms;
+        anyDataFound = true;
+        break;
+      }
+    }
+    if (scoreInQuarter && scoreInQuarter.health_score < healthyMin) {
+      totalAtRiskArr += acc.arr || 0;
+      atRiskCount += 1;
+    }
+  }
+  return {
+    label: `Q${b.q} ${b.y}`,
+    arr: totalAtRiskArr,
+    accountCount: atRiskCount,
+    hasData: anyDataFound,
+  };
+}
+
 function computeQuarterlyAtRisk(
-  accounts: AccountHistory[]
+  accounts: AccountHistory[],
+  anchor?: QuarterBucket | null,
 ): { current: QuarterlyAtRisk; lastQuarter: QuarterlyAtRisk; yearAgo: QuarterlyAtRisk } {
-  // thresholdValues() is the canonical source of truth for healthy_min (70).
-  // Hardcoding is explicitly forbidden per MEMORY.md threshold guidance.
   const healthyMin = thresholdValues().healthy_min;
-  // Anchor "this quarter" on the latest month across all accounts.
+  const empty: QuarterlyAtRisk = { label: 'N/A', arr: 0, accountCount: 0, hasData: false };
+
   const allMonths = new Set<string>();
   for (const acc of accounts) {
     for (const ms of acc.monthly_scores || []) allMonths.add(ms.month);
   }
   const sortedMonths = Array.from(allMonths).sort();
-  const latestMonth = sortedMonths[sortedMonths.length - 1];
-
-  const empty: QuarterlyAtRisk = { label: 'N/A', arr: 0, accountCount: 0, hasData: false };
-  if (!latestMonth) {
+  if (sortedMonths.length === 0) {
     return { current: empty, lastQuarter: empty, yearAgo: empty };
   }
 
-  const [yStr, mStr] = latestMonth.split('-');
-  const latestY = Number(yStr);
-  const latestM = Number(mStr); // 1-12
-  const currentQ = Math.ceil(latestM / 3); // 1-4
+  let currentBucket: { y: number; q: number };
+  if (anchor) {
+    currentBucket = { y: anchor.y, q: anchor.q };
+  } else {
+    const latestMonth = sortedMonths[sortedMonths.length - 1];
+    const [yStr, mStr] = latestMonth.split('-');
+    const latestM = Number(mStr);
+    currentBucket = { y: Number(yStr), q: Math.ceil(latestM / 3) };
+  }
 
-  const currentBucket = { y: latestY, q: currentQ };
-  const lastQ = currentQ === 1 ? 4 : currentQ - 1;
-  const lastY = currentQ === 1 ? latestY - 1 : latestY;
-  const lastBucket = { y: lastY, q: lastQ };
-  const yearAgoBucket = { y: latestY - 1, q: currentQ };
-
-  const qLabel = (b: { y: number; q: number }) => `Q${b.q} ${b.y}`;
-
-  const monthsInQuarter = (b: { y: number; q: number }) => {
-    const startM = (b.q - 1) * 3 + 1;
-    return [startM, startM + 1, startM + 2].map(
-      (m) => `${b.y}-${String(m).padStart(2, '0')}`
-    );
-  };
-
-  // For each bucket, find the LATEST month within the quarter we have data
-  // for, per account. Snapshot at that month so within-quarter sampling is
-  // consistent across buckets (no double-counting if multiple months exist).
-  const snapshotForBucket = (b: { y: number; q: number }): QuarterlyAtRisk => {
-    const candidateMonths = monthsInQuarter(b).reverse(); // latest in quarter first
-    let totalAtRiskArr = 0;
-    let atRiskCount = 0;
-    let anyDataFound = false;
-    for (const acc of accounts) {
-      let scoreInQuarter: MonthlyScore | null = null;
-      for (const m of candidateMonths) {
-        const ms = (acc.monthly_scores || []).find((x) => x.month === m);
-        if (ms) {
-          scoreInQuarter = ms;
-          anyDataFound = true;
-          break;
-        }
-      }
-      if (scoreInQuarter && scoreInQuarter.health_score < healthyMin) {
-        totalAtRiskArr += acc.arr || 0;
-        atRiskCount += 1;
-      }
-    }
-    return {
-      label: qLabel(b),
-      arr: totalAtRiskArr,
-      accountCount: atRiskCount,
-      hasData: anyDataFound,
-    };
-  };
+  const prior = previousQuarter({ y: currentBucket.y, q: currentBucket.q, label: '' });
+  const lastBucket = { y: prior.y, q: prior.q };
+  const yearAgoBucket = { y: currentBucket.y - 1, q: currentBucket.q };
 
   return {
-    current: snapshotForBucket(currentBucket),
-    lastQuarter: snapshotForBucket(lastBucket),
-    yearAgo: snapshotForBucket(yearAgoBucket),
+    current: snapshotForBucket(accounts, currentBucket, healthyMin),
+    lastQuarter: snapshotForBucket(accounts, lastBucket, healthyMin),
+    yearAgo: snapshotForBucket(accounts, yearAgoBucket, healthyMin),
+  };
+}
+
+/** Period-aware view: historical tabs use health-score snapshots, not live graph $. */
+function applyPeriodToCroData(
+  base: CRODashboardData,
+  period: CroPeriod,
+  historyAccounts: AccountHistory[],
+): CRODashboardData {
+  const anchor = periodToAnchorBucket(period);
+  const isLiveQuarter = period === 'Q4' && anchor.label === getCalendarQuarter().label;
+  const quarterly = computeQuarterlyAtRisk(historyAccounts, anchor);
+
+  const revenue_cards = base.revenue_cards.map((card, i) => {
+    if (i === 0 && quarterly.current.hasData) {
+      return {
+        ...card,
+        amount: isLiveQuarter ? card.amount : quarterly.current.arr,
+        subtitle: isLiveQuarter
+          ? card.subtitle
+          : `Health-based at-risk ARR · end of ${quarterly.current.label}`,
+        account_count: isLiveQuarter ? card.account_count : quarterly.current.accountCount,
+      };
+    }
+    if ((i === 1 || i === 2) && !isLiveQuarter) {
+      return {
+        ...card,
+        subtitle: `Point-in-time (context graph) · select Q4 for current confirmed $`,
+      };
+    }
+    return card;
+  });
+
+  const healthyMin = thresholdValues().healthy_min;
+  const candidateMonths = monthsInQuarterBucket(anchor).reverse();
+  const risk_accounts = isLiveQuarter
+    ? base.risk_accounts
+    : historyAccounts
+        .map((acc): RiskAccount | null => {
+          let scoreInQuarter: MonthlyScore | null = null;
+          for (const m of candidateMonths) {
+            const ms = (acc.monthly_scores || []).find((x) => x.month === m);
+            if (ms) {
+              scoreInQuarter = ms;
+              break;
+            }
+          }
+          if (!scoreInQuarter || scoreInQuarter.health_score >= healthyMin) return null;
+          const score = scoreInQuarter.health_score;
+          const cls = score < 50 ? 'critical' as const : score < 70 ? 'at_risk' as const : 'healthy' as const;
+          return {
+            account_id: acc.account_id,
+            account_name: acc.account_name,
+            health_score: score,
+            arr: acc.arr || 0,
+            classification: cls,
+            signal_count: 0,
+            pillar_scores: {},
+          };
+        })
+        .filter((a): a is RiskAccount => a != null)
+        .sort((a, b) => a.health_score - b.health_score);
+
+  return {
+    ...base,
+    revenue_cards,
+    risk_accounts,
+    period: periodDisplayLabel(period),
   };
 }
 
@@ -788,8 +864,13 @@ const QuarterlyAtRiskTile: React.FC<{
   accounts: AccountHistory[];
   loading: boolean;
   monthsAvailable: number;
-}> = ({ accounts, loading, monthsAvailable }) => {
-  const stats = React.useMemo(() => computeQuarterlyAtRisk(accounts), [accounts]);
+  period: CroPeriod;
+}> = ({ accounts, loading, monthsAvailable, period }) => {
+  const anchor = periodToAnchorBucket(period);
+  const stats = React.useMemo(
+    () => computeQuarterlyAtRisk(accounts, anchor),
+    [accounts, anchor.y, anchor.q],
+  );
 
   const renderDelta = (curr: number, ref: QuarterlyAtRisk) => {
     if (!ref.hasData) {
@@ -838,6 +919,7 @@ const QuarterlyAtRiskTile: React.FC<{
           <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
           <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">
             Revenue at Risk · Quarterly Trend
+            <span className="text-gray-500 normal-case font-normal ml-1">({periodDisplayLabel(period)})</span>
           </h3>
         </div>
         <span
@@ -1329,6 +1411,14 @@ const CRODashboard: React.FC = () => {
   const signalCount = data?.story_arcs?.reduce((s, a) => s + (a.account_count || 0), 0) || 0;
   const roiPct = data?.roi_summary?.roi_pct || 0;
 
+  const displayData = useMemo(() => {
+    if (!data) return null;
+    return applyPeriodToCroData(data, activePeriod, historyAccounts);
+  }, [data, activePeriod, historyAccounts]);
+
+  const isLiveQuarter =
+    activePeriod === 'Q4' && periodToAnchorBucket('Q4').label === getCalendarQuarter().label;
+
   // ---- Sub-view rendering (non-overview views) ----
   if (activeView !== 'cro-overview') {
     return (
@@ -1423,7 +1513,17 @@ const CRODashboard: React.FC = () => {
     );
   }
 
-  const d = data!;
+  if (!data || !displayData) {
+    return (
+      <DashboardErrorState
+        dashboardLabel="CRO dashboard"
+        errorMessage="No dashboard data available."
+        errorStatus={null}
+      />
+    );
+  }
+
+  const d = displayData;
 
   return (
     <div className="flex flex-col h-screen bg-[#0f1419] text-white font-['Inter',sans-serif]">
@@ -1447,7 +1547,7 @@ const CRODashboard: React.FC = () => {
             <div>
               <h1 className="text-lg font-semibold text-white tracking-tight">
                 REVENUE INTELLIGENCE
-                <span className="text-gray-500 font-normal ml-2">&middot; {d.period}</span>
+                <span className="text-gray-500 font-normal ml-2">&middot; {displayData.period}</span>
               </h1>
               <div className="h-0.5 w-12 bg-red-500 mt-1.5 rounded-full" />
             </div>
@@ -1464,18 +1564,31 @@ const CRODashboard: React.FC = () => {
               {(['Q3', 'Q4', 'TTM'] as const).map((p) => (
                 <button
                   key={p}
-                  onClick={() => setActivePeriod(p)}
+                  type="button"
+                  onClick={() => {
+                    setActivePeriod(p);
+                    trackEvent('cro_period_change', p, { persona: 'cro', period: p });
+                  }}
                   className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                     activePeriod === p
-                      ? 'bg-white/10 text-white'
+                      ? 'bg-white/10 text-white ring-1 ring-white/20'
                       : 'text-gray-500 hover:text-gray-300'
                   }`}
+                  aria-pressed={activePeriod === p}
                 >
                   {p}
                 </button>
               ))}
             </div>
           </div>
+
+          {!isLiveQuarter && (
+            <div className="mb-4 rounded-lg border border-amber-700/40 bg-amber-950/20 px-4 py-2.5 text-[11px] text-amber-100/80">
+              Viewing <span className="font-semibold text-amber-200">{displayData.period}</span> — revenue at risk
+              and account list use health-score snapshots for that period. Protected / expansion $ and forward
+              forecast are point-in-time; switch to <span className="font-semibold">Q4</span> for live context-graph totals.
+            </div>
+          )}
 
           {/* CRO-6: dismissible alert when accounts flipped healthy → at_risk
               in the most recent month. Computed client-side from
@@ -1487,12 +1600,13 @@ const CRODashboard: React.FC = () => {
             onDismissKey={(k) =>
               setDismissedTransitionKeys((prev) => new Set(prev).add(k))
             }
+            period={activePeriod}
           />
 
           {/* Row 1: Revenue cards */}
           <div className="grid grid-cols-3 gap-4 mb-4">
-            {d.revenue_cards.map((card, i) => (
-              <RevenueCardComponent key={i} card={card} riskAccounts={i === 0 ? d.risk_accounts : undefined} />
+            {displayData.revenue_cards.map((card, i) => (
+              <RevenueCardComponent key={i} card={card} riskAccounts={i === 0 ? displayData.risk_accounts : undefined} />
             ))}
           </div>
 
@@ -1503,6 +1617,7 @@ const CRODashboard: React.FC = () => {
             accounts={historyAccounts}
             loading={historyLoading}
             monthsAvailable={historyMonthsAvailable}
+            period={activePeriod}
           />
 
           {/* Predictor v3 — top expansion + top at-risk per-account forecast.
@@ -1515,7 +1630,7 @@ const CRODashboard: React.FC = () => {
               the at-risk + expansion + per-account NRR queries between
               account-specific renewal date, 3-month quarter window, and
               12-month default. The tile re-fetches when horizon changes. */}
-          {session && (
+          {isLiveQuarter && session && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] uppercase tracking-[0.18em] text-gray-500">
