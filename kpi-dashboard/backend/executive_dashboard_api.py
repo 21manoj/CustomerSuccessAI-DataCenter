@@ -1012,40 +1012,39 @@ def cfo_dashboard():
         # ── Power-of-1 benchmark fallback when no ROI snapshot ──
         if not power_of_1_metrics and total_arr > 0:
             power_of_1_metrics = _get_po1_benchmark_metrics(total_arr)
-            # Estimate ROI from benchmark totals
             if estimated_investment > 0:
-                total_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
-                roi_pct = round((total_impact / estimated_investment - 1) * 100) if estimated_investment > 0 else 0
-                roi_impact = total_impact
-            # Set projected NRR/GRR from 1% improvement
+                roi_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
             for m in power_of_1_metrics:
                 if m['metric_id'] == 'NRR':
                     nrr_projection = round(m['current'])
                 elif m['metric_id'] == 'GRR':
                     grr_projection = round(m['current'])
 
-        # ── ROI scaling projections (non-linear) ──
-        num_accounts = len(accounts)
-        roi_scaling = {
-            'current_accounts': num_accounts,
-            'current_roi': roi_pct,
-            'projections': [],
-        }
-        for target_accounts in [10, 50, 200]:
-            if num_accounts > 0 and roi_pct > 0:
-                # Non-linear scaling: ROI improves with log of account ratio
-                scale_factor = 1 + math.log(max(target_accounts / max(num_accounts, 1), 1) + 1) * 0.8
-                projected_roi = round(roi_pct * scale_factor)
-            else:
-                projected_roi = 0
-            roi_scaling['projections'].append({
-                'accounts': target_accounts,
-                'roi': projected_roi,
-            })
-
         # ── Pre-compute effective investment (needed by pillar breakdown + efficiency) ──
         is_estimated = cs_investment == 0 and estimated_investment > 0
         effective_investment = cs_investment or estimated_investment
+
+        # ── Phase 3: modeled ROI % + scaling (recompute when snapshot ROI is 0) ──
+        from utils.cfo_dashboard_helpers import (
+            build_cfo_efficiency_metrics,
+            build_roi_scaling,
+            resolve_cfo_roi_pct,
+        )
+
+        roi_pct, roi_multiple, roi_is_modeled = resolve_cfo_roi_pct(
+            roi_snap,
+            power_of_1_metrics,
+            estimated_investment,
+            roi_impact=roi_impact,
+        )
+        if roi_impact <= 0 and power_of_1_metrics:
+            roi_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
+
+        num_accounts = len(accounts)
+        roi_scaling = build_roi_scaling(
+            roi_pct, num_accounts, is_modeled=roi_is_modeled or is_estimated,
+        )
+        roi_scaling['roi_multiple'] = roi_multiple
 
         # ── Pillar investment breakdown (from Power-of-1 metrics) ──
         # Map Po1 metrics to pillars for realistic per-pillar impact
@@ -1113,11 +1112,6 @@ def cfo_dashboard():
                 'return': month_return,
             })
 
-        # ── Compute efficiency metrics ──
-        # (is_estimated and effective_investment computed above, before pillar breakdown)
-        # Efficiency score: projected impact / investment (capped at 100)
-        efficiency_score = min(round((roi_impact / effective_investment) * 50, 0), 100) if effective_investment > 0 else 0
-        # Payback months
         payback_months = round((effective_investment / roi_impact) * 12) if roi_impact > 0 else 0
 
         # ── Cost of Inaction + Revenue Waterfall ──
@@ -1241,6 +1235,18 @@ def cfo_dashboard():
             proof_data['executions'].sort(key=lambda e: e['revenue_protected'], reverse=True)
         except Exception as e:
             logger.warning(f"CFO proof_data computation failed: {e}")
+
+        # ── Phase 3: efficiency from playbook economics or proof (after proof_data) ──
+        efficiency_block = build_cfo_efficiency_metrics(
+            customer_id,
+            total_arr,
+            proof_data,
+            effective_investment,
+            roi_impact,
+        )
+        efficiency_score = efficiency_block.get('efficiency_score', 0)
+        automation_rate = efficiency_block.get('automation_rate', 0)
+        time_saved_hours = efficiency_block.get('time_saved_hours', 0)
 
         # ── HISTORICAL ACTUALS (Row A of "Past — Three Lenses") ──
         # Raw OUTCOME aggregates from the customer's own uploaded data.
@@ -1455,13 +1461,14 @@ def cfo_dashboard():
                 power_of_1_metrics,
             ),
             'roi_scaling': roi_scaling,
+            'roi_multiple': roi_multiple,
+            'roi_is_modeled': roi_is_modeled or is_estimated,
             'pillar_investments': pillar_investments,
             'investment_timeline': investment_timeline,
-            # Efficiency metrics (projected when using benchmarks)
+            'efficiency': efficiency_block,
             'efficiency_score': efficiency_score,
-            'automation_rate': 35 if is_estimated else 0,  # benchmark: 35% typical
-            # ~20 hrs/mo per account saved via playbook automation at 35% rate
-            'time_saved_hours': round(num_accounts * 20 * 0.35, 0) if is_estimated else 0,
+            'automation_rate': automation_rate,
+            'time_saved_hours': time_saved_hours,
             'payback_months': payback_months,
             # Pre-computed ratios so frontend doesn't need the fallback logic
             'rev_per_cs_dollar': round(roi_impact / effective_investment, 1) if effective_investment > 0 else 0,
@@ -1869,10 +1876,10 @@ PERSONA_PROMPTS = {
                 'vs modeled churn exposure. Name the NRR lens (historical / Wizard B / forward).',
         'suggested': [
             'What is our CS investment returning per dollar?',
-            'Which pillars have the worst ROI and should we reallocate?',
-            'What is the cost per account for our CS programs?',
-            'How does our ROI scale as we add more accounts?',
-            'Give me the board-ready summary of our CS investment.',
+            'How much confirmed revenue is at risk (context graph)?',
+            'Compare actual vs projected revenue protection — is a target set?',
+            'What is our payback period on CS Pulse adoption?',
+            'How does modeled ROI scale as we add more accounts?',
         ],
     },
     'ceo': {

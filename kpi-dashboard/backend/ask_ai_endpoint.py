@@ -73,6 +73,13 @@ PERSONA_PROMPTS = {
                 '(2) playbook-attributed revenue protected, (3) modeled churn exposure '
                 'from unhealthy accounts. Name which lens you use. For NRR, state whether '
                 'historical actuals, Wizard B TTM counterfactual, or Predictor v3 forward.',
+        'suggested': [
+            'What is our CS investment returning per dollar?',
+            'How much confirmed revenue is at risk in the context graph?',
+            'Compare actual vs projected revenue protection — do we have a target set?',
+            'What is our payback period on CS Pulse at current playbook economics?',
+            'How does modeled ROI scale if we add more accounts?',
+        ],
     },
     'ceo': {
         'role': 'Chief Executive Officer',
@@ -140,6 +147,24 @@ def _build_system_prompt(persona: str, portfolio_summary: str) -> str:
             "truncated mid-analysis answer is worse than a shorter answer "
             "with fewer tools. (CEO only — analytical personas like CRO, "
             "CFO, VP CS need to call multiple tools to do their job.)"
+        )
+    if persona == 'cfo':
+        persona_specific_rules += (
+            "\n- CFO NRR LENS: When asked 'what is our NRR' (or similar), "
+            "state which lens before the number: (1) historical actuals from "
+            "outcomes, (2) Wizard B TTM counterfactual, or (3) Predictor v3 "
+            "forward 12mo. Do not blend lenses in one headline %."
+            "\n- CFO VARIANCE (actual vs projected): If no corporate budget "
+            "target or quarterly projection exists in context or tool output, "
+            "say so explicitly — do NOT invent a 'projected' figure. Offer "
+            "modeled Po1 or playbook forward impact as context only, labeled "
+            "as modeled."
+            "\n- CFO TOOL DISCIPLINE: For portfolio ROI, cost-per-save, or "
+            "payback questions you MUST call get_portfolio_roi_summary and/or "
+            "get_outcome_roi_story before stating multiples or $. For "
+            "confirmed $ at risk / expansion, cite CONTEXT GRAPH totals first."
+            "\n- CFO REVENUE LENSES: playbook-attributed $ ≠ context-graph "
+            "confirmed $ ≠ modeled churn exposure (health-based COI)."
         )
 
     return f"""You are the AI assistant for CS Pulse, a Customer Success Revenue Intelligence platform.

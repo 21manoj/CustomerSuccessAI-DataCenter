@@ -72,6 +72,11 @@ jobs:
             tests/test_account_snapshot.py \
             tests/test_portfolio_synergy.py \
             tests/test_mcp_interfaces.py \
+            tests/test_cfo_dashboard_context_graph.py \
+            tests/test_cfo_dashboard_phase2.py \
+            tests/test_cfo_dashboard_phase3.py \
+            tests/test_cfo_ask_ai_phase4.py \
+            tests/test_cfo_phase5_persona_ci.py \
             -v --tb=short -q 2>&1 || true
 
   # ── Frontend Build + Tests ──────────────────────────────────

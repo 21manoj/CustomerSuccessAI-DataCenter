@@ -90,7 +90,17 @@ interface ROIScalingTier {
   accounts: number;
   label: string;
   roi: number;
-  growth_bar: number; // percentage width for visual
+  growth_bar: number;
+}
+
+interface CFOEfficiency {
+  available: boolean;
+  source: string;
+  efficiency_score: number;
+  automation_rate: number;
+  time_saved_hours: number;
+  rev_per_cs_dollar: number;
+  label?: string;
 }
 
 interface FinancialRatio {
@@ -283,6 +293,9 @@ interface CFODashboardData {
   pillar_investments: PillarInvestment[];
   investment_timeline: InvestmentTimelinePoint[];
   roi_scaling: ROIScalingTier[];
+  roi_scaling_is_modeled: boolean;
+  roi_multiple: number;
+  efficiency: CFOEfficiency | null;
   efficiency_score: number;
   automation_rate: number;
   time_saved_hours: number;
@@ -746,8 +759,56 @@ const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = (
   );
 };
 
+/** Phase 3 — CS efficiency from playbook economics or proof (hidden when unavailable). */
+const CFOEfficiencyPanel: React.FC<{ efficiency: CFOEfficiency | null }> = ({ efficiency }) => {
+  if (!efficiency?.available) {
+    return null;
+  }
+  const isProof = efficiency.source === 'csPulseProof';
+  return (
+    <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-[10px] font-semibold tracking-[0.15em] text-gray-500 uppercase">
+          CS Efficiency
+        </h3>
+        <SourceLabel source={isProof ? 'csPulseProof' : 'benchmark'} />
+      </div>
+      <div className="text-center mb-3">
+        <p className="text-3xl font-bold text-cyan-400">{efficiency.efficiency_score}</p>
+        <p className="text-[10px] text-gray-500">Efficiency score (0–100)</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-center text-xs">
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <p className="font-semibold text-white">
+            {efficiency.automation_rate > 0 ? `${efficiency.automation_rate}%` : '—'}
+          </p>
+          <p className="text-[9px] text-gray-500">Automation (modeled)</p>
+        </div>
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <p className="font-semibold text-emerald-400">
+            {efficiency.rev_per_cs_dollar > 0 ? `$${efficiency.rev_per_cs_dollar}` : '—'}
+          </p>
+          <p className="text-[9px] text-gray-500">Rev / CS $</p>
+        </div>
+      </div>
+      {efficiency.time_saved_hours > 0 && (
+        <p className="text-[10px] text-gray-500 text-center mt-2">
+          ~{Math.round(efficiency.time_saved_hours).toLocaleString()}h playbook hours automated (modeled)
+        </p>
+      )}
+      {efficiency.label && (
+        <p className="text-[9px] text-gray-600 text-center mt-2 leading-relaxed">{efficiency.label}</p>
+      )}
+    </div>
+  );
+};
+
 /** ROI Scaling Analysis - three large cards */
-const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => {
+const ROIScalingSection: React.FC<{
+  tiers: ROIScalingTier[];
+  isModeled?: boolean;
+  roiMultiple?: number;
+}> = ({ tiers, isModeled, roiMultiple }) => {
   const tierColors = ['#06b6d4', '#22c55e', '#a855f7'];
   const tierBgColors = ['bg-cyan-500/10', 'bg-green-500/10', 'bg-purple-500/10'];
 
@@ -760,9 +821,19 @@ const ROIScalingSection: React.FC<{ tiers: ROIScalingTier[] }> = ({ tiers }) => 
             Non-Linear ROI Scaling
           </h3>
         </div>
+        {isModeled && (
+          <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
+            Modeled · Po1
+          </span>
+        )}
       </div>
       <p className="text-[11px] text-gray-500 mb-5">
-        CS Pulse platform costs remain fixed while revenue impact compounds across accounts. Each additional account adds marginal cost but full playbook value.
+        CS Pulse platform costs remain fixed while revenue impact compounds across accounts.
+        {roiMultiple != null && roiMultiple > 0 && (
+          <span className="block mt-1 text-amber-400/80">
+            Portfolio modeled ROI multiple: {roiMultiple}x (capped display % below).
+          </span>
+        )}
       </p>
       {tiers.length === 0 ? (
         <div className="text-center py-8">
@@ -1866,13 +1937,27 @@ const CFODashboard: React.FC = () => {
           }));
 
           const scalingProjs = json.roi_scaling?.projections || [];
-          const roiScaling: ROIScalingTier[] = scalingProjs.map((s: any, i: number) => ({
+          const roiScalingIsModeled = Boolean(
+            json.roi_scaling?.is_modeled ?? json.roi_is_modeled,
+          );
+          const roiScaling: ROIScalingTier[] = scalingProjs.map((s: any) => ({
             accounts: s.accounts,
             label: `${s.accounts} accts`,
-            roi: s.roi,
-            growth_bar: i === 0 ? 30 : i === 1 ? 60 : 90,
+            roi: s.roi ?? 0,
+            growth_bar: s.growth_bar ?? 0,
           }));
-          // If API returns no scaling projections, leave empty — UI handles gracefully
+          const roiMultiple = Number(json.roi_multiple ?? json.roi_scaling?.roi_multiple ?? 0);
+          const efficiencyBlock: CFOEfficiency | null = json.efficiency?.available
+            ? {
+                available: true,
+                source: json.efficiency.source || 'benchmark',
+                efficiency_score: json.efficiency.efficiency_score || 0,
+                automation_rate: json.efficiency.automation_rate || 0,
+                time_saved_hours: json.efficiency.time_saved_hours || 0,
+                rev_per_cs_dollar: json.efficiency.rev_per_cs_dollar || 0,
+                label: json.efficiency.label,
+              }
+            : null;
 
           const csPercent = totalArr > 0 ? ((csInvestment / totalArr) * 100).toFixed(2) : '0';
 
@@ -2012,9 +2097,12 @@ const CFODashboard: React.FC = () => {
             pillar_investments: pillarInvs,
             investment_timeline: invTimeline,
             roi_scaling: roiScaling,
-            efficiency_score: json.efficiency_score || 0,
-            automation_rate: json.automation_rate || 0,
-            time_saved_hours: json.time_saved_hours || 0,
+            roi_scaling_is_modeled: roiScalingIsModeled,
+            roi_multiple: roiMultiple,
+            efficiency: efficiencyBlock,
+            efficiency_score: (efficiencyBlock?.efficiency_score ?? json.efficiency_score) || 0,
+            automation_rate: (efficiencyBlock?.automation_rate ?? json.automation_rate) || 0,
+            time_saved_hours: (efficiencyBlock?.time_saved_hours ?? json.time_saved_hours) || 0,
             // Use total projected impact (not just confirmed protected) when estimated
             cost_per_protected_dollar: csInvestment > 0 && roiImpact > 0
               ? parseFloat((csInvestment / roiImpact).toFixed(2))
@@ -2660,7 +2748,11 @@ const CFODashboard: React.FC = () => {
                 </div>
 
                 {/* ROI Scaling Analysis */}
-                <ROIScalingSection tiers={d.roi_scaling} />
+                <ROIScalingSection
+                  tiers={d.roi_scaling}
+                  isModeled={d.roi_scaling_is_modeled}
+                  roiMultiple={d.roi_multiple}
+                />
               </div>
             )}
           </div>
@@ -2826,6 +2918,9 @@ const CFODashboard: React.FC = () => {
             <SourceLabel source="csPulseProof" className="mt-2" />
           </div>
         )}
+
+        {/* Phase 3: CS efficiency (playbook economics or proof) */}
+        <CFOEfficiencyPanel efficiency={d.efficiency} />
 
         {/* Quick Financial Ratios */}
         <FinancialRatiosWidget ratios={d.financial_ratios} />
