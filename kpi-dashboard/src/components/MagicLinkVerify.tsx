@@ -5,6 +5,7 @@ import { CheckCircle, XCircle, Loader2, Sparkles } from 'lucide-react';
 interface MagicLinkVerifyProps {
   onLogin: (session: {
     customer_id: number;
+    customer_name?: string;
     user_id: string;
     user_name: string;
     email: string;
@@ -48,6 +49,7 @@ const MagicLinkVerify: React.FC<MagicLinkVerifyProps> = ({ onLogin }) => {
         // Build session from verify response (same shape as login)
         const session = {
           customer_id: data.user?.customer_id || 1,
+          customer_name: data.user?.customer_name || undefined,
           user_id: data.user?.user_id?.toString() || '1',
           user_name: data.user?.user_name || data.user?.customer_name || 'User',
           email: data.user?.email || '',

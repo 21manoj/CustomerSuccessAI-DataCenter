@@ -25,9 +25,13 @@ const ACCENT_COLORS: Record<string, string> = {
  * Shared top bar for all persona dashboards.
  * Shows: Customer Name | Customer ID | User Name | Logout
  *
- * When super admin (customer_id=1) is logged in and X-Customer-ID header
- * points to a different customer, auto-resolves the actual customer name
- * so the header doesn't show "CS Pulse Admin" or "Customer 1".
+ * Sources, in order of preference, for the displayed customer name + id:
+ *   1. Props passed by the parent dashboard (super-admin acting-as override).
+ *   2. Resolved from /api/v1/accounts (fires when super admin is acting-as,
+ *      OR when the stored session is missing customer_name — self-heals
+ *      localStorage written by an older client).
+ *   3. session.customer_name / session.customer_id from SessionContext.
+ *   4. Last-resort fallback: "Customer <id>".
  */
 const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ accent = 'red', customerName: propName, customerId: propId }) => {
   const { session, logout } = useSession();
@@ -35,15 +39,19 @@ const DashboardTopBar: React.FC<DashboardTopBarProps> = ({ accent = 'red', custo
   const [resolvedName, setResolvedName] = useState<string | null>(null);
   const [resolvedId, setResolvedId] = useState<number | null>(null);
 
-  // Auto-resolve customer context for super admin sessions
+  // Auto-resolve customer context when either:
+  //   (a) session is super admin (customer_id = 1) acting as another tenant, or
+  //   (b) session is missing customer_name (e.g. localStorage was written by an
+  //       older client that did not persist it — self-heals stale sessions
+  //       without forcing a logout).
   useEffect(() => {
     if (!session || propName) return;
-    // Only resolve if session is super admin (customer_id = 1)
-    if (session.customer_id !== 1) return;
+    const isSuperAdmin = session.customer_id === 1;
+    const missingName = !session.customer_name;
+    if (!isSuperAdmin && !missingName) return;
 
-    // Try to get real customer context from the accounts endpoint
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    if (session.customer_uuid) {
+    if (isSuperAdmin && session.customer_uuid) {
       headers['X-Customer-ID'] = session.customer_uuid;
     }
 
