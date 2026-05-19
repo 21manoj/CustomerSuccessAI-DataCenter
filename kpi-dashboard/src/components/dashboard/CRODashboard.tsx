@@ -40,6 +40,14 @@ import {
   periodToAnchorBucket,
   previousQuarter,
 } from '../../utils/croPeriod';
+import {
+  CROMetricGuideBanner,
+  CROPreProofBanner,
+  CROContextGraphStrip,
+  type CROContextGraphRevenue,
+  type CROProofData,
+  type CustomerPhase,
+} from './CROOverviewHonesty';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
@@ -59,6 +67,8 @@ interface RevenueCard {
   subtitle: string;
   account_count?: number;
   accent: string;
+  badge?: string;
+  footnote?: string;
 }
 
 interface MetricCard {
@@ -191,6 +201,18 @@ interface CRODashboardData {
   renewals_at_risk: Array<{ account_name: string; arr: number; days_until: number; health_score: number }>;
   period: string;
   last_updated: string;
+  arr_exposure: number;
+  arr_exposure_label: string;
+  revenue_risk_label: string;
+  context_graph_revenue: CROContextGraphRevenue | null;
+  proof_data: CROProofData;
+  customer_phase: CustomerPhase;
+  playbook_roi_estimated: boolean;
+  wizard_b_nrr: {
+    with_cs_pulse_nrr_pct?: number;
+    without_cs_pulse_nrr_pct?: number;
+    delta_pct?: number;
+  } | null;
 }
 
 // ============================================================================
@@ -417,9 +439,19 @@ const RevenueCardComponent: React.FC<{ card: RevenueCard; riskAccounts?: RiskAcc
       <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: accent }} />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 opacity-10 blur-2xl" style={{ backgroundColor: accent }} />
       <div className="relative p-5">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{card.label}</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{card.label}</p>
+          {card.badge && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700/80 text-gray-300 font-medium">
+              {card.badge}
+            </span>
+          )}
+        </div>
         <p className="text-3xl font-bold text-white mb-1" style={{ color: accent }}>{formatCompact(card.amount)}</p>
-        <p className="text-xs text-gray-500 mb-3">{card.subtitle}</p>
+        <p className="text-xs text-gray-500 mb-1">{card.subtitle}</p>
+        {card.footnote && (
+          <p className="text-[10px] text-gray-600 mb-2">{card.footnote}</p>
+        )}
         {card.account_count != null && card.account_count > 0 && (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -1265,11 +1297,51 @@ const CRODashboard: React.FC = () => {
           // Transform flat API response into CRODashboardData shape
           const isEstimatedRoi = json.playbook_roi_estimated === true;
           const roiLabel = isEstimatedRoi ? 'Estimated (Power-of-1)' : `↑ ${json.playbook_roi_pct || 0}pp vs Q3`;
+          const proof = json.proof_data || {};
+          const executionsTotal = proof.executions_total || 0;
+          const realizedRoi = proof.realized_roi || 0;
+          const customerPhase: CustomerPhase =
+            executionsTotal === 0 ? 'pre_deploy'
+            : executionsTotal <= 5 ? 'onboarding'
+            : 'active';
+          const graphProv = json.context_graph_provenance || null;
+          const contextGraphRevenue: CROContextGraphRevenue | null = {
+            revenue_at_risk: json.revenue_at_risk || 0,
+            graph_revenue_protected: json.revenue_protected || 0,
+            expansion_pipeline: json.expansion_pipeline || 0,
+            revenue_risk_label: json.revenue_risk_label || 'Confirmed Risk (Context Graph)',
+            provenance: graphProv,
+          };
+          const arrExposure = json.arr_exposure || 0;
           const transformed: CRODashboardData = {
             revenue_cards: [
-              { label: 'Revenue at Risk', amount: json.revenue_at_risk || 0, subtitle: 'Causal evidence chains active', account_count: json.accounts_at_risk_count || 0, accent: 'red' },
-              { label: 'Revenue Protected', amount: json.revenue_protected || 0, subtitle: json.accounts_recovered_count ? 'Playbook interventions proven' : 'Context graph confirmed', account_count: json.accounts_recovered_count || undefined, accent: 'green' },
-              { label: 'Expansion Pipeline', amount: json.expansion_pipeline || 0, subtitle: json.expansion_candidates_count ? 'Stakeholder maps confirmed' : 'Context graph confirmed', account_count: json.expansion_candidates_count || undefined, accent: 'cyan' },
+              {
+                label: 'Revenue at Risk',
+                amount: json.revenue_at_risk || 0,
+                subtitle: json.revenue_risk_label || 'Confirmed (context graph)',
+                account_count: json.accounts_at_risk_count || 0,
+                accent: 'red',
+                badge: 'Confirmed',
+                footnote: arrExposure > 0
+                  ? `ARR exposure (health-band): ${formatCompact(arrExposure)} · ${json.arr_exposure_label || 'sub-70 accounts'}`
+                  : undefined,
+              },
+              {
+                label: 'Revenue Protected',
+                amount: json.revenue_protected || 0,
+                subtitle: json.accounts_recovered_count ? 'Playbook interventions proven' : 'Context graph confirmed',
+                account_count: json.accounts_recovered_count || undefined,
+                accent: 'green',
+                badge: 'Confirmed',
+              },
+              {
+                label: 'Expansion Pipeline',
+                amount: json.expansion_pipeline || 0,
+                subtitle: json.expansion_candidates_count ? 'Stakeholder maps confirmed' : 'Context graph confirmed',
+                account_count: json.expansion_candidates_count || undefined,
+                accent: 'cyan',
+                badge: 'Confirmed',
+              },
             ],
             metrics: [
               { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down', tooltip: 'Revenue-weighted average across all accounts. Larger accounts (by ARR) have proportionally more influence on this score.' },
@@ -1321,6 +1393,14 @@ const CRODashboard: React.FC = () => {
             renewals_at_risk: json.renewals_at_risk || [],
             period: json.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
             last_updated: json.last_updated || new Date().toISOString(),
+            arr_exposure: arrExposure,
+            arr_exposure_label: json.arr_exposure_label || 'Exposure (ARR in at-risk accounts)',
+            revenue_risk_label: json.revenue_risk_label || 'Confirmed Risk (Context Graph)',
+            context_graph_revenue: contextGraphRevenue,
+            proof_data: proof,
+            customer_phase: customerPhase,
+            playbook_roi_estimated: isEstimatedRoi,
+            wizard_b_nrr: json.wizard_b_nrr || null,
           };
           setData(transformed);
           trackPageView('cro_dashboard', { accounts: transformed.risk_accounts?.length || 0 });
@@ -1581,6 +1661,19 @@ const CRODashboard: React.FC = () => {
               ))}
             </div>
           </div>
+
+          <CROMetricGuideBanner />
+          {d.context_graph_revenue && (
+            <CROContextGraphStrip
+              data={d.context_graph_revenue}
+              onOpenGraph={() => handleViewChange('context-graph')}
+            />
+          )}
+          <CROPreProofBanner
+            phase={d.customer_phase}
+            executionsTotal={d.proof_data.executions_total || 0}
+            realizedRoi={d.proof_data.realized_roi || 0}
+          />
 
           {!isLiveQuarter && (
             <div className="mb-4 rounded-lg border border-amber-700/40 bg-amber-950/20 px-4 py-2.5 text-[11px] text-amber-100/80">

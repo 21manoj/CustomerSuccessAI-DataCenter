@@ -837,8 +837,21 @@ def cro_dashboard():
         except Exception as nrr_err:
             logger.warning(f"NRR forecast enrichment failed (non-fatal): {nrr_err}")
 
+        period_param = (request.args.get('period') or '').strip().upper() or None
+        period_meta = {
+            'requested_period': period_param,
+            'anchor_quarter_label': _current_quarter_label(),
+            'filter_mode': 'client_side',
+            'note': (
+                'CRO period tabs (Q3/Q4/TTM) filter at-risk $ and accounts in the UI; '
+                'pass ?period=Q3|Q4|TTM to echo the tab. Protected/expansion $ stay point-in-time.'
+            ),
+        }
+
         return jsonify({
             'status': 'success',
+            'period': period_param,
+            'period_meta': period_meta,
             # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
@@ -1859,11 +1872,11 @@ PERSONA_PROMPTS = {
                 'Lead with dollar amounts. Quantify risk in ARR terms. '
                 'Recommend actions that protect or grow revenue.',
         'suggested': [
-            'Which accounts have the highest churn risk and why?',
-            'Where is our biggest expansion opportunity right now?',
-            'What story arcs should I be worried about this quarter?',
-            'How is our playbook investment translating to revenue protection?',
-            'What would happen if we doubled down on our at-risk accounts?',
+            'How much confirmed revenue is at risk (context graph) over the next 90 days?',
+            'Which 3 accounts are most likely to churn next quarter, and why?',
+            'Where is our biggest expansion upside in the portfolio?',
+            'Show the causal chain for our worst-trending account this quarter.',
+            'Which playbooks are moving revenue vs wasting CSM time?',
         ],
     },
     'cfo': {

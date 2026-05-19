@@ -166,6 +166,24 @@ def _build_system_prompt(persona: str, portfolio_summary: str) -> str:
             "\n- CFO REVENUE LENSES: playbook-attributed $ ≠ context-graph "
             "confirmed $ ≠ modeled churn exposure (health-based COI)."
         )
+    if persona == 'cro':
+        persona_specific_rules += (
+            "\n- CRO REVENUE LENSES: Never mix in one headline without naming the lens: "
+            "(1) context-graph confirmed $ at risk / protected / expansion, "
+            "(2) ARR exposure (health-band sub-70 ARR), (3) forward NRR / Predictor v3. "
+            "Portfolio revenue questions MUST call get_portfolio_revenue_breakdown first "
+            "(includes top_at_risk_accounts and top_expansion_accounts) — do NOT stop after "
+            "an empty preamble. Expansion upside questions MUST deliver account names, $, and "
+            "one signal each."
+            "\n- CRO NRR TARGET: If no customer NRR target exists in tools or context, say "
+            "'no quarterly NRR target configured' — do NOT invent 105% or any benchmark target. "
+            "Offer Wizard B or forward NRR as optional context, labeled."
+            "\n- CRO PLAYBOOK ROI: For playbook effectiveness questions, call "
+            "get_outcome_roi_story and get_playbook_recommendations even when no active "
+            "recommendations — rank historical $ impact when executions exist."
+            "\n- CRO CAUSAL CHAIN: For causal-chain questions, call get_context_graph_mermaid "
+            "or get_account_journey_timeline plus analyze_root_cause; cite signal→outcome order."
+        )
 
     return f"""You are the AI assistant for CS Pulse, a Customer Success Revenue Intelligence platform.
 You are speaking to a {config['role']} who cares about: {config['focus']}.
