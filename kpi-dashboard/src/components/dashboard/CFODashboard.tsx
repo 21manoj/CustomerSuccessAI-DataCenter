@@ -38,6 +38,7 @@ import { trackPageView, trackEvent } from '../../utils/activityTracker';
 import PredictorV3Tile from '../predictor/PredictorV3Tile';
 import { PerAccountNRRForecastTable } from '../predictor/PerAccountNRRForecastTable';
 import { DashboardErrorState } from '../shared/DashboardErrorState';
+import PendingDecisionsQueue from './PendingDecisionsQueue';
 
 // ============================================================================
 // TYPES
@@ -2896,6 +2897,9 @@ const CFODashboard: React.FC = () => {
             economics={playbookEconomics}
           />
         )}
+
+        {/* Pending Decisions Queue — read-only v1 */}
+        <PendingDecisionsQueue persona="cfo" />
 
         {/* Revenue Waterfall */}
         {d.nrr_waterfall.expected_loss > 0 && (
