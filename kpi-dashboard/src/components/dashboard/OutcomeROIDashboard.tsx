@@ -40,6 +40,15 @@ interface ROISummary {
   improvement_pct_avg: number;
 }
 
+interface HistoricalDisclosure {
+  non_repeatable: boolean;
+  period_basis: string;            // 'since_onboarding' | 'trailing_window' | 'stable_window'
+  headline: string;                // short auditor-facing label
+  detail: string;                  // full disclosure paragraph
+  recommended_label: string;       // what the tile should display as the period
+  data_source?: string;
+}
+
 interface OutcomeResult {
   view_type: string;
   period_label: string;
@@ -55,6 +64,10 @@ interface OutcomeResult {
     improvement_pct: number;
     headline: string;
   }>;
+  // PR #20 (May 17) attaches this when the historical window surfaces
+  // non-repeatable, one-time gains (e.g. fresh-tenant decline→recovery
+  // trajectories where ROI > 500% and avg improvement > 2× forward steady-state).
+  disclosure?: HistoricalDisclosure | null;
 }
 
 interface BridgeData {
@@ -398,6 +411,26 @@ const OutcomePanel: React.FC<{
           {result.period_start} to {result.period_end}
         </div>
       </div>
+
+      {/* PR #20 disclosure — render when the historical view surfaces non-repeatable
+          one-time gains (e.g. fresh tenants where ROI > 500% reflects onboarding lift).
+          The backend already rewrites `period_label` above; this surfaces the structured
+          warning auditors expect. */}
+      {result.view_type === 'historical' && result.disclosure?.non_repeatable && (
+        <div className="bg-amber-50 border-x border-amber-200 border-b border-amber-200 px-6 py-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide">
+                {result.disclosure.headline}
+              </p>
+              <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                {result.disclosure.detail}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="bg-white border-x border-gray-200 px-6 py-5">
