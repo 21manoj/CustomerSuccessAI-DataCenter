@@ -48,6 +48,7 @@ import {
   type CROProofData,
   type CustomerPhase,
 } from './CROOverviewHonesty';
+import PendingDecisionsQueue from './PendingDecisionsQueue';
 
 // Lazy-load sub-views
 const SignalTimelineView = React.lazy(() => import('./views/SignalTimelineView'));
@@ -1972,6 +1973,9 @@ const CRODashboard: React.FC = () => {
 
       {/* ---- Right Sidebar ---- */}
       <aside className="w-80 flex-shrink-0 bg-[#0d1117] border-l border-gray-700/50 py-6 px-4 overflow-y-auto flex flex-col gap-5">
+        {/* Pending Decisions Queue — read-only v1 */}
+        <PendingDecisionsQueue persona="cro" />
+
         {/* Power of 1 ROI Engine */}
         <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4">
           <div className="flex items-center justify-between mb-1">

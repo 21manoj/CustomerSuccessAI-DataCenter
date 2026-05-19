@@ -2087,3 +2087,256 @@ def _generate_followups(query: str, persona_config: dict) -> list:
         followups.extend(persona_config['suggested'][:2])
 
     return followups[:3]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pending Decisions Queue (CRO / CFO right-sidebar panel)
+# ─────────────────────────────────────────────────────────────────────────────
+# Read-only v1. Surfaces items awaiting an executive decision, drawn from
+# existing data sources:
+#   • PlaybookExecutionV2 (status='in_progress')      → playbook reviews / spend approvals
+#   • ContextNode (node_type='DECISION', subset)      → flagged decisions (escalations etc.)
+#   • At-risk accounts without an active playbook     → launch-a-playbook decision
+#
+# Persona filter:
+#   • cro: sort by revenue_at_stake desc; default headline is account-centric.
+#   • cfo: sort by dollar_amount desc; default headline is investment-centric.
+# Both personas receive the SAME data; ordering + framing differ.
+
+_DECISION_KIND_HEADLINES = {
+    'playbook_in_flight': {
+        'cro': 'Review {account}: playbook in flight',
+        'cfo': 'Approve continued spend on {account}',
+    },
+    'at_risk_no_playbook': {
+        'cro': 'Decide intervention for {account}',
+        'cfo': 'Authorise budget to protect {account}',
+    },
+    'expansion_open': {
+        'cro': 'Staff expansion on {account}',
+        'cfo': 'Approve expansion investment in {account}',
+    },
+    'flagged_decision': {
+        'cro': 'Decide: {title}',
+        'cfo': 'Decide: {title}',
+    },
+}
+
+
+def _classify_urgency(revenue_at_stake: float, days_open: int) -> str:
+    """Simple urgency heuristic — not a model, just a deterministic bucket.
+    High = revenue ≥ $1M OR open > 30d. Low = revenue < $250k AND open ≤ 7d.
+    """
+    if revenue_at_stake >= 1_000_000 or days_open > 30:
+        return 'high'
+    if revenue_at_stake < 250_000 and days_open <= 7:
+        return 'low'
+    return 'medium'
+
+
+def _build_pending_decisions(customer_id: int, limit: int = 5):
+    """Pull pending-decision rows from existing sources. Returns unsorted list."""
+    accounts = _get_customer_accounts(customer_id)
+    if not accounts:
+        return []
+
+    account_ids = [a.account_id for a in accounts]
+    account_by_id = {a.account_id: a for a in accounts}
+    now = datetime.utcnow()
+    items = []
+
+    # Health scores — guarded against schema drift (rare, but pre-existing pattern).
+    latest_health = {}
+    try:
+        latest_health = _get_latest_health_scores(customer_id, account_ids)
+    except Exception:
+        logger.warning('pending_decisions: health-score fetch failed; skipping at-risk path', exc_info=True)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+    # 1) In-flight playbooks — spend/continuation decisions
+    in_flight = []
+    try:
+        in_flight = (
+            PlaybookExecutionV2.query
+            .filter_by(customer_id=customer_id, status='in_progress')
+            .order_by(PlaybookExecutionV2.triggered_at.desc())
+            .limit(20)
+            .all()
+        )
+    except Exception:
+        logger.warning('pending_decisions: PlaybookExecutionV2 query failed; skipping', exc_info=True)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    for ex in in_flight:
+        acct = account_by_id.get(ex.account_id)
+        if not acct:
+            continue
+        rev_at_stake = _safe_float(ex.arr_at_trigger) or _safe_float(acct.revenue)
+        cost = _safe_float(ex.total_cost)
+        triggered_at = ex.triggered_at or now
+        days_open = max(0, (now - triggered_at).days)
+        progress = ''
+        if ex.actions_planned:
+            progress = f"{ex.actions_completed or 0}/{ex.actions_planned} actions complete"
+        rationale_bits = [
+            f"{ex.playbook_name or ex.playbook_id}",
+            f"phase: {ex.phase or 'stabilize'}",
+            f"open {days_open}d",
+        ]
+        if progress:
+            rationale_bits.append(progress)
+        items.append({
+            'decision_id': f"pbexec_{ex.id}",
+            'kind': 'playbook_in_flight',
+            'account_id': acct.account_id,
+            'account_name': acct.account_name,
+            'dollar_amount': round(cost, 0),
+            'revenue_at_stake': round(rev_at_stake, 0),
+            'rationale': ' · '.join(rationale_bits),
+            'urgency': _classify_urgency(rev_at_stake, days_open),
+            'occurred_at': triggered_at.isoformat(),
+            'source': {'type': 'playbook_execution', 'id': ex.execution_id},
+        })
+
+    # 2) At-risk accounts WITHOUT an active playbook — launch-decision needed
+    accounts_with_active_pb = {ex.account_id for ex in in_flight}
+    healthy_floor = ht.healthy_min()
+    for acct in accounts:
+        if acct.account_id in accounts_with_active_pb:
+            continue
+        hs = latest_health.get(acct.account_id)
+        if not hs:
+            continue
+        score = _safe_float(hs.health_score)
+        if score >= healthy_floor:
+            continue
+        rev = _safe_float(acct.revenue)
+        # only surface accounts with material exposure
+        if rev < 100_000:
+            continue
+        # days since latest health snapshot (best-effort signal of how stale this risk is)
+        days_open = 0
+        snapshot_dt = getattr(hs, 'created_at', None) or getattr(hs, 'measurement_month', None)
+        if snapshot_dt:
+            try:
+                snapshot_dt = snapshot_dt if isinstance(snapshot_dt, datetime) else datetime.combine(snapshot_dt, datetime.min.time())
+                days_open = max(0, (now - snapshot_dt).days)
+            except Exception:
+                days_open = 0
+        items.append({
+            'decision_id': f"atrisk_{acct.account_id}",
+            'kind': 'at_risk_no_playbook',
+            'account_id': acct.account_id,
+            'account_name': acct.account_name,
+            'dollar_amount': 0,  # no spend yet — that's the point
+            'revenue_at_stake': round(rev, 0),
+            'rationale': f"health {round(score, 1)} · {ht.classify(score)} · no active playbook",
+            'urgency': _classify_urgency(rev, days_open),
+            'occurred_at': snapshot_dt.isoformat() if snapshot_dt else now.isoformat(),
+            'source': {'type': 'account', 'id': acct.account_id},
+        })
+
+    # 3) Open expansion opportunities from ContextNode
+    # Defensive: matches the cro_dashboard pattern (~line 568) — ContextNode schema
+    # drift between image versions has burned us before, so don't let a single
+    # missing column collapse the whole queue.
+    expansion_nodes = []
+    try:
+        expansion_nodes = (
+            ContextNode.query
+            .filter(
+                ContextNode.customer_id == customer_id,
+                ContextNode.revenue_impact_type == 'expansion',
+                ContextNode.revenue_impact.isnot(None),
+            )
+            .order_by(ContextNode.revenue_impact.desc())
+            .limit(10)
+            .all()
+        )
+    except Exception:
+        logger.warning('pending_decisions: ContextNode expansion query failed; skipping', exc_info=True)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    for n in expansion_nodes:
+        acct = account_by_id.get(n.account_id)
+        if not acct:
+            continue
+        rev = _safe_float(n.revenue_impact)
+        if rev <= 0:
+            continue
+        occurred = n.occurred_at or now
+        days_open = max(0, (now - occurred).days)
+        items.append({
+            'decision_id': f"ctx_{n.node_id}",
+            'kind': 'expansion_open',
+            'account_id': acct.account_id,
+            'account_name': acct.account_name,
+            'dollar_amount': 0,
+            'revenue_at_stake': round(rev, 0),
+            'rationale': (n.title or n.node_subtype or 'expansion signal') + f" · open {days_open}d",
+            'urgency': _classify_urgency(rev, days_open),
+            'occurred_at': occurred.isoformat(),
+            'source': {'type': 'context_node', 'id': n.node_id},
+        })
+
+    return items
+
+
+@executive_dashboard_api.route('/api/executive/pending-decisions', methods=['GET'])
+def pending_decisions():
+    """
+    Read-only pending-decisions queue for CRO + CFO dashboards.
+
+    Query params:
+      persona  — 'cro' (default) | 'cfo'   controls sort order + headline framing
+      limit    — int, default 5
+
+    Returns: { persona, items: [...], generated_at }
+    """
+    try:
+        customer_id = get_current_customer_id()
+        if not customer_id:
+            return jsonify({'error': 'Authentication required'}), 400
+
+        persona = (request.args.get('persona') or 'cro').lower()
+        if persona not in ('cro', 'cfo'):
+            persona = 'cro'
+        try:
+            limit = max(1, min(int(request.args.get('limit') or 5), 20))
+        except (TypeError, ValueError):
+            limit = 5
+
+        items = _build_pending_decisions(customer_id, limit=limit)
+
+        # persona-driven sort
+        if persona == 'cfo':
+            items.sort(key=lambda x: (x['dollar_amount'], x['revenue_at_stake']), reverse=True)
+        else:  # cro
+            items.sort(key=lambda x: x['revenue_at_stake'], reverse=True)
+
+        items = items[:limit]
+
+        # attach persona-framed headline
+        for it in items:
+            template = (_DECISION_KIND_HEADLINES.get(it['kind']) or {}).get(persona, '{title}')
+            it['headline'] = template.format(
+                account=it.get('account_name', 'account'),
+                title=it.get('rationale', 'decision'),
+            )
+
+        return jsonify({
+            'persona': persona,
+            'customer_id': customer_id,
+            'items': items,
+            'generated_at': datetime.utcnow().isoformat(),
+        })
+    except Exception as e:
+        logger.exception('pending_decisions failed')
+        return jsonify({'error': str(e)}), 500
