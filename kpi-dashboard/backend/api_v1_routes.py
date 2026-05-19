@@ -293,6 +293,13 @@ def v1_playbook_success_metrics():
     return _dispatch('playbook_success_metrics', get_playbook_success_metrics_api)
 
 
+@api_v1.route('/renewals')
+def v1_renewals():
+    """Renewal pipeline — vertical-agnostic."""
+    from verticals.dc2_s.api_routes import get_renewals_api
+    return _dispatch('renewals', get_renewals_api)
+
+
 # ─── Vertical handler registration API ──────────────────────────────────────
 
 def register_vertical_handler(vertical: str, endpoint: str, handler):

@@ -81,12 +81,34 @@ VPCS_QUESTIONS = [
             "headroom or overflow assessment",
             "specific CSMs above or below threshold",
         ],
-        must_call_tools=['get_csm_daily_actions', 'list_accounts'],
+        must_call_tools=['get_team_capacity', 'get_csm_scorecard'],
         must_call_at_least=1,
-        tone_check="Quantified. % or hours-based.",
+        tone_check="Quantified. % or hours-based; cite recommended CSM count when present.",
         anti_hallucination=[
             "no manufactured capacity benchmarks",
         ],
+    ),
+    PersonaQuestion(
+        id='vpcs-q07-capacity-allocation',
+        persona='vpcs',
+        question=(
+            "Do we have the right number of CSMs, and who are the top performers "
+            "on critical-to-expansion playbooks?"
+        ),
+        intent="Capacity planning and correct allocation — headcount + playbook leaders.",
+        must_cite=[
+            "current vs recommended CSM count",
+            "named top performers",
+            "playbook IDs or names tied to expansion/recovery",
+        ],
+        must_call_tools=['get_team_capacity', 'get_csm_scorecard'],
+        must_call_at_least=1,
+        tone_check="Staffing recommendation with evidence from scorecard/capacity tools.",
+        anti_hallucination=[
+            "no invented headcount targets",
+            "no fabricated performer names",
+        ],
+        weight=1.2,
     ),
     PersonaQuestion(
         id='vpcs-q06-early-predictors',

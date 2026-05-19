@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 import {
   AlertTriangle, TrendingUp, TrendingDown, Minus, Shield, Zap,
-  Target, DollarSign, Users, BarChart3, Clock,
+  Target, Users, BarChart3, Clock,
   ChevronRight, Eye, Activity, GitBranch, Sparkles,
   ArrowRight, ArrowUpRight, Briefcase, CheckCircle2,
   Calendar, Timer, PlayCircle, ClipboardList, UserCheck,
@@ -34,6 +34,15 @@ import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import { trackPageView, trackDashboardSwitch } from '../../utils/activityTracker';
 import AskAIPortal from '../ai/AskAIPortal';
 import { DashboardErrorState } from '../shared/DashboardErrorState';
+import {
+  VPCSMetricGuideBanner,
+  VPCSPreProofBanner,
+  VPCSContextGraphStrip,
+  VPCSCapacityPlanningPanel,
+  type CustomerPhase,
+  type CapacityPlanningData,
+  type UncoveredAccount,
+} from './VPCSOverviewHonesty';
 
 // ============================================================================
 // TYPES
@@ -61,6 +70,7 @@ interface HealthBucket {
 interface ActionItem {
   priority: number;
   account_name: string;
+  assigned_csm?: string;
   action: string;
   urgency: 'critical' | 'high' | 'medium' | 'low';
   est_hours: number;
@@ -71,6 +81,7 @@ interface ActionItem {
 interface AccountRow {
   account_id: string | number;
   account_name: string;
+  assigned_csm?: string;
   health_score: number;
   arr: number;
   industry: string;
@@ -183,6 +194,11 @@ interface VPCSDashboardData {
   };
   playbook_metrics: PlaybookMetric[];
   revenue_summary: RevenueSummary | null;
+  capacity_planning: CapacityPlanningData | null;
+  uncovered_at_risk: UncoveredAccount[];
+  customer_phase: CustomerPhase;
+  proof_executions_total: number;
+  proof_realized_roi: number;
   period: string;
   last_updated: string;
   is_live_data: boolean;
@@ -322,6 +338,11 @@ const FALLBACK_DATA: VPCSDashboardData = {
   portfolio_trajectory: { improving_count: 0, declining_count: 0, stable_count: 0, improving_arr_pct: 0, declining_arr_pct: 0 },
   playbook_metrics: [],
   revenue_summary: null,
+  capacity_planning: null,
+  uncovered_at_risk: [],
+  customer_phase: 'active',
+  proof_executions_total: 0,
+  proof_realized_roi: 0,
   period: 'Q1 2026',
   last_updated: '2m ago',
   is_live_data: false,
@@ -567,6 +588,7 @@ const ActionsQueueTable: React.FC<{ actions: ActionItem[] }> = ({ actions }) => 
           <tr className="border-b border-gray-700/50">
             <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12">#</th>
             <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Account</th>
+            <th className="text-left px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">CSM</th>
             <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Action</th>
             <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Urgency</th>
             <th className="text-right px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Est. Hrs</th>
@@ -583,6 +605,9 @@ const ActionsQueueTable: React.FC<{ actions: ActionItem[] }> = ({ actions }) => 
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-xs font-medium text-white">{action.account_name}</span>
+                </td>
+                <td className="px-3 py-3 text-xs text-gray-400 max-w-[88px] truncate">
+                  {action.assigned_csm || '—'}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -631,6 +656,7 @@ const AccountPortfolioTable: React.FC<{ accounts: AccountRow[] }> = ({ accounts 
         <thead>
           <tr className="border-b border-gray-700/50">
             <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Account</th>
+            <th className="text-left px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">CSM</th>
             <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-32">Health</th>
             <th className="text-right px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">ARR</th>
             <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Industry</th>
@@ -652,6 +678,9 @@ const AccountPortfolioTable: React.FC<{ accounts: AccountRow[] }> = ({ accounts 
                   <span className="text-xs font-medium text-white group-hover:text-teal-400 transition-colors">
                     {acct.account_name}
                   </span>
+                </td>
+                <td className="px-3 py-3 text-xs text-gray-400 max-w-[96px] truncate">
+                  {acct.assigned_csm || '—'}
                 </td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2">
@@ -999,7 +1028,7 @@ const VPCSDashboard: React.FC = () => {
         const headers = { 'X-Customer-ID': customerId };
 
         // Parallel fetch from all endpoints (including new ones)
-        const [accountsResp, actionsResp, healthResp, roiResp, capacityResp, scorecardResp, playbookMetricsResp, historyResp] = await Promise.allSettled([
+        const [accountsResp, actionsResp, healthResp, roiResp, capacityResp, scorecardResp, playbookMetricsResp, historyResp, renewalsResp] = await Promise.allSettled([
           apiCall('/api/v1/accounts', { headers }),
           apiCall('/api/v1/daily-actions', { headers }),
           apiCall('/api/v1/health-summary', { headers }),
@@ -1008,6 +1037,7 @@ const VPCSDashboard: React.FC = () => {
           apiCall('/api/v1/csm-scorecard', { headers }),
           apiCall('/api/v1/playbook-success-metrics', { headers }),
           apiCall('/api/v1/health-score-history?months=6', { headers }),
+          apiCall('/api/v1/renewals?days=90', { headers }),
         ]);
 
         // Detect session-expired across any endpoint and surface to error UI.
@@ -1030,6 +1060,7 @@ const VPCSDashboard: React.FC = () => {
         const scorecardData = await parse(scorecardResp);
         const playbookMetrics = await parse(playbookMetricsResp);
         const historyData = await parse(historyResp);
+        const renewalsData = await parse(renewalsResp);
 
         if (cancelled) return;
 
@@ -1045,17 +1076,25 @@ const VPCSDashboard: React.FC = () => {
 
         // Transform accounts data
         const rawAccounts = accountsData?.accounts || accountsData || [];
-        const accounts: AccountRow[] = (Array.isArray(rawAccounts) ? rawAccounts : []).map((a: any) => ({
-          account_id: a.account_id || a.id,
-          account_name: a.account_name || a.name || 'Unknown',
-          health_score: a.health_score || a.overall_health || 0,
-          arr: a.arr || a.revenue || 0,
-          industry: a.industry || a.vertical || 'N/A',
-          region: a.region || 'N/A',
-          last_signal: a.last_signal || a.latest_signal || 'No recent signals',
-          classification: classify(a.health_score || a.overall_health || 0),
-          renewal_date: a.renewal_date || undefined,
-        })).sort((a: AccountRow, b: AccountRow) => a.health_score - b.health_score);
+        const csmByAccountName = new Map<string, string>();
+        const accounts: AccountRow[] = (Array.isArray(rawAccounts) ? rawAccounts : []).map((a: any) => {
+          const name = a.account_name || a.name || 'Unknown';
+          const meta = a.profile_metadata || {};
+          const assigned = meta.assigned_csm || meta.csm_name || a.assigned_csm;
+          if (assigned) csmByAccountName.set(name, assigned);
+          return {
+            account_id: a.account_id || a.id,
+            account_name: name,
+            assigned_csm: assigned,
+            health_score: a.health_score || a.overall_health || 0,
+            arr: a.arr || a.revenue || 0,
+            industry: a.industry || a.vertical || 'N/A',
+            region: a.region || 'N/A',
+            last_signal: a.last_signal || a.latest_signal || 'No recent signals',
+            classification: classify(a.health_score || a.overall_health || 0),
+            renewal_date: a.renewal_date || meta.renewal_date || undefined,
+          };
+        }).sort((a: AccountRow, b: AccountRow) => a.health_score - b.health_score);
 
         // Compute health buckets
         const { healthy_min, at_risk_min } = thresholdValues();
@@ -1076,15 +1115,19 @@ const VPCSDashboard: React.FC = () => {
 
         // Transform actions data
         const rawActions = actionsData?.actions || actionsData || [];
-        const actions: ActionItem[] = (Array.isArray(rawActions) ? rawActions : []).slice(0, 10).map((a: any, i: number) => ({
-          priority: a.rank || a.priority || i + 1,
-          account_name: a.account_name || a.account || 'Unknown',
-          action: a.action_title || a.action || a.description || a.title || 'Action required',
-          urgency: (a.urgency || a.severity || 'medium').toLowerCase() as ActionItem['urgency'],
-          est_hours: a.estimated_hours || a.est_hours || a.effort_hours || 2,
-          impact_dollars: a.roi_projected_impact || a.impact_dollars || a.dollar_impact || a.projected_impact || 0,
-          playbook: a.related_playbook_id || a.playbook || a.playbook_id || undefined,
-        }));
+        const actions: ActionItem[] = (Array.isArray(rawActions) ? rawActions : []).slice(0, 10).map((a: any, i: number) => {
+          const acctName = a.account_name || a.account || 'Unknown';
+          return {
+            priority: a.rank || a.priority || i + 1,
+            account_name: acctName,
+            assigned_csm: a.assigned_csm || a.csm_name || csmByAccountName.get(acctName),
+            action: a.action_title || a.action || a.description || a.title || 'Action required',
+            urgency: (a.urgency || a.severity || 'medium').toLowerCase() as ActionItem['urgency'],
+            est_hours: a.estimated_hours || a.est_hours || a.effort_hours || 2,
+            impact_dollars: a.roi_projected_impact || a.impact_dollars || a.dollar_impact || a.projected_impact || 0,
+            playbook: a.related_playbook_id || a.playbook || a.playbook_id || undefined,
+          };
+        });
 
         // Use real playbook metrics for completion rate
         const pbSummary = playbookMetrics?.portfolio_summary;
@@ -1096,25 +1139,29 @@ const VPCSDashboard: React.FC = () => {
         const renewalCount = roiData?.renewals_90d_count || healthData?.renewal_count || 0;
         const renewalArr = roiData?.renewals_90d_arr || 0;
 
-        // Build renewals from actual renewal_date on accounts
-        const now = new Date();
-        const renewals: RenewalItem[] = accounts
-          .filter((a) => a.renewal_date)
-          .map((a) => {
-            const renewDate = new Date(a.renewal_date!);
-            const diffMs = renewDate.getTime() - now.getTime();
-            const daysUntil = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
-            return { account_name: a.account_name, arr: a.arr, days_until: daysUntil, health_score: a.health_score };
-          })
-          .filter((r) => r.days_until <= 90)
-          .sort((a, b) => a.days_until - b.days_until)
-          .slice(0, 6);
+        const apiRenewals: RenewalItem[] = (renewalsData?.renewals || []).map((r: any) => ({
+          account_name: r.account_name,
+          arr: r.arr,
+          days_until: r.days_until,
+          health_score: r.health_score,
+        }));
 
-        // If no renewal dates available, show top accounts as approximate
-        const finalRenewals = renewals.length > 0 ? renewals : accounts
-          .filter((a) => a.arr > 200000)
-          .slice(0, 6)
-          .map((a, i) => ({ account_name: a.account_name, arr: a.arr, days_until: 20 + i * 14, health_score: a.health_score }));
+        const now = new Date();
+        const renewals: RenewalItem[] = apiRenewals.length > 0
+          ? apiRenewals
+          : accounts
+            .filter((a) => a.renewal_date)
+            .map((a) => {
+              const renewDate = new Date(a.renewal_date!);
+              const diffMs = renewDate.getTime() - now.getTime();
+              const daysUntil = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+              return { account_name: a.account_name, arr: a.arr, days_until: daysUntil, health_score: a.health_score };
+            })
+            .filter((r) => r.days_until <= 90)
+            .sort((a, b) => a.days_until - b.days_until)
+            .slice(0, 6);
+
+        const finalRenewals = renewals;
 
         // Team capacity from real endpoint
         const realCsmCount = capacityData?.csm_count || Math.ceil(accounts.length / 5);
@@ -1197,6 +1244,13 @@ const VPCSDashboard: React.FC = () => {
             expansion_pipeline: roiData.expansion_pipeline || roiData.expansion_amount || 0,
             total_arr: roiData.total_arr || totalArr || 0,
           } : null,
+          capacity_planning: capacityData?.capacity_planning || null,
+          uncovered_at_risk: Array.isArray(capacityData?.uncovered_at_risk)
+            ? capacityData.uncovered_at_risk
+            : [],
+          customer_phase: (roiData?.customer_phase || 'active') as CustomerPhase,
+          proof_executions_total: totalRuns,
+          proof_realized_roi: Number(roiData?.realized_roi || roiData?.total_revenue_impact || 0),
           period: roiData?.quarter_label || `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
           last_updated: 'just now',
           is_live_data: hasLiveData,
@@ -1306,6 +1360,12 @@ const VPCSDashboard: React.FC = () => {
           {/* ============ VIEW: Team Overview (default) ============ */}
           {activeView === 'vpcs-overview' && (
             <>
+              <VPCSMetricGuideBanner />
+              <VPCSPreProofBanner
+                phase={d.customer_phase}
+                executionsTotal={d.proof_executions_total}
+                realizedRoi={d.proof_realized_roi}
+              />
               {/* Row 1: Summary cards */}
               <div className="grid grid-cols-4 gap-4 mb-6">
                 {d.summary_cards.map((card, i) => (
@@ -1313,35 +1373,22 @@ const VPCSDashboard: React.FC = () => {
                 ))}
               </div>
 
-              {/* Row 2: Revenue Intelligence Card */}
               {d.revenue_summary && (
-                <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5 mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <DollarSign className="w-4 h-4 text-teal-400" />
-                    <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Revenue Intelligence</h3>
-                  </div>
-                  <div className="grid grid-cols-3 gap-6">
-                    <div>
-                      <p className="text-[10px] text-gray-500 uppercase mb-1">At Risk</p>
-                      <p className="text-2xl font-bold text-red-400">{formatCompact(d.revenue_summary.revenue_at_risk)}</p>
-                      <p className="text-[10px] text-gray-600 mt-0.5">
-                        {d.revenue_summary.total_arr > 0
-                          ? `${((d.revenue_summary.revenue_at_risk / d.revenue_summary.total_arr) * 100).toFixed(1)}% of ARR`
-                          : '—'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-500 uppercase mb-1">Protected</p>
-                      <p className="text-2xl font-bold text-green-400">{formatCompact(d.revenue_summary.revenue_protected)}</p>
-                      <p className="text-[10px] text-gray-600 mt-0.5">via interventions</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-500 uppercase mb-1">Expansion Pipeline</p>
-                      <p className="text-2xl font-bold text-teal-400">{formatCompact(d.revenue_summary.expansion_pipeline)}</p>
-                      <p className="text-[10px] text-gray-600 mt-0.5">upsell &amp; cross-sell</p>
-                    </div>
-                  </div>
-                </div>
+                <VPCSContextGraphStrip
+                  data={{
+                    revenue_at_risk: d.revenue_summary.revenue_at_risk,
+                    graph_revenue_protected: d.revenue_summary.revenue_protected,
+                    expansion_pipeline: d.revenue_summary.expansion_pipeline,
+                    revenue_risk_label: 'Context-graph confirmed',
+                  }}
+                />
+              )}
+
+              {d.capacity_planning && (
+                <VPCSCapacityPlanningPanel
+                  planning={d.capacity_planning}
+                  uncovered={d.uncovered_at_risk}
+                />
               )}
 
               {/* Row 3: Health Distribution — click bucket to drill into filtered accounts */}
@@ -1682,6 +1729,13 @@ const VPCSDashboard: React.FC = () => {
                   csmCount={d.team_capacity.csm_count}
                 />
               </div>
+
+              {d.capacity_planning && (
+                <VPCSCapacityPlanningPanel
+                  planning={d.capacity_planning}
+                  uncovered={d.uncovered_at_risk}
+                />
+              )}
 
               {/* Per-CSM Capacity Breakdown */}
               {d.team_capacity.per_csm_breakdown.length > 0 && (

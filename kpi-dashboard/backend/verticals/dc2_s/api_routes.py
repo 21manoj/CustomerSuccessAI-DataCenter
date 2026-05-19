@@ -2794,6 +2794,18 @@ def get_team_capacity_api():
             total_hours_planned = 0.0
             total_hours_utilization_pct = 0.0
 
+        capacity_planning = {}
+        uncovered_at_risk = []
+        try:
+            from utils.vpcs_dashboard_helpers import (
+                build_capacity_planning,
+                build_uncovered_at_risk,
+            )
+            capacity_planning = build_capacity_planning(int(customer_id), accounts)
+            uncovered_at_risk = build_uncovered_at_risk(int(customer_id), accounts)
+        except Exception as _vpcs_err:
+            logger.debug("VPCS capacity planning unavailable: %s", _vpcs_err)
+
         return jsonify({
             # ── Legacy fields (preserved for callers that consume them) ──
             'csm_count': csm_count,
@@ -2822,6 +2834,8 @@ def get_team_capacity_api():
             'bottleneck_roles': bottleneck_roles,
             'overflow_hours': overflow_hours,
             'recommendation': recommendation_text,
+            'capacity_planning': capacity_planning,
+            'uncovered_at_risk': uncovered_at_risk,
         })
 
     except Exception as e:

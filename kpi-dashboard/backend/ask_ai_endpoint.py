@@ -166,6 +166,18 @@ def _build_system_prompt(persona: str, portfolio_summary: str) -> str:
             "\n- CFO REVENUE LENSES: playbook-attributed $ ≠ context-graph "
             "confirmed $ ≠ modeled churn exposure (health-based COI)."
         )
+    if persona == 'vpcs':
+        persona_specific_rules += (
+            "\n- VP CS TEAM OPS: For CSM rankings, capacity, or daily queue questions, call "
+            "get_csm_scorecard, get_team_capacity, and get_csm_daily_actions — deliver CSM "
+            "names, account counts, and ranked lists. Never invent headcount targets or NRR benchmarks."
+            "\n- VP CS CAPACITY: get_team_capacity includes capacity_planning (recommended CSM "
+            "count) and top_performers (critical→expansion playbooks). Cite allocation_rationale."
+            "\n- VP CS PLAYBOOKS: For effectiveness, use get_playbook_success_metrics and "
+            "get_outcome_roi_story; label $0 attributed when executions exist without proof."
+            "\n- VP CS UNCOVERED RISK: When asked about accounts without playbook coverage, use "
+            "uncovered_at_risk from get_team_capacity or list at-risk accounts with last touch."
+        )
     if persona == 'cro':
         persona_specific_rules += (
             "\n- CRO REVENUE LENSES: Never mix in one headline without naming the lens: "

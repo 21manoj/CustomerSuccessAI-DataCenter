@@ -637,6 +637,18 @@ def get_team_capacity(customer_id: int) -> dict:
 
         bottleneck_list = [bottleneck] if bottleneck else []
 
+        capacity_planning = {}
+        uncovered_at_risk = []
+        try:
+            from utils.vpcs_dashboard_helpers import (
+                build_capacity_planning,
+                build_uncovered_at_risk,
+            )
+            capacity_planning = build_capacity_planning(customer_id, accounts)
+            uncovered_at_risk = build_uncovered_at_risk(customer_id, accounts)
+        except Exception:
+            pass
+
         return {
             'scope': 'portfolio',
             'customer_id': customer_id,
@@ -658,6 +670,8 @@ def get_team_capacity(customer_id: int) -> dict:
                 + (f"No bottlenecks." if not bottleneck_list else f"Bottleneck roles: {', '.join(bottleneck_list)}.")
                 + f" {at_risk_count} at-risk accounts need attention."
             ),
+            'capacity_planning': capacity_planning,
+            'uncovered_at_risk': uncovered_at_risk,
         }
 
 
