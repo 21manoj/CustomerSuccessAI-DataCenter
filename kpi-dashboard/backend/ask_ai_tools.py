@@ -491,6 +491,14 @@ def _portfolio_revenue_breakdown_enriched(customer_id: int) -> dict:
 
 # ─── Tool Dispatcher ─────────────────────────────────────────────────────────
 
+def _invoke_mcp_tool(tool_fn, **kwargs):
+    """Call impl behind @mcp.tool (FunctionTool is not directly callable)."""
+    impl = getattr(tool_fn, 'fn', None)
+    if impl is not None:
+        return impl(**kwargs)
+    return tool_fn(**kwargs)
+
+
 def execute_tool(tool_name: str, tool_input: dict, customer_id: int) -> dict:
     """
     Dispatch a Claude tool_use call to the underlying Python function.
@@ -557,20 +565,28 @@ def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict
         return get_stakeholder_map(customer_id=customer_id, account_id=tool_input['account_id'])
     elif tool_name == 'get_csm_daily_actions':
         from mcp_server.cs_pulse_admin import get_csm_daily_actions
-        return get_csm_daily_actions(customer_id=customer_id)
+        return _invoke_mcp_tool(get_csm_daily_actions, customer_id=customer_id)
     elif tool_name == 'get_csm_scorecard':
         # Apr 26 2026 (Phase 1): per-CSM aggregation tool exposed from
         # MCP server into Ask AI's TOOL_DEFINITIONS. Closes the VP CS
         # structural gap (vpcs-q01/q03 require per-CSM names + metrics
         # which previously had no tool surface).
         from mcp_server.cs_pulse_admin import get_csm_scorecard
-        return get_csm_scorecard(customer_id=customer_id, csm_name=tool_input.get('csm_name'))
+        return _invoke_mcp_tool(
+            get_csm_scorecard,
+            customer_id=customer_id,
+            csm_name=tool_input.get('csm_name'),
+        )
     elif tool_name == 'get_csm_ranking':
         from mcp_server.cs_pulse_admin import get_csm_ranking
-        return get_csm_ranking(customer_id=customer_id, metric=tool_input.get('metric', 'composite'))
+        return _invoke_mcp_tool(
+            get_csm_ranking,
+            customer_id=customer_id,
+            metric=tool_input.get('metric', 'composite'),
+        )
     elif tool_name == 'get_team_capacity':
         from mcp_server.cs_pulse_revenue import get_team_capacity
-        return get_team_capacity(customer_id=customer_id)
+        return _invoke_mcp_tool(get_team_capacity, customer_id=customer_id)
     elif tool_name == 'calculate_power_of_1':
         from mcp_server.cs_pulse_revenue import calculate_power_of_1
         return calculate_power_of_1(customer_id=customer_id, metric_id=tool_input['metric_id'], improvement_pct=tool_input.get('improvement_pct', 1.0))
@@ -990,9 +1006,11 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
                     priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
                     total_hours = sum(s.get('estimated_hours', 0) for s in pb_cfg.get('sub_components', []))
                     roi_ctx = _get_roi_context('playbook', pb_id, arr)
+                    _meta = account.profile_metadata if isinstance(account.profile_metadata, dict) else {}
                     all_actions.append({
                         'account_id': account.account_id,
                         'account_name': account.account_name,
+                        'assigned_csm': _meta.get('assigned_csm') or _meta.get('csm_name') or 'Unassigned',
                         'action_title': f"Start {pb_cfg['name']} Playbook",
                         'action_type': 'playbook',
                         'related_playbook_id': pb_id,
@@ -1026,13 +1044,21 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         # grouping + HealthScore deltas + PlaybookExecutionV2 attribution)
         # is already implemented there with the right field knowledge.
         from mcp_server.cs_pulse_admin import get_csm_scorecard
-        return get_csm_scorecard(customer_id=customer_id, csm_name=tool_input.get('csm_name'))
+        return _invoke_mcp_tool(
+            get_csm_scorecard,
+            customer_id=customer_id,
+            csm_name=tool_input.get('csm_name'),
+        )
     elif tool_name == 'get_csm_ranking':
         from mcp_server.cs_pulse_admin import get_csm_ranking
-        return get_csm_ranking(customer_id=customer_id, metric=tool_input.get('metric', 'composite'))
+        return _invoke_mcp_tool(
+            get_csm_ranking,
+            customer_id=customer_id,
+            metric=tool_input.get('metric', 'composite'),
+        )
     elif tool_name == 'get_team_capacity':
         from mcp_server.cs_pulse_revenue import get_team_capacity
-        return get_team_capacity(customer_id=customer_id)
+        return _invoke_mcp_tool(get_team_capacity, customer_id=customer_id)
 
     elif tool_name == 'calculate_power_of_1':
         # REAL: calls power_of_1_model.calculate_power_of_1_impact()

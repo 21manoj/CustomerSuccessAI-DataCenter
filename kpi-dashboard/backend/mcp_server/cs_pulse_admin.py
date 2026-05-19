@@ -519,6 +519,15 @@ def get_csm_daily_actions(customer_id: int, csm_name: str = None) -> dict:
                 },
             }
 
+        acct_csm = {
+            a.account_id: (
+                (a.profile_metadata or {}).get('assigned_csm')
+                or (a.profile_metadata or {}).get('csm_name')
+                or 'Unassigned'
+            )
+            for a in accounts
+        }
+
         # Load pillar labels from vertical config (not hardcoded)
         PILLAR_LABELS = _get_pillar_labels(vertical)
 
@@ -937,6 +946,9 @@ def get_csm_daily_actions(customer_id: int, csm_name: str = None) -> dict:
         for i, action in enumerate(top_actions, 1):
             action['rank'] = i
             action['id'] = f"act-{i:03d}"
+            action['assigned_csm'] = acct_csm.get(
+                action.get('account_id'), 'Unassigned'
+            )
 
         urgency_counts = {'critical': 0, 'high': 0, 'opportunity': 0, 'medium': 0}
         total_hours = 0
