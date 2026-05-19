@@ -73,6 +73,19 @@ jobs:
           python scripts/audit_account_column_access.py --self-test
           python scripts/audit_account_column_access.py --verbose
 
+      # Static audit: catches "Flask + MCP duplication drift" -- the same
+      # logical function exists in both kpi-dashboard/backend/mcp_server/*.py
+      # AND a Flask route file, and one side gets fixed while the other
+      # silently diverges. Buyer demos hit either path depending on
+      # whether they're on the React UI or Claude.ai's MCP client.
+      # Three such bugs in one May 2026 session (B-1 team_capacity health
+      # computation, PR #30 team_capacity response shape, PR #33
+      # get_playbook_recommendations vertical routing). Runs in ~0.5s.
+      - name: Audit Flask + MCP duplication drift
+        run: |
+          python scripts/audit_flask_mcp_drift.py --self-test
+          python scripts/audit_flask_mcp_drift.py --verbose --time
+
       - name: Run unit tests
         working-directory: kpi-dashboard/backend
         run: |

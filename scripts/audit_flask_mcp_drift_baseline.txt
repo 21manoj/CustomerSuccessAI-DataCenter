@@ -1,0 +1,26 @@
+# audit_flask_mcp_drift baseline
+#
+# Pre-existing MCP/Flask drift that we know about but aren't fixing in
+# the same PR as the audit. Each entry is a real concern -- a bug, a
+# latent SaaS-routing risk, or a structural difference we accept for
+# now. The audit treats baseline entries as 'not new', so they don't
+# fail CI; but they're not in the allowlist because they should
+# eventually be fixed (or moved to the allowlist with a reason).
+#
+# Format:  <kind> | <mcp_relpath:funcname> | <flask_relpath:funcname>
+# Comments directly above an entry are preserved on --regenerate-baseline.
+#
+
+# Same shape as PR #33, not yet fixed: GET /api/v1/accounts hardcodes
+# get_dc2s_accounts. _VERTICAL_HANDLERS is empty in the codebase today
+# (registry exists but no SaaS handler is ever registered), so SaaS
+# tenants will get the DC2S row shape. Fix: route through a tenant-
+# aware account-list helper, OR populate _VERTICAL_HANDLERS at startup
+# with a saas-specific list_saas_accounts handler.
+helper_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts | kpi-dashboard/backend/api_v1_routes.py:v1_accounts
+
+# Same shape as PR #33, not yet fixed: GET /api/v1/health-scores/<id>
+# hardcodes get_dc2s_health_score. SaaS tenants need their own health
+# scorer. Fix path: utils.vertical_health.get_health_calculator(...)
+# (already exists; just isn't wired into v1_health_score).
+helper_drift | kpi-dashboard/backend/mcp_server/process_data_pipeline.py:calculate_health_scores | kpi-dashboard/backend/api_v1_routes.py:v1_health_score
