@@ -111,7 +111,8 @@ fi
     if [[ -n \"\${CSPULSE_GITHUB_TOKEN:-}\" ]] && [[ \"\$(git remote get-url origin 2>/dev/null)\" == https://github.com/* ]]; then
       git remote set-url origin \"\${CSPULSE_GIT_REMOTE/https:\\/\\//https://\${CSPULSE_GITHUB_TOKEN}@}\"
     fi
-    git pull --ff-only origin '${BRANCH}'
+    git fetch origin '${BRANCH}'
+    git reset --hard "origin/${BRANCH}"
   fi
 
   # Reuse secrets from ECR deploy layout

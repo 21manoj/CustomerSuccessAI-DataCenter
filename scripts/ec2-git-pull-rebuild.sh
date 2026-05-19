@@ -35,7 +35,8 @@ fi
 cd "$REPO_ROOT"
 git fetch origin
 git checkout "$BRANCH"
-git pull --ff-only origin "$BRANCH"
+git fetch origin "$BRANCH"
+git reset --hard "origin/$BRANCH"
 
 cd "$DASH"
 "${REPO_ROOT}/scripts/ensure-ec2-docker-buildx.sh"
