@@ -80,7 +80,7 @@ def main() -> int:
             ("Phase 1 graph strip", "Revenue intelligence (context graph)"),
             ("Phase 2 pre-proof", "Playbook success is logged"),
             ("Phase 3 capacity", "Capacity planning & allocation"),
-            ("Phase 3 performers", "critical → expansion"),
+            ("Phase 3 performers", "Top performers"),
         ]
         print("\n--- UI bundle markers ---")
         for label, needle in markers:
