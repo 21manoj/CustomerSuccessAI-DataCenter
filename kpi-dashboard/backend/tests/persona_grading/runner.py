@@ -387,7 +387,11 @@ if __name__ == "__main__":
     personas = args.personas.split(",") if args.personas else None
     # Need Flask app context for the imported helpers
     import sys
-    sys.path.insert(0, "/app/backend")
+    from pathlib import Path as _Path
+    _backend = _Path(__file__).resolve().parents[2]
+    for _p in (str(_backend), "/app/backend"):
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
     from app_v3_minimal import app
     with app.app_context():
         run_all_personas(

@@ -69,10 +69,13 @@ kpi-dashboard/backend/qdrant_temporal_storage*/
 # ── Generated customer vertical data (volume-mounted at runtime) ──
 kpi-dashboard/backend/verticals/customer*-dc2_s/
 
-# ── Test files (not for production, except test_runner_api.py) ──
+# ── Test files (not for production, except test_runner_api.py + persona grading) ──
 kpi-dashboard/backend/test_*.py
 !kpi-dashboard/backend/test_runner_api.py
 kpi-dashboard/backend/tests/
+!kpi-dashboard/backend/tests/__init__.py
+!kpi-dashboard/backend/tests/persona_grading/
+!kpi-dashboard/backend/tests/persona_grading/**
 kpi-dashboard/backend/test_data/
 kpi-dashboard/backend/test_csv_files/
 

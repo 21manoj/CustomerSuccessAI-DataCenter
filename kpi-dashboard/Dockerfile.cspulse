@@ -64,7 +64,8 @@ RUN python setup_cython.py build_ext --inplace 2>&1 | tail -5
 # KEEP: agents/, verticals/, mcp_server/ — all excluded from Cython but imported at runtime.
 # KEEP: scripts/generate_synthetic_*.py — needed at runtime for demo-mode onboarding
 # KEEP: scripts/sqs_onboarding_worker.py — SQS consumer for async onboarding / export / rehydrate jobs
-# KEEP: scripts/seed_vpcs_demo_334.py — demo tenant 334 renewals + playbook attribution (EC2 persona grading)
+# KEEP: scripts/seed_vpcs_demo_334.py — demo tenant 334 renewals + playbook attribution (EC2 acceptance)
+# Image includes tests/persona_grading/ (see .dockerignore) for: python3 -m tests.persona_grading.runner
 # KEEP: migrations/add_customer_id_to_wizard_learnings.py, add_arc_fields_to_accounts.py — runnable in container
 RUN find ./templates -name "*.py" -delete 2>/dev/null || true && \
     find ./migrations -name "*.py" ! -name "add_customer_id_to_wizard_learnings.py" ! -name "add_arc_fields_to_accounts.py" ! -name "refine_provenance_source_values.py" -delete 2>/dev/null || true && \
@@ -144,6 +145,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Create necessary directories
 RUN mkdir -p /app/backend/uploads /app/backend/instance /app/backend/verticals \
+             /app/backend/scripts/datasets \
              /app/load-driver/results/ui-runs
 
 # Build stamp — always know which commit is running

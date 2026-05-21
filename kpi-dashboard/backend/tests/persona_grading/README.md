@@ -15,14 +15,25 @@ The grader is a Claude Sonnet call role-playing as a 15-year-experienced version
 
 ## How to run
 
-```bash
-# Inside the cspulse-platform container (where TOOL_DEFINITIONS, execute_tool, etc. are importable):
+**Recommended (from repo root, EC2 or local Docker):**
 
+```bash
+cp scripts/.env.acceptance.example scripts/.env.acceptance
+# Set ANTHROPIC_API_KEY, CS_PULSE_BASE_URL, ACCEPTANCE_CUSTOMER_ID
+
+ACCEPTANCE_RUN_PERSONA=1 ./scripts/run_acceptance_ec2.sh
+```
+
+**Manual (inside the cspulse-platform container):**
+
+```bash
 DATABASE_URL=postgresql://.../cs_pulse \
 ANTHROPIC_API_KEY=sk-ant-... \
 python3 -m tests.persona_grading.runner \
-  --customer 331 \
-  --output /app/scripts/datasets/persona_grades_$(date +%Y%m%d).json
+  --customer 334 \
+  --shots 3 \
+  --personas cro,cfo,vpcs \
+  --output /app/backend/scripts/datasets/persona_grades_$(date +%Y%m%d).json
 ```
 
 Or via pytest (opt-in):
