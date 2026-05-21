@@ -247,6 +247,64 @@ children.push(bullet("If the panel renders 'Could not load — API 404' during a
 children.push(bullet("If a customer requests new sources in the queue (e.g. a churn-imminent renewal, a CRM stage flip): treat as a base-dev request — the queue's data contract should not drift per-customer."));
 children.push(bullet("Never modify the persona sort or headline framing in a customer overlay. The persona split (revenue-at-stake for CRO, dollar-spend for CFO) is a product decision, not a configuration knob."));
 
+children.push(h2("2.4 Signal path — CSV default vs. live signal engine"));
+children.push(para(
+  "Qualitative signals reach the platform through one of two channels. Most pilots run Channel 1 only. Channel 2 (live ingest) is opt-in per tenant after DPA + admin enablement."
+));
+children.push(table([1800, 4200, 3600], [
+  ["Channel", "What it is", "Default state"],
+  ["1 — CSV", "qualitative_signals.csv or enhanced_qualitative_signals.csv shipped as part of the 4-CSV onboarding (see §7.3). Signals land directly in the DB + context graph during process_data.", "ON. The default onboarding path."],
+  ["2 — Live ingest", "Email forwarding (SendGrid inbound), Slack/Teams webhooks (signal_engine/slack_events.py, signal_engine/ingest_api.py), transcript uploads, MCP submit_signal. Worker enriches + writes QualitativeSignal + context graph + fires the proactive scan.", "OFF per tenant until DPA + admin enablement. Platform-level FEATURE_SIGNAL_ENGINE=true is typically already set in compose/EC2 — this just gates the API surface, not per-tenant ingest."],
+], { zebra: true }));
+children.push(para("FDE decision tree:"));
+children.push(bullet("Did the customer supply qualitative_signals.csv (or enhanced_) in the 4-CSV? → Leave live ingest OFF for pilot. Verify process_data loaded the rows. signal_analyst will use health-score deltas plus the CSV-derived signals."));
+children.push(bullet("Customer wants live email / Slack / transcript ingest? → Confirm DPA is signed. Enable the per-tenant feature toggle. Wire the channels you need (email forwarder, Slack webhook, etc.). Configure verticals/customer{N}-{vertical}/config/signal_channels.json. Confirm the worker is running. Use the MCP submit_signal tool for a smoke test before pointing live channels at it."));
+children.push(bullet("Customer wants BOTH (CSV historical + live going forward)? → Common for established tenants. Land the CSV first, run process_data, then enable live ingest. Watch for collision dedup — two channels feeding the same signal should fuse via signal_engine/collision.py, not double-count."));
+children.push(para(
+  "Signal engine modules you should NOT edit in an overlay: enrichment.py, fusion.py, urgency.py, collision.py. They are the shared signal-processing pipeline. If a customer needs a bespoke enrichment rule, that is a base-dev request."
+));
+
+children.push(h2("2.5 Playbook execution model — choose one spine per customer"));
+children.push(para(
+  "Playbooks have two halves: the catalog (what playbooks exist) and the execution spine (how they actually run). Four different mechanisms touch playbooks today; the FDE picks ONE execution spine per customer and documents it in the engagement notes."
+));
+children.push(table([2000, 4800, 3200], [
+  ["Mechanism", "What it does", "Who edits"],
+  ["Catalog (UI definitions)", "kpi-dashboard/src/lib/playbooks.ts — built-in playbook cards rendered in the CSM kanban + recommendation panels (e.g. PB-01 Activation Blitz, PB-02 VoC Sprint, PB-04 Renewal Safeguard).", "Base dev. Do NOT edit in a customer overlay."],
+  ["Per-tenant customizations", "customer_playbooks DB table, managed via /api/playbooks/library + /api/playbooks/* in customer_playbook_api.py. Per-tenant variants, custom playbooks, parameter overrides.", "FDE via admin UI or MCP — this is where tenant-specific playbook tailoring lives."],
+  ["Claude skills (.md)", "kpi-dashboard/backend/skills/*.md — multi-step playbook runbooks for Claude.ai / Ask AI. One ships today: pb-champion-recovery.md. Used for power-user paths where the playbook is mostly conversational analysis.", "FDE can author new .md skills with base-dev sign-off."],
+  ["n8n workflows", "External orchestration. n8n-workflows/templates/playbook-actions/ has Slack alert + Jira issue templates. Triggered via integration_api / action_interface_api webhooks; callbacks update PlaybookExecutionV2.", "FDE designs the n8n graph; base dev owns the callback contract."],
+], { zebra: true }));
+children.push(para(
+  "Execution spine — pick ONE per customer (you can mix later, but start with one):"
+));
+children.push(bullet("(A) Platform-only. CSM clicks 'Launch' in the kanban → MCP execute_playbook → PlaybookExecutionV2 row → CSM logs progress → close_playbook → realized ROI snapshot. Simplest. Best when the customer is using CS Pulse as the system of record for CS work."));
+children.push(bullet("(B) n8n. execute_playbook fires a webhook → n8n graph runs external steps (Slack messages, Jira ticket creation, sheet updates, etc.) → callback to /api/.../execution updates PlaybookExecutionV2 with the outcome. Best when the customer already has automation in n8n / Zapier / etc. and wants CS Pulse to be the trigger and the system of record but not the actor."));
+children.push(bullet("(C) Claude skill. The playbook is documented as a .md file that Claude.ai (with MCP) reads and walks through with the user. Best for advisory playbooks (champion recovery analysis) where the value is in the prompted workflow more than in side-effects."));
+children.push(para(
+  "Hard rules: (1) Advisory playbooks (CSM recommendations, ROI story narration) are platform + Ask AI tools — not 'playbook execution' in the (A)/(B)/(C) sense. (2) The admin UI does NOT support customer-self-service playbook authoring today. Do not promise it. (3) Mapping playbook_id → n8n URL per customer is not fully shipped — confirm with base dev before promising the (B) spine in production."
+));
+
+children.push(h2("2.6 Knowledge base (RAG) — Qdrant signal index + KPI RAG APIs"));
+children.push(para(
+  "The platform has retrieval surfaces that the FDE playbook v1.0 omitted. They are not modules in §2's table — they're spread across the codebase and serve different jobs."
+));
+children.push(table([2400, 4800, 2400], [
+  ["Surface", "Purpose", "When it runs"],
+  ["Qdrant signal index", "Semantic search over qualitative signals. SignalVectorStore (utils/qdrant_signal_search.py) embeds and stores; signal_engine/enrichment.py and utils/signal_analyst.py read it. Powers the search_signals MCP tool.", "On every signal write when QDRANT_URL + QDRANT_API_KEY are set on EC2. If env vars are missing the system runs without semantic search and falls back to keyword matching."],
+  ["direct_rag_api", "Legacy 'working RAG' path — KPI + account knowledge base, rebuild on CSV upload events.", "Registered as a blueprint; rebuild fires from enhanced_upload_api after material data changes."],
+  ["enhanced_rag_* (temporal / openai / qdrant variants)", "Newer experimental RAG paths — temporal context, OpenAI embeddings, Qdrant-backed. Admin/upload flows; not on the critical path for all tenants.", "Registered blueprints; on-demand."],
+  ["governance_rag_api", "Governance doc search (policies, model cards, AI-DD responses).", "Optional blueprint."],
+], { zebra: true }));
+children.push(para("What RAG is FOR (and what it isn't):"));
+children.push(bullet("RAG is for: semantic signal lookup (search_signals), legacy product/KPI Q&A in Ask AI fallback paths."));
+children.push(bullet("RAG is NOT for: CFO/CRO dashboard tile numbers. Those are SQL + context graph, not retrieval. If a tile is wrong, do not look at Qdrant — look at the underlying API call's data path."));
+children.push(bullet("Persona grading (§5.3) tests tool use, not RAG retrieval. A persona grade of A- doesn't say anything about whether the Qdrant index is healthy."));
+children.push(para("FDE responsibilities around RAG:"));
+children.push(bullet("Confirm QDRANT_URL + QDRANT_API_KEY on EC2 if the customer's overlay expects semantic search. Without them, search_signals will keyword-match only."));
+children.push(bullet("After a material data change (signals CSV refresh, new signal batch), trigger a rebuild via enhanced_upload_api or by re-running process_data so the index reflects new content."));
+children.push(bullet("Regression-test the KB with load-driver scenario 2b (50-account RAG queries) before customer acceptance. The HTTP verify scripts (§5.6) do not cover RAG."));
+
 // ---------- Section 3: Docker image lifecycle ----------
 children.push(h1("3. Docker Image Lifecycle"));
 children.push(para(
@@ -554,6 +612,11 @@ children.push(bullet("Revenue Protected $0: post-load attribution did not run. T
 children.push(bullet("NRR forecast 0% or unchanged from a previous tenant: Wizard D was not refit (see §7.3 wizard policy). Run trigger_wizard('d') manually."));
 children.push(bullet("Ask AI says \"I don't know\" to dashboard questions: a tool was not wired into the customer's enabled set. Check entitlements."));
 children.push(bullet("Dashboard tile shows context-graph $ but CRO and CFO numbers don't match: PR #38 parity regression — re-run scripts/verify_cfo_phase1_ec2.py to localize."));
+
+children.push(para("Capability-level day-one checks (cross-references to §2.4–2.6):"));
+children.push(bullet("Signal path (§2.4): If the customer shipped qualitative_signals.csv → confirm rows landed (count via search_signals or DB probe). If they want live ingest → confirm per-tenant feature_signal_engine toggle is ON, signal_channels.json is wired, worker is running, and an MCP submit_signal smoke test produced a fresh QualitativeSignal + context node."));
+children.push(bullet("Playbook execution spine (§2.5): Confirm the one chosen spine end-to-end. (A) Platform: launch a low-stakes playbook from the CSM kanban → see PlaybookExecutionV2 row → close_playbook → realized ROI snapshot non-zero. (B) n8n: trigger a test playbook → confirm the webhook fired and the callback updated PlaybookExecutionV2. (C) Claude skill: walk the .md once with the customer's stakeholder to validate the prompts."));
+children.push(bullet("Knowledge base (§2.6): If QDRANT_URL is set, run a search_signals query with a paraphrased keyword and confirm semantic match (not just substring). If the customer expects KPI Q&A in Ask AI fallback, fire load-driver scenario 2b before sign-off. Do NOT confuse RAG health with dashboard-tile correctness."));
 
 children.push(h2("7.5 Step 5 — Run the first persona-grading pass"));
 children.push(para(
