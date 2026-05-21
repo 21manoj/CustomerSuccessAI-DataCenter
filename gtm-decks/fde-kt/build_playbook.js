@@ -262,12 +262,22 @@ children.push(code("docker pull <ECR-host>/cspulse-platform:latest"));
 children.push(h2("3.2 Local development loop"));
 children.push(para("Run a local stack with the customer's data mounted as a read-only volume:"));
 children.push(code("docker compose -f docker-compose.cspulse.yml up -d"));
-children.push(para("The compose file brings up postgres, the platform, and the load-driver. Hot-reload on the platform is on by default so file changes inside the mounted customer overlay take effect without a restart."));
+children.push(para(
+  "The compose file brings up postgres, the platform, and the load-driver. Volume mounts make customer overlay files visible to the running container, but the Flask backend does NOT auto-reload on Python changes; you typically need to restart the cs-pulse service after editing overlay code. React dev server (when run separately, not in compose) does hot-reload on .tsx changes. Treat 'no restart needed' as the exception, not the rule."
+));
 
 children.push(h2("3.3 Deploying back to the customer environment"));
-children.push(para("There is one canonical deploy script. Use it. Do not docker-cp files into a running container — that pattern has burned us before."));
-children.push(code("./scripts/rehydrate-ec2-ecr.sh <INSTANCE_ID>"));
-children.push(para("This pulls from ECR using local AWS credentials and recreates the platform + postgres + load-driver containers on the EC2 instance. The script is idempotent and self-healing: it will repair a missing env file, reissue a stale magic-link, and write SESSION_COOKIE_SECURE=false if the customer is on direct-HTTP."));
+children.push(para(
+  "Two scripts, two purposes. Pick deliberately. Do not docker-cp files into a running container — that pattern has burned us before."
+));
+children.push(table([3000, 5400, 2400], [
+  ["Script", "When to use", "What it does"],
+  ["./scripts/deploy-ec2-git-pull.sh", "Day-to-day. You want EC2 running the latest main, bit-for-bit, no PLATFORM_TAG indirection.", "Pulls main on the EC2 host, rebuilds the image locally on EC2, recreates containers. Slower (~5–10 min) but the image always matches main HEAD."],
+  ["./scripts/rehydrate-ec2-ecr.sh <INSTANCE_ID>", "Image was already built by CI and pushed to ECR; you want to deploy that specific tag.", "Pulls from ECR using local AWS creds, recreates containers. Fast (~1–2 min). HONORS the PLATFORM_TAG env var on EC2 — see §3.6 about the promotion gap."],
+], { zebra: true }));
+children.push(para(
+  "Both scripts are idempotent and self-healing: they repair a missing env file, reissue a stale magic-link, and write SESSION_COOKIE_SECURE=false if the customer is on direct-HTTP. If the bundle hash doesn't change after a rehydrate, you hit the PLATFORM_TAG gap (§3.6) — switch to the git-pull script or re-pin the tag."
+));
 
 children.push(h2("3.4 Rolling back"));
 children.push(para("Every promoted tag stays in ECR. To roll back, flip the PLATFORM_TAG environment variable on the EC2 host and re-run the rehydrate script. Recovery time is under one minute. Do not delete prior tags from ECR — that is your only safety net."));
@@ -300,7 +310,7 @@ children.push(bullet("(b) Register a new test tenant via load-driver --register.
 children.push(bullet("(c) Call list_customers, get_at_risk_accounts, get_csm_daily_actions, and get_portfolio_nrr_forecast_v3 via MCP for the new tenant. Any 500 means a model/schema drift slipped through."));
 children.push(bullet("(d) Open all 5 persona dashboards in the browser, walk top-of-fold, and compare against the prior verify-script baseline. A tile that flips from a number to '$0' or shows 'Failed to fetch' is a regression."));
 children.push(para(
-  "Bundled verify scripts (run them; do not re-derive them): scripts/verify_cfo_phase1_ec2.py and scripts/verify_cro_phases_ec2.py. Pattern: per-PR scripts that hit known endpoints, assert known invariants, and exit non-zero on regression. When you ship a new persona-facing PR, add a sibling verify script in the same shape."
+  "Bundled verify scripts (run them; do not re-derive them) — see §5.6 for the full inventory. Today's set covers CFO (verify_cfo_phase1_ec2.py for Phase 1 only, verify_cfo_phases_ec2.py for Phases 0–5), CRO (verify_cro_phases_ec2.py), and VPCS (verify_vpcs_phases_ec2.py). The sanity_check_cust333.py script is a numeric-snapshot harness for cust 333, NOT a persona-eval matrix — it does not exercise the persona grader. When you ship a new persona-facing PR, add a sibling verify script in the same shape (login → hit endpoints → assert known invariants → exit non-zero on regression)."
 ));
 
 children.push(h2("3.8 CI concurrency cancellation (the multi-merge pattern)"));
@@ -384,53 +394,96 @@ children.push(bullet("Do not edit the math in the Predictor, Wizards, or scoring
 children.push(bullet("Do not add a new MCP tool. Use existing tools. If you genuinely need a new one, file a base-dev ticket with the use case."));
 
 children.push(h2("4.4 Tests and eval gates"));
-children.push(para("Every PR must:"));
-children.push(bullet("Pass the existing pytest suite (no skips, no xfail without justification)."));
-children.push(bullet("Pass the persona-eval matrix at the customer's pass threshold (default: 16 of 20 per persona)."));
-children.push(bullet("Include a diff of results/sanity/ snapshots showing exactly which numbers moved and why."));
-children.push(bullet("Include a one-line entry in the customer's CHANGELOG.md inside their overlay folder."));
+children.push(para("What CI runs on every PR (gate — must pass to merge):"));
+children.push(bullet("A narrow pytest subset — score calculator, account-column ORM audit (PR #32), Flask/MCP duplication-drift audit (PR #37). NOT the full suite."));
+children.push(bullet("Frontend TypeScript compile via the Docker build (catches type drift that pytest misses)."));
+children.push(para("What CI does NOT run automatically (opt-in — your responsibility before customer acceptance):"));
+children.push(bullet("Persona grading (tests/persona_grading) — costs $3–5 per run. Opt in via PERSONA_GRADING_ENABLED=1 pytest flag, or run --shots 3 locally before tagging a release. See §5.3."));
+children.push(bullet("HTTP verify scripts (scripts/verify_*.py) — run these post-rehydrate, not at PR time. See §5.6."));
+children.push(bullet("Load-driver E2E (load-driver/manifests + process_data + Wizard D refit) — manual on demo tenants."));
+children.push(para("What every PR must include (manual discipline — not enforced by CI):"));
+children.push(bullet("A diff of the verify-script output (or the persona-grader JSON) for any persona-facing change."));
+children.push(bullet("A one-line entry in the customer's CHANGELOG.md inside their overlay folder."));
+children.push(bullet("If the change touches Flask + MCP siblings, run scripts/audit_flask_mcp_drift.py locally before pushing — the audit catches drift but the message is easier to act on locally than in the CI logs."));
 
 // ---------- Section 5: Persona-eval framework ----------
 children.push(h1("5. Persona-Eval Framework"));
 children.push(para(
-  "A platform that works for a CRO can fail a CSM. The eval matrix is how you prove the customer's deployment lands for every persona — not just the loudest one in the room."
+  "A platform that works for a CRO can fail a CSM. The eval matrix is how you prove the customer's deployment lands for every persona — not just the loudest one in the room. There are two parallel instruments today; you need both, for different purposes."
 ));
 
-children.push(h2("5.1 The rubric"));
-children.push(para("Five personas, ten questions each, scored 0-2 per question. Pass = 16 of 20 per persona. Total possible: 100. Customer-acceptance threshold: 80, with no single persona below 14."));
-
-children.push(table([1600, 4800, 3200], [
-  ["Persona", "What the eval tests", "Pass threshold"],
-  ["CRO", "Revenue at risk visibility, NRR forecast credibility, top expansion opportunities, account-level explainability.", "16/20"],
-  ["CFO", "ROI traceability, CS investment scaling, attribution back to playbooks, audit-trail of every dollar claim.", "16/20"],
-  ["CEO", "Portfolio rollup, board-ready summary numbers, cross-customer comparison if PE/portfolio mode is on.", "16/20"],
-  ["VP CS", "Team capacity, CSM ranking, playbook execution rates, weekly business review readiness.", "16/20"],
-  ["CSM", "Daily Kanban (FIRE / THIS WEEK / OPPORTUNITIES), per-account action recommendations, signal triage, time-to-next-action.", "16/20"],
+children.push(h2("5.1 Two instruments — what they cover"));
+children.push(table([2400, 3600, 3600], [
+  ["Instrument", "What it tests", "When to run"],
+  ["HTTP verify scripts (scripts/verify_*.py)", "Dashboard tile shapes, API payloads, source labels, period transforms. Deterministic — no LLM in the loop.", "After every rehydrate. Run-to-completion in <60s per script."],
+  ["LLM-as-judge persona grading (tests/persona_grading)", "Ask-AI response quality against a 15-yr-veteran-of-the-persona grader. Captures tone, citation discipline, anti-hallucination.", "Before customer acceptance, after image upgrades, when calibrating overlays."],
 ], { zebra: true }));
+children.push(para(
+  "The verify scripts prove the deploy didn't break what was working. The persona grader proves the AI surface still answers correctly. A green verify run with a B+ persona grade is the floor; an A- across all 5 personas is the customer-acceptance bar."
+));
 
-children.push(h2("5.2 Question categories per persona"));
-children.push(bullet("Numbers (2 questions): Are the headline numbers on the persona's dashboard correct and reconcile-able to a source?"));
-children.push(bullet("Explainability (2 questions): When the persona clicks into a number, do they get an answer they can defend in a meeting?"));
-children.push(bullet("Actionability (2 questions): Does the dashboard tell them what to do next?"));
-children.push(bullet("Trust (2 questions): Is the confidence interval / governance disclosure visible where it matters?"));
-children.push(bullet("Workflow (2 questions): Does the surface fit the persona's actual cadence (CSM = daily, CFO = monthly, CEO = quarterly)?"));
+children.push(h2("5.2 The persona grading rubric (what the grader actually scores)"));
+children.push(para(
+  "Five personas, 5–7 canonical questions each (~30 total across the matrix — see kpi-dashboard/backend/tests/persona_grading/fixtures/{persona}.py for the exact list). Each question has an explicit rubric the grader is shown:"
+));
+children.push(bullet("must_cite — specific facts that must appear (e.g. 'specific dollar amount', 'specific account name')."));
+children.push(bullet("must_call_tools — Ask-AI tools the system should have invoked to answer (e.g. get_revenue_at_risk, get_top_expansion_opportunities_v3)."));
+children.push(bullet("tone_check — stylistic requirement (e.g. 'leads with $ first', 'frames as decision not analysis')."));
+children.push(bullet("anti_hallucination — things the response must NOT do (e.g. 'no fabricated account_ids', 'no made-up calibration_id')."));
+children.push(para(
+  "The grader is a Claude Sonnet call role-playing as a 15-year-experienced version of the persona (5-yr for CSM). It returns a letter grade (A, A-, B+, B, B-, C+, C, C-, D+, D, F) plus a numeric (~4.0 scale) and free-text rationale. No grade inflation — the grader is prompted to be harsh."
+));
 
-children.push(h2("5.3 The practical instrument: MCP replay"));
-children.push(para("The rubric is the conceptual framework. The instrument you actually run is MCP replay."));
-children.push(para("Each persona has a fixed prompt-set (10 prompts, matching the 10 rubric questions). You run them through Ask AI against the customer's tenant. The script captures the answer and diffs it against a golden JSON in results/sanity/."));
-children.push(code("./scripts/sanity_check_cust{N}.py --persona cro --persona cfo --persona ceo --persona vpcs --persona csm"));
-children.push(para("The script emits a per-persona scorecard: pass / fail per question, total per persona, and a portfolio rollup. The golden JSON is checked into the customer overlay so future runs are reproducible."));
+children.push(h2("5.3 Running the grader"));
+children.push(para(
+  "From inside the cspulse-platform container (so TOOL_DEFINITIONS and execute_tool are importable), full run for one customer:"
+));
+children.push(code(
+  "DATABASE_URL=postgresql://.../cs_pulse \\\n  ANTHROPIC_API_KEY=sk-ant-... \\\n  python3 -m tests.persona_grading.runner \\\n    --customer 334 \\\n    --output /app/scripts/datasets/persona_grades_$(date +%Y%m%d).json"
+));
+children.push(para("Useful flags:"));
+children.push(bullet("--personas cro,cfo — comma-separated subset (default: all 5)."));
+children.push(bullet("--shots 3 — re-run each question N times and report best/median/worst grade. Defaults to 1. Use 3 when calibrating overlays so a single bad LLM roll doesn't drive a bogus retry."));
+children.push(bullet("--model claude-sonnet-4-20250514 — override the grader model. Keep this stable across runs for a customer so grades are comparable over time."));
 
-children.push(h2("5.4 Calibration loop"));
-children.push(para("When a persona scores below threshold, the fix loop is:"));
-children.push(numbered("Identify which question failed (the script tells you)."));
-children.push(numbered("Map the question to a root cause: wrong KPI weight, missing signal source, wrong pillar weight, stale Wizard C calibration, or a playbook gap."));
-children.push(numbered("Make the smallest possible change in the customer overlay — usually a weight adjustment in bootstrap_weights_config.json or a new signal channel."));
-children.push(numbered("Re-run the persona's eval. The script will show which questions moved and by how much."));
-children.push(numbered("Repeat until threshold is crossed. Cap at 5 calibration cycles. If you cannot close the gap in 5, file a base-dev ticket — the issue is likely deeper than a weight."));
+children.push(h2("5.4 Cost + cadence"));
+children.push(para(
+  "~$0.10–$0.15 per question (one Ask-AI tool-use loop + one grader call). A full 30-question run is ≈$3–5 at default --shots=1; ≈$9–15 at --shots=3. Cheap enough to run on every deploy. Track the cumulative line in the customer's CHANGELOG.md so spend stays predictable."
+));
 
-children.push(h2("5.5 Golden-file maintenance"));
-children.push(para("Once a persona passes, snapshot the answers into results/sanity/golden_{persona}.json. That becomes the regression baseline for every future image upgrade for this customer. Re-running the script after a deploy is how you prove the upgrade did not silently drift the numbers."));
+children.push(h2("5.5 Calibration loop"));
+children.push(para("When a persona's average grade slips below the customer's bar, the fix loop is:"));
+children.push(numbered("Look at the JSON output. The grader's rationale + specific_concerns fields name exactly what was missing or hallucinated."));
+children.push(numbered("Map to a root cause — usually one of: wrong KPI weight in bootstrap_weights_config.json, missing signal channel in the customer overlay, stale Wizard C calibration, or a playbook template that doesn't fit the customer's vertical."));
+children.push(numbered("Make the smallest possible overlay change. Most regressions are weight or signal-channel issues, not code."));
+children.push(numbered("Re-run with --shots 3 on the affected persona only. The JSON diff between runs tells you whether the change moved the needle or rolled the LLM."));
+children.push(numbered("Cap at 5 calibration cycles. If you cannot reach the bar in 5, file a base-dev ticket — the issue is deeper than a weight."));
+
+children.push(h2("5.6 HTTP verify scripts — the deterministic gate"));
+children.push(para(
+  "Before grading, every deploy runs the HTTP verify scripts. These are deterministic — same inputs, same outputs — so they pin invariants (right tile, right number shape, right source label, right period transform) without an LLM in the loop. Run each script post-rehydrate; they exit non-zero on regression."
+));
+children.push(table([3600, 6000], [
+  ["Script", "What it pins"],
+  ["scripts/verify_cfo_phases_ec2.py", "CFO dashboard Phases 0–5: source labels, context-graph parity with CRO, period_meta echo, ARR exposure, proof-data tile."],
+  ["scripts/verify_cfo_phase1_ec2.py", "Narrower CFO Phase 1 subset (context-graph $ parity only). Useful when iterating on just Phase 1 changes."],
+  ["scripts/verify_cro_phases_ec2.py", "CRO dashboard Phases 0–5: metric guide, context-graph strip, pre-proof banner, ARR exposure footnote, period_meta, Phase 5 proof path."],
+  ["scripts/verify_vpcs_phases_ec2.py", "VPCS dashboard: capacity tile, top performers, scorecard auditability."],
+  ["scripts/sanity_check_cust333.py", "Numeric snapshot harness for cust 333 (legacy). API + 2 Ask-AI probes. NOT a persona matrix — use only as a pre/post deploy delta check on numeric tiles."],
+], { zebra: true }));
+children.push(para(
+  "The recommended pattern: each persona-facing PR ships its own verify_*.py in the same shape (login → hit endpoints → assert known invariants → exit non-zero on regression). The May 17 batch added the first three; the VPCS one followed in the 904184fed batch. Keep adding them — they're cheap regression insurance."
+));
+
+children.push(h2("5.7 Acceptance harness (planned)"));
+children.push(para(
+  "A run_acceptance_ec2.sh wrapper to orchestrate the HTTP suites + optional persona grading from one invocation is on the roadmap. Until it lands, run each verify script directly post-rehydrate and run the persona grader manually before customer acceptance. The wrapper would expose ACCEPTANCE_RUN_PERSONA=1 to opt into LLM grading and ACCEPTANCE_SEED_VPCS=1 to refresh renewal/playbook attribution before the run. If your engagement needs this orchestrator before the wrapper lands, write a thin shell script that runs verify_*.py in sequence — do not rebuild the persona grader."
+));
+
+children.push(h2("5.8 Golden-file maintenance"));
+children.push(para(
+  "Persona grader JSON outputs (with prompts, responses, grades, rationale) go in /app/scripts/datasets/ inside the container. Pull them out to the customer's overlay folder as the regression baseline. Re-running after a deploy is how you prove the upgrade did not silently drift the AI surface."
+));
 
 // ---------- Section 6: Coordination protocol ----------
 children.push(h1("6. Coordination Protocol"));
@@ -472,28 +525,40 @@ children.push(para("Open CSPulse_FDE_Discovery.xlsx (the companion workbook). Se
 children.push(para("The workbook captures: pain points, top 5 KPIs they track today, weights they would assign each pillar, signal sources (Slack channels, email aliases, transcript tools), stakeholders, success outcomes, and current process pain. The Consolidation tab rolls all five into a config-export view."));
 
 children.push(h2("7.2 Step 2 — Provision the customer"));
-children.push(para("Use the platform's onboarding wizard from the admin UI, or the MCP create_customer tool if you are scripting. Pick the vertical (DC2_S, SaaS, Healthcare). Pick the KPI tier (Starter 9, Predictive 11 — default, Full 43)."));
+children.push(para(
+  "Use the platform's onboarding wizard from the admin UI, or the MCP create_customer tool if you are scripting. Two first-class verticals today: dc2_s (data center) and saas_premium. Other industry labels (healthcare, etc.) flow in as account firmographic data, not as separate vertical modules — do not promise the customer a 'Healthcare vertical' surface that exists like dc2_s. Pick the KPI tier (Starter 9, Predictive 11 — default, Full 43)."
+));
 children.push(para("The Consolidation tab in the discovery workbook has the field names that map straight into the create_customer call. Copy them across."));
 
 children.push(h2("7.3 Step 3 — The canonical 4-CSV upload"));
 children.push(para("This is the only onboarding pattern we support by default. Anything else is a special case requiring base-dev approval."));
 children.push(table([3200, 6400], [
   ["File", "Contents"],
-  ["accounts.csv", "Account records with products, champion contacts, contract details, firmographic data."],
+  ["account_details.csv (preferred) or accounts.csv (fallback)", "Account records with products, champion contacts, contract details, firmographic data. The loader prefers account_details.csv when both are present."],
   ["kpi_measurements.csv", "Monthly KPI time-series from the customer's source systems."],
-  ["enhanced_qualitative_signals.csv", "Signal feed (NPS, escalations, champion changes, executive feedback)."],
+  ["enhanced_qualitative_signals.csv (preferred) or qualitative_signals.csv (fallback)", "Signal feed (NPS, escalations, champion changes, executive feedback). The enhanced_ variant carries additional columns; the loader accepts either."],
   ["outcomes.csv", "CRM renewal / churn / expansion history (Salesforce export)."],
 ], { zebra: true }));
-children.push(para("Upload via the admin UI or the MCP upload_csv tool. After all four are uploaded, call process_data. Wizard A and Wizard B auto-run. Wizard C does NOT auto-fire — that is a deliberate policy decision. Wizard C runs only on an outcome-count threshold (≥10 new closed outcomes) or an explicit admin trigger. Do not change this."));
+children.push(para(
+  "Upload via the admin UI or the MCP upload_csv tool. After all four are uploaded, call process_data. Wizard A (causal-graph) and Wizard B (counterfactual NRR) auto-run as part of process_data. Wizard C (KPI weight calibration) and Wizard D (predictor recalibration) DO NOT auto-fire from process_data."
+));
+children.push(para("Specifically on the wizard policy — what is actually true today:"));
+children.push(bullet("Wizard C: explicit-only. Run via the MCP tool trigger_wizard('c') or the admin endpoint. The intended policy is 'auto-fire on ≥10 new closed outcomes or admin trigger,' but the auto-threshold is NOT enforced in code today — treat C as admin-trigger-only until base dev confirms the threshold is wired."));
+children.push(bullet("Wizard D: explicit, post-load. After process_data lands and outcomes are present, run trigger_wizard('d') (or the equivalent admin call) so the predictor refits to this tenant. Skipping this leaves the tenant on the previous calibration — symptoms: NRR forecast looks plausible but doesn't move with the tenant's actual KPI trajectory."));
 
 children.push(h2("7.4 Step 4 — First sanity check"));
-children.push(para("Run the sanity script against the new tenant. Confirm the dashboards render and the numbers are non-zero. Common first-day issues:"));
+children.push(para(
+  "Run the HTTP verify scripts (§5.6) against the new tenant. They confirm tile shapes and source labels deterministically. Then visually walk all 5 dashboards and confirm the numbers are non-zero. Common first-day issues:"
+));
 children.push(bullet("Revenue Protected $0: post-load attribution did not run. Trigger it from the admin endpoint."));
-children.push(bullet("NRR forecast 0%: Wizard D did not converge. Check the Wizard D log; refit manually if needed."));
+children.push(bullet("NRR forecast 0% or unchanged from a previous tenant: Wizard D was not refit (see §7.3 wizard policy). Run trigger_wizard('d') manually."));
 children.push(bullet("Ask AI says \"I don't know\" to dashboard questions: a tool was not wired into the customer's enabled set. Check entitlements."));
+children.push(bullet("Dashboard tile shows context-graph $ but CRO and CFO numbers don't match: PR #38 parity regression — re-run scripts/verify_cfo_phase1_ec2.py to localize."));
 
-children.push(h2("7.5 Step 5 — Run the first persona-eval"));
-children.push(para("Once the dashboards render, run the persona-eval matrix (Section 5). Expect at least one persona to score below threshold on day one. The discovery workbook answers are the calibration starting point — adjust the weights, re-run, repeat. Target: all five personas at threshold within the first week."));
+children.push(h2("7.5 Step 5 — Run the first persona-grading pass"));
+children.push(para(
+  "Once §7.4 is green, run the persona grader (§5.3) for all 5 personas at --shots 3 to get a confident baseline. Expect at least one persona to grade below the customer's bar on day one — usually CSM (cold-start tenant has no closed-loop revenue attribution yet) or CFO (no realized defensive ROI until playbooks resolve). The discovery workbook answers are the calibration starting point — follow the loop in §5.5. Target: all 5 personas at the customer's bar (typically B+ or higher) within the first week."
+));
 
 children.push(h2("7.6 Step 6 — Handover"));
 children.push(para("Once evals pass and the customer's stakeholders sign off, hand the engagement to the customer-success team. Your handover packet is: the discovery workbook, the persona-eval golden files, the CHANGELOG.md, and a one-page \"how to read this dashboard\" note per persona (cut from the GTM decks)."));
@@ -523,18 +588,21 @@ children.push(table([4800, 4800], [
   ["What you need", "Where it lives"],
   ["Customer overlay", "verticals/customer{N}-{vertical}/"],
   ["Pillar + KPI weights", "verticals/customer{N}-{vertical}/journey/config/bootstrap_weights_config.json"],
-  ["KPI catalog (canonical, do not edit)", "backend/verticals/dc2_s/kpi_definitions.py"],
+  ["KPI catalog (canonical, do not edit)", "backend/verticals/dc2_s/kpi_definitions.py (and verticals/saas_premium/ equivalent)"],
   ["Signal channel config", "verticals/customer{N}-{vertical}/config/signal_channels.json"],
-  ["Sanity script", "scripts/sanity_check_cust{N}.py"],
-  ["Sanity snapshots + golden files", "results/sanity/"],
-  ["Deploy script", "scripts/rehydrate-ec2-ecr.sh"],
+  ["Persona grader runner", "kpi-dashboard/backend/tests/persona_grading/runner.py (invoke via python3 -m tests.persona_grading.runner)"],
+  ["HTTP verify scripts", "scripts/verify_cfo_phases_ec2.py, verify_cro_phases_ec2.py, verify_vpcs_phases_ec2.py, verify_cfo_phase1_ec2.py"],
+  ["Legacy numeric-snapshot harness (cust 333 only, NOT persona)", "scripts/sanity_check_cust333.py"],
+  ["Deploy scripts", "scripts/deploy-ec2-git-pull.sh (primary), scripts/rehydrate-ec2-ecr.sh (ECR tag-based)"],
   ["Docker compose (local)", "docker-compose.cspulse.yml"],
-  ["MCP tool catalog (51 tools)", "kpi-dashboard/backend/mcp_server/"],
+  ["MCP tool catalog (~52 @mcp.tool decorators today)", "kpi-dashboard/backend/mcp_server/cs_pulse_*.py"],
   ["Discovery workbook (this engagement)", "Companion file: CSPulse_FDE_Discovery.xlsx"],
 ], { zebra: true }));
 
-children.push(h2("8.3 The 51 MCP tools (by capability area)"));
-children.push(para("You will call these via Ask AI or directly through the MCP server. You may NOT add new ones — those go through base dev."));
+children.push(h2("8.3 MCP tool inventory (by capability area)"));
+children.push(para(
+  "The platform exposes ~52 @mcp.tool-decorated callables today, spread across kpi-dashboard/backend/mcp_server/cs_pulse_*.py. The list below is curated and groups them by capability — it is NOT generated from code, so do not treat the count as authoritative; before quoting a number to a customer, grep mcp_server/ for @mcp.tool and count the live decorations. You may NOT add new tools — those go through base dev."
+));
 children.push(h3("Customer + onboarding"));
 children.push(para("create_customer, list_customers, clone_customer, complete_onboarding, configure_customer_kpis, enable_features, get_csv_templates, upload_csv, download_customer_csv, process_data, partner_portal, list_portfolio_customers, list_verticals, get_platform_instructions."));
 children.push(h3("Health + accounts"));
