@@ -523,19 +523,54 @@ children.push(para(
 ));
 children.push(table([3600, 6000], [
   ["Script", "What it pins"],
-  ["scripts/verify_cfo_phases_ec2.py", "CFO dashboard Phases 0–5: source labels, context-graph parity with CRO, period_meta echo, ARR exposure, proof-data tile."],
+  ["scripts/verify_executive_phases_ec2.py", "Env-driven multi-suite runner. --suite all|cfo|cro|vpcs|cfo-phase1. Reads CS_PULSE_BASE_URL + creds from scripts/.env.acceptance. This is the script run_acceptance_ec2.sh (§5.7) calls under the hood — use this directly when you need to localize a failure."],
+  ["scripts/verify_cfo_phases_ec2.py", "Single-PR-style CFO Phases 0–5 script: source labels, context-graph parity with CRO, period_meta echo, ARR exposure, proof-data tile. Predates the env-driven runner — kept for narrow re-runs."],
   ["scripts/verify_cfo_phase1_ec2.py", "Narrower CFO Phase 1 subset (context-graph $ parity only). Useful when iterating on just Phase 1 changes."],
-  ["scripts/verify_cro_phases_ec2.py", "CRO dashboard Phases 0–5: metric guide, context-graph strip, pre-proof banner, ARR exposure footnote, period_meta, Phase 5 proof path."],
+  ["scripts/verify_cro_phases_ec2.py", "CRO Phases 0–5 single-PR script: metric guide, context-graph strip, pre-proof banner, ARR exposure footnote, period_meta, Phase 5 proof path."],
   ["scripts/verify_vpcs_phases_ec2.py", "VPCS dashboard: capacity tile, top performers, scorecard auditability."],
   ["scripts/sanity_check_cust333.py", "Numeric snapshot harness for cust 333 (legacy). API + 2 Ask-AI probes. NOT a persona matrix — use only as a pre/post deploy delta check on numeric tiles."],
 ], { zebra: true }));
 children.push(para(
-  "The recommended pattern: each persona-facing PR ships its own verify_*.py in the same shape (login → hit endpoints → assert known invariants → exit non-zero on regression). The May 17 batch added the first three; the VPCS one followed in the 904184fed batch. Keep adding them — they're cheap regression insurance."
+  "Pick verify_executive_phases_ec2.py for routine acceptance (or just call run_acceptance_ec2.sh in §5.7, which wraps it). The per-PR scripts (verify_cfo_phases_ec2.py etc.) are kept for surgical re-runs when you want to bisect a specific suite without booting the full harness."
+));
+children.push(para(
+  "Pattern for new persona-facing PRs: extend scripts/ec2_acceptance/checks.py with the new invariants and add a new --suite name in verify_executive_phases_ec2.py. Do NOT add another standalone verify_*.py — the per-PR scripts predate the env-driven runner and should not multiply."
 ));
 
-children.push(h2("5.7 Acceptance harness (planned)"));
+children.push(h2("5.7 Acceptance harness — one-command post-deploy"));
 children.push(para(
-  "A run_acceptance_ec2.sh wrapper to orchestrate the HTTP suites + optional persona grading from one invocation is on the roadmap. Until it lands, run each verify script directly post-rehydrate and run the persona grader manually before customer acceptance. The wrapper would expose ACCEPTANCE_RUN_PERSONA=1 to opt into LLM grading and ACCEPTANCE_SEED_VPCS=1 to refresh renewal/playbook attribution before the run. If your engagement needs this orchestrator before the wrapper lands, write a thin shell script that runs verify_*.py in sequence — do not rebuild the persona grader."
+  "scripts/run_acceptance_ec2.sh is the canonical 'step 7' post-deploy harness. It runs the HTTP suites and, optionally, persona grading inside the platform container. Use this instead of running verify scripts one at a time."
+));
+children.push(para("Quick start:"));
+children.push(code(
+  "cp scripts/.env.acceptance.example scripts/.env.acceptance\n# edit CS_PULSE_BASE_URL, credentials, ANTHROPIC_API_KEY\n./scripts/run_acceptance_ec2.sh"
+));
+children.push(para(
+  "The wrapper sources scripts/.env.acceptance (or whatever ACCEPTANCE_ENV_FILE points to), then orchestrates two stages: (1) HTTP acceptance via scripts/verify_executive_phases_ec2.py (env-driven, --suite-aware — runs CFO/CRO/VPCS suites against the live host); (2) optional persona grading via docker exec into the platform container."
+));
+children.push(para("Environment knobs (see scripts/.env.acceptance.example for the full list):"));
+children.push(table([2800, 2000, 4400], [
+  ["Variable", "Default", "Purpose"],
+  ["CS_PULSE_BASE_URL", "http://3.94.106.197", "Target host (local stack, EC2 IP, or CloudFront)."],
+  ["ACCEPTANCE_CUSTOMER_ID", "334", "Tenant the acceptance run targets."],
+  ["ACCEPTANCE_SUITE", "all", "Subset for HTTP stage: cfo | cro | vpcs | cfo-phase1 | all."],
+  ["ACCEPTANCE_SKIP_HTTP", "0", "Set 1 to skip HTTP and run persona grading only."],
+  ["ACCEPTANCE_RUN_PERSONA", "0", "Set 1 to run persona grading in the container. Requires ANTHROPIC_API_KEY."],
+  ["ACCEPTANCE_PERSONAS", "cro,cfo,vpcs", "Subset of personas to grade."],
+  ["ACCEPTANCE_PERSONA_SHOTS", "3", "Shots per question (see §5.3)."],
+  ["ACCEPTANCE_MIN_GRADE_NUMERIC", "0", "Gate. Set e.g. 3.7 to fail the run below A-."],
+  ["ACCEPTANCE_SEED_VPCS", "0", "Set 1 to run seed_vpcs_demo_334.py inside the container before checks (refreshes renewal + playbook attribution on cust 334 demos)."],
+  ["CSPULSE_CONTAINER", "auto-detect", "Docker container name on EC2 (only needed if the host runs multiple cs-pulse containers)."],
+], { zebra: true }));
+children.push(para(
+  "Outputs land in $ACCEPTANCE_OUTPUT_DIR (defaults to scripts/datasets/). The script exits non-zero on any HTTP failure or below-gate grade — wire it into your post-rehydrate runbook."
+));
+children.push(para("Three common invocations:"));
+children.push(bullet("HTTP-only smoke after every rehydrate: ./scripts/run_acceptance_ec2.sh (no cost, ~60s)."));
+children.push(bullet("Full acceptance before customer sign-off: ACCEPTANCE_RUN_PERSONA=1 ./scripts/run_acceptance_ec2.sh (~$3–5 + ~5min)."));
+children.push(bullet("Persona grading only (HTTP already known good): ACCEPTANCE_SKIP_HTTP=1 ACCEPTANCE_RUN_PERSONA=1 ACCEPTANCE_PERSONAS=cfo ./scripts/run_acceptance_ec2.sh."));
+children.push(para(
+  "Supporting code lives in scripts/ec2_acceptance/ (config.py, http_client.py, checks.py) — that's the env-loading + suite-dispatch layer. You should not need to edit it; if you do, file a base-dev request."
 ));
 
 children.push(h2("5.8 Golden-file maintenance"));
@@ -654,7 +689,9 @@ children.push(table([4800, 4800], [
   ["KPI catalog (canonical, do not edit)", "backend/verticals/dc2_s/kpi_definitions.py (and verticals/saas_premium/ equivalent)"],
   ["Signal channel config", "verticals/customer{N}-{vertical}/config/signal_channels.json"],
   ["Persona grader runner", "kpi-dashboard/backend/tests/persona_grading/runner.py (invoke via python3 -m tests.persona_grading.runner)"],
-  ["HTTP verify scripts", "scripts/verify_cfo_phases_ec2.py, verify_cro_phases_ec2.py, verify_vpcs_phases_ec2.py, verify_cfo_phase1_ec2.py"],
+  ["Acceptance harness (primary)", "scripts/run_acceptance_ec2.sh + scripts/.env.acceptance(.example) + scripts/ec2_acceptance/{config,http_client,checks}.py"],
+  ["HTTP verify — env-driven multi-suite", "scripts/verify_executive_phases_ec2.py --suite all|cfo|cro|vpcs|cfo-phase1"],
+  ["HTTP verify — per-PR scripts (kept for surgical re-runs)", "scripts/verify_cfo_phases_ec2.py, verify_cro_phases_ec2.py, verify_vpcs_phases_ec2.py, verify_cfo_phase1_ec2.py"],
   ["Legacy numeric-snapshot harness (cust 333 only, NOT persona)", "scripts/sanity_check_cust333.py"],
   ["Deploy scripts", "scripts/deploy-ec2-git-pull.sh (primary), scripts/rehydrate-ec2-ecr.sh (ECR tag-based)"],
   ["Docker compose (local)", "docker-compose.cspulse.yml"],
