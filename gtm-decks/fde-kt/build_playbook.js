@@ -201,7 +201,7 @@ children.push(table([2400, 4800, 2160], [
   ["predictor/", "Per-account forward NRR forecasting on a 12-month horizon. Provides portfolio rollup and per-account explanation surface.", "Base dev"],
   ["wizards/", "Wizard A (causal-graph generation), Wizard B (pattern + counterfactual analysis), Wizard C (KPI weight calibration), Wizard D (predictor recalibration).", "Base dev"],
   ["signal_engine/", "Qualitative-signal ingestion, deduplication, enrichment, urgency classification, alert dispatch.", "FDE wires channels"],
-  ["verticals/", "Vertical-specific KPI catalogs, pillar weights, and overlays. Default verticals: DC2_S (data center hardware), SaaS Premium, Healthcare Provider.", "FDE owns overlays"],
+  ["verticals/", "Vertical-specific KPI catalogs, pillar weights, and overlays. First-class verticals today: dc2_s (data center) and saas_premium. Other industries (e.g. healthcare) are account firmographics, not separate vertical modules.", "FDE owns overlays"],
   ["mcp_server/", "The MCP tool surface — 51 tools that expose the platform to Claude, Ask AI, and external agents.", "Base dev owns signatures"],
   ["outcome_roi_engine.py", "Historical proof and forward projection of Customer Success ROI using Power-of-1 scaling.", "Base dev"],
   ["health_score_engine.py", "Account-level health score derived from KPI rollups with reference-range scoring.", "Base dev"],
@@ -291,7 +291,7 @@ children.push(para(
 ));
 children.push(table([2400, 4800, 2400], [
   ["Surface", "Purpose", "When it runs"],
-  ["Qdrant signal index", "Semantic search over qualitative signals. SignalVectorStore (utils/qdrant_signal_search.py) embeds and stores; signal_engine/enrichment.py and utils/signal_analyst.py read it. Powers the search_signals MCP tool.", "On every signal write when QDRANT_URL + QDRANT_API_KEY are set on EC2. If env vars are missing the system runs without semantic search and falls back to keyword matching."],
+  ["Qdrant signal index", "Semantic search over qualitative signals. SignalVectorStore (utils/qdrant_signal_search.py): signal_engine/enrichment.py searches similar past signals during live enrichment; utils/signal_analyst.py uses the same store. Bulk (re)index via index_signals() runs after process_data when QDRANT_URL is set (optional pipeline stage). Powers search_signals MCP.", "When QDRANT_URL + QDRANT_API_KEY are set: search at enrich-time; bulk reindex after process_data or material upload. If unset, falls back to SQL/keyword matching."],
   ["direct_rag_api", "Legacy 'working RAG' path — KPI + account knowledge base, rebuild on CSV upload events.", "Registered as a blueprint; rebuild fires from enhanced_upload_api after material data changes."],
   ["enhanced_rag_* (temporal / openai / qdrant variants)", "Newer experimental RAG paths — temporal context, OpenAI embeddings, Qdrant-backed. Admin/upload flows; not on the critical path for all tenants.", "Registered blueprints; on-demand."],
   ["governance_rag_api", "Governance doc search (policies, model cards, AI-DD responses).", "Optional blueprint."],
@@ -432,8 +432,8 @@ children.push(para("Every customer gets a dedicated overlay folder:"));
 children.push(code("verticals/customer{N}-{vertical}/"));
 children.push(para("Inside that folder you will find:"));
 children.push(bullet("config/bootstrap_weights_config.json — pillar weights (L2) and KPI weights (L1) for this customer."));
-children.push(bullet("config/playbook_overlays.json — customer-specific playbook templates."));
-children.push(bullet("config/signal_channels.json — Slack channels, email aliases, transcript sources."));
+children.push(bullet("Per-tenant playbooks — customer_playbooks DB table via /api/playbooks/library (customer_playbook_api.py). See §2.5; there is no config/playbook_overlays.json file."));
+children.push(bullet("config/signal_channels.json — Slack channels, email aliases, transcript sources (live signal engine only)."));
 children.push(bullet("data/ — the customer's mounted CSV directory."));
 children.push(bullet("journey/ — generated context graph snapshots."));
 
@@ -587,7 +587,7 @@ children.push(para(
 children.push(h2("6.1 The three paths"));
 children.push(table([2000, 4400, 3200], [
   ["Path", "When to use", "Turnaround"],
-  ["Overlay (no PR)", "Pure customer-specific config: weights, signal channels, playbook templates. Lives in verticals/customer{N}-*/. Does not touch shared code.", "Same day"],
+  ["Overlay (no PR)", "Pure customer-specific config: weights, signal_channels.json, customer_playbooks rows (/api/playbooks/library). Lives in verticals/customer{N}-*/. Does not touch shared code.", "Same day"],
   ["PR to main", "New capability that other FDEs would want: a new playbook archetype, a new signal channel adapter, a new persona-eval prompt-set.", "2-3 days"],
   ["Base-dev request", "Math change, prompt change, schema change, new MCP tool, new vertical, governance flag adjustment.", "1-2 weeks"],
 ], { zebra: true }));
@@ -688,6 +688,7 @@ children.push(table([4800, 4800], [
   ["Pillar + KPI weights", "verticals/customer{N}-{vertical}/journey/config/bootstrap_weights_config.json"],
   ["KPI catalog (canonical, do not edit)", "backend/verticals/dc2_s/kpi_definitions.py (and verticals/saas_premium/ equivalent)"],
   ["Signal channel config", "verticals/customer{N}-{vertical}/config/signal_channels.json"],
+  ["Per-tenant playbooks (DB)", "customer_playbooks table — /api/playbooks/library (see customer_playbook_api.py)"],
   ["Persona grader runner", "kpi-dashboard/backend/tests/persona_grading/runner.py (invoke via python3 -m tests.persona_grading.runner)"],
   ["Acceptance harness (primary)", "scripts/run_acceptance_ec2.sh + scripts/.env.acceptance(.example) + scripts/ec2_acceptance/{config,http_client,checks}.py"],
   ["HTTP verify — env-driven multi-suite", "scripts/verify_executive_phases_ec2.py --suite all|cfo|cro|vpcs|cfo-phase1"],
@@ -741,8 +742,8 @@ children.push(table([3200, 3200, 3200], [
 ], { zebra: true }));
 
 children.push(h2("8.6 Sign-off checklist (use this before handover)"));
-children.push(bullet("All five personas pass the eval matrix at threshold."));
-children.push(bullet("Golden sanity files committed to the customer overlay."));
+children.push(bullet("./scripts/run_acceptance_ec2.sh exits 0 (HTTP suites). If persona grading ran: all personas at customer bar (e.g. ACCEPTANCE_MIN_GRADE_NUMERIC=3.7 for A-)."));
+children.push(bullet("Persona grader JSON + HTTP verify baselines archived in the customer engagement folder (not necessarily in git — no secrets)."));
 children.push(bullet("CHANGELOG.md in the overlay reflects every change made during the engagement."));
 children.push(bullet("Discovery workbook is filled in and stored in the engagement folder."));
 children.push(bullet("Customer admin has been issued credentials; magic-link flow tested."));

@@ -608,7 +608,7 @@ def build_consolidation(ws, persona_anchors):
         ("kpi_tier", "Predictive 11", "Default", "Override to Starter 9 or Full 43 if customer asks"),
         ("vertical", "DC2_S", "Default", "Set per engagement"),
         ("signal_channels", "See section 5", "Per-persona signal sources rolled up", "Free-form list, deduped"),
-        ("playbook_overlays", "See engagement-specific overlay folder", "FDE authored", "verticals/customer{N}/config/playbook_overlays.json"),
+        ("customer_playbooks", "Per-tenant playbook rows via /api/playbooks/library", "FDE via admin UI or MCP", "DB table customer_playbooks (customer_playbook_api.py)"),
     ]
     for field, val, src, note in config_rows:
         ws.cell(row=r, column=1, value=field).font = FONT_LABEL
