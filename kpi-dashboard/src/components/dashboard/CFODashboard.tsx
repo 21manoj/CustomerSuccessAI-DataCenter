@@ -1722,24 +1722,24 @@ const PastThreeLensesSection: React.FC<{
           title="Counterfactual — Hypothetical with CS Pulse"
           sourceLabel="Wizard B · directional"
           accentColor="amber"
-          subtitle='Wizard B arc-pattern counterfactual: "what would NRR have been if CS Pulse had been running through this period?" Conservative attribution — only credits the incremental delta over the natural arc trajectory.'
+          subtitle={`Wizard B arc-pattern counterfactual: "what would NRR have been if CS Pulse had been running through this period?" Conservative attribution — credits only the incremental delta over Wizard B's modeled natural-arc baseline (${wb.without?.toFixed(1)}%), which is a different basis than Lens A's gross-outcome NRR — the two NRR figures are not directly comparable.`}
           cards={[
             {
               label: 'Hypothetical NRR (with CS Pulse)',
               value: `${wb.with_pulse}%`,
-              sub: 'Wizard B current_nrr_pct',
+              sub: `vs ${wb.without?.toFixed(1)}% natural-arc baseline`,
               color: 'amber',
             },
             {
-              label: 'Counterfactual Lift',
+              label: 'Counterfactual NRR Lift',
               value: `+${wb.delta}pp`,
-              sub: `≈ ${formatCompact((wb.delta || 0) / 100 * totalArr)} attributable on ${formatCompact(totalArr)} ARR`,
+              sub: `≈ ${formatCompact((wb.delta || 0) / 100 * totalArr)} on ${formatCompact(totalArr)} ARR (this is the dollar value of the NRR lift)`,
               color: 'amber',
             },
             {
-              label: 'Counterfactual ARR lift',
+              label: 'ARR Protected (Saved Accounts)',
               value: formatCompact(wb.arr_protected),
-              sub: 'Wizard B · modeled attribution',
+              sub: `Gross ARR of the ${wb.accounts_saved} saved accounts (not the NRR-lift dollars)`,
               color: 'amber',
             },
             {
