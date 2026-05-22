@@ -1796,27 +1796,49 @@ const CRODashboard: React.FC = () => {
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
               <div className="flex items-baseline justify-between mb-2">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Forward NRR</p>
-                <span className="text-[9px] text-gray-600">90d horizon</span>
+                <span className="text-[9px] text-gray-600">Wizard B · 90d horizon</span>
               </div>
-              <div className="flex items-end gap-3 mb-2">
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Without CS Pulse</p>
-                  <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-red-400'}`}>{d.nrr_current}%</p>
+              {/* Truthful 3-column: natural-arc baseline → today (CS Pulse running, interventions not yet applied)
+                  → projected if all recommended interventions succeed. All three numbers are Wizard B outputs;
+                  prior labeling implied 88.49 was the "without CS Pulse" baseline, which is wrong — that's
+                  88.09 (without_cs_pulse_nrr_pct). 88.49 is the with-CS-Pulse current state. */}
+              {d.wizard_b_nrr?.without_cs_pulse_nrr_pct != null ? (
+                <div className="flex items-end gap-2 mb-2">
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-500 mb-0.5">Natural-arc baseline</p>
+                    <p className="text-xl font-bold text-red-400">{d.wizard_b_nrr.without_cs_pulse_nrr_pct.toFixed(1)}%</p>
+                  </div>
+                  <div className="text-gray-600 text-base pb-1">&rarr;</div>
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-500 mb-0.5">Today, with CS Pulse</p>
+                    <p className={`text-xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-amber-400'}`}>{d.nrr_current}%</p>
+                  </div>
+                  <div className="text-gray-600 text-base pb-1">&rarr;</div>
+                  <div className="flex-1">
+                    <p className="text-[9px] text-gray-500 mb-0.5">If interventions succeed</p>
+                    <p className="text-xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+                  </div>
                 </div>
-                <div className="text-gray-600 text-lg pb-1">&rarr;</div>
-                <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">With CS Pulse (projected)</p>
-                  <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+              ) : (
+                <div className="flex items-end gap-3 mb-2">
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">Today, with CS Pulse</p>
+                    <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-amber-400'}`}>{d.nrr_current}%</p>
+                  </div>
+                  <div className="text-gray-600 text-lg pb-1">&rarr;</div>
+                  <div>
+                    <p className="text-[9px] text-gray-500 mb-0.5">If interventions succeed</p>
+                    <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
+                  </div>
                 </div>
-              </div>
+              )}
               {d.nrr_arr_protected > 0 && (
                 <p className="text-[10px] text-green-400/80">
                   {formatCompact(d.nrr_arr_protected)} ARR protectable (attributed)
                 </p>
               )}
               <p className="text-[9px] text-gray-600 mt-1">
-                Forward projection — health-weighted churn risk over the next 90 days. For
-                realized NRR (lifecycle outcomes), see CFO Overview · NRR tile.
+                Wizard B counterfactual at 90d horizon. CS Pulse is already running in the "today" and "interventions" scenarios; the natural-arc baseline is what Wizard B's model expects without any CS Pulse intervention. For 12mo Predictor v3 forecast see CFO Overview · NRR tile.
               </p>
             </div>
           </div>
