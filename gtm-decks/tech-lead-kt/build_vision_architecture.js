@@ -7,7 +7,35 @@ const path = require('path');
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, LevelFormat, HeadingLevel, BorderStyle, WidthType, ShadingType,
+  ImageRun,
 } = require('docx');
+
+// Embed a PNG diagram (constrains to ~580px usable Word width, preserves aspect ratio).
+function diagram(filename, maxWidth = 580) {
+  const imgPath = path.join(__dirname, 'diagrams', filename);
+  if (!fs.existsSync(imgPath)) {
+    return new Paragraph({ children: [new TextRun({ text: `[diagram missing: ${filename}]`, italics: true, color: "808080" })] });
+  }
+  // Read original dimensions via PNG IHDR (bytes 16-23)
+  const buf = fs.readFileSync(imgPath);
+  const origW = buf.readUInt32BE(16);
+  const origH = buf.readUInt32BE(20);
+  const scale = Math.min(1, maxWidth / origW);
+  const w = Math.round(origW * scale);
+  const h = Math.round(origH * scale);
+  return new Paragraph({
+    children: [new ImageRun({ data: buf, transformation: { width: w, height: h } })],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 120, after: 180 },
+  });
+}
+function caption(text) {
+  return new Paragraph({
+    children: [new TextRun({ text, italics: true, size: 18, color: "606060" })],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 240 },
+  });
+}
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "B8B8B8" };
 const cellBorders = { top: border, bottom: border, left: border, right: border };
@@ -92,6 +120,8 @@ children.push(h2("1.1 The two-layer indicator model (the foundational design cho
 children.push(para(
   "This is the most important conceptual call in CS Pulse and it's worth understanding before reading anything else. Most CS platforms have ONE health-score layer — usually a KPI rollup. CS Pulse has TWO layers, intentionally not reconciled. From session memory (product_two_layer_indicator_design.md):"
 ));
+children.push(diagram("d1_two_layer.png"));
+children.push(caption("Figure 1 — The two-layer indicator model. Leading layer (signals → context graph) flags revenue-at-risk before KPIs reflect it; trailing layer (KPI rollup) is mathematically rigorous but lagging. The gap between them is the product."));
 children.push(table([2400, 4400, 2800], [
   ["Layer", "What it is", "Latency"],
   ["Leading (qualitative)", "Signal-driven revenue outcomes. Email/Slack/transcript signals → context graph OUTCOME nodes → revenue-impact attribution. Captures things that haven't yet shown up in the KPI numbers — champion loss, executive sponsor change, NPS decline, escalation patterns.", "Real-time as signals arrive"],
@@ -130,6 +160,8 @@ children.push(para(
 ));
 
 children.push(h2("2.1 The three layers"));
+children.push(diagram("d2_three_layers_ai.png"));
+children.push(caption("Figure 2 — The three layers of AI in CS Pulse. Bottom-up: user/buyer hits the Generative surface (Ask AI + MCP); generative calls into the Causal layer (context graph + invariants) for trustworthy answers; causal layer leans on the Predictive layer (the 4 wizards) for statistical signal. Competitors typically have one layer; none have all three."));
 children.push(table([2200, 3600, 3800], [
   ["Layer", "What it does", "Named technology"],
   ["Predictive (statistical learning)", "Forecasts NRR per account on 12mo horizon. Calibrates KPI + signal weights per tenant. Detects pattern signatures across accounts.", "Wizard B (counterfactual pattern analysis), Wizard C (KPI weight calibration), Wizard D (GLMM-calibrated predictor v3). Pre-Bayesian frequentist hierarchical model today; Bayesian variant on roadmap."],
@@ -156,6 +188,8 @@ children.push(h1("3. Module Surface (10 modules)"));
 children.push(para(
   "The platform image exposes ten top-level modules. As tech lead you'll touch all of them within your first month. This section is the map; the Technical Deep Dive (doc #3) goes into implementation per module."
 ));
+children.push(diagram("d3_modules.png"));
+children.push(caption("Figure 3 — Module surface + data flow. Yellow = customer upload; purple = wizards + predictor (the predictive core); orange = context graph (the causal layer); blue = AI chat surfaces; green = persona dashboards. Solid arrows = primary data path; dotted = subordinate / enrichment paths."));
 
 children.push(table([2400, 4800, 2400], [
   ["Module", "Capability", "Change ownership"],

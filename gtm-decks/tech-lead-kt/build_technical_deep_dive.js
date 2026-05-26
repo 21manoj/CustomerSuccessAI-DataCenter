@@ -7,7 +7,31 @@ const path = require('path');
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, LevelFormat, HeadingLevel, BorderStyle, WidthType, ShadingType,
+  ImageRun,
 } = require('docx');
+
+function diagram(filename, maxWidth = 580) {
+  const imgPath = path.join(__dirname, 'diagrams', filename);
+  if (!fs.existsSync(imgPath)) {
+    return new Paragraph({ children: [new TextRun({ text: `[diagram missing: ${filename}]`, italics: true, color: "808080" })] });
+  }
+  const buf = fs.readFileSync(imgPath);
+  const origW = buf.readUInt32BE(16);
+  const origH = buf.readUInt32BE(20);
+  const scale = Math.min(1, maxWidth / origW);
+  const w = Math.round(origW * scale);
+  const h = Math.round(origH * scale);
+  return new Paragraph({
+    children: [new ImageRun({ data: buf, transformation: { width: w, height: h } })],
+    alignment: AlignmentType.CENTER, spacing: { before: 120, after: 180 },
+  });
+}
+function caption(text) {
+  return new Paragraph({
+    children: [new TextRun({ text, italics: true, size: 18, color: "606060" })],
+    alignment: AlignmentType.CENTER, spacing: { after: 240 },
+  });
+}
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "B8B8B8" };
 const cellBorders = { top: border, bottom: border, left: border, right: border };
@@ -96,7 +120,9 @@ children.push(table([2400, 7200], [
 ], { zebra: true }));
 
 children.push(h2("1.1 Request lifecycle (one API call end-to-end)"));
-children.push(para("For an Ask AI call from Claude.ai resolving to get_account_nrr_forecast:"));
+children.push(diagram("d5_request_lifecycle.png"));
+children.push(caption("Figure 1 — End-to-end request lifecycle. Top: customer upload of 4 CSVs → process_data → Wizard A/B fire automatically. Middle: admin runs trigger_wizard('d') to fit the per-tenant GLMM. Bottom: end user hits the CFO dashboard, handler ARR-weights per-account predictor v3 forecasts into the FORECAST NRR tile."));
+children.push(para("Walking the lifecycle in detail. For an Ask AI call from Claude.ai resolving to get_account_nrr_forecast:"));
 children.push(numbered("Claude.ai sends JSON-RPC POST to https://d2oqfugrb2ltg9.cloudfront.net/mcp?api_key=csp_server_... (Bearer header also works)."));
 children.push(numbered("CloudFront → EC2 origin (3.94.106.197) → cspulse-platform Docker container :80."));
 children.push(numbered("Nginx (in-container) routes /mcp → Flask /mcp endpoint."));
@@ -142,6 +168,8 @@ children.push(h2("2.4 Wizard D — Predictor recalibration (the GLMM)"));
 children.push(para(
   "Wizard D is the most consequential model in CS Pulse — it powers the forward NRR forecast that anchors the CFO + CRO demos. Worth understanding deeply."
 ));
+children.push(diagram("d4_wizard_d_flow.png"));
+children.push(caption("Figure 2 — Wizard D calibration + inference flow. Top: trigger (MCP or admin endpoint) → run_wizard_d builds training panel → fits 4 sub-models (hazard, contraction, expansion_event, expansion_size). Middle: INSERTs to predictor_calibrations, flips prior is_active=false (audit trail). Bottom: predictor/inference.py reads active rows at request time; output surfaces on CFO rollup (103.71% ARR-weighted for cust 334) and MCP tools."));
 
 children.push(h3("Entry point + storage"));
 children.push(bullet("Entry: wizards/wizard_d_predictor_calibrator.py → run_wizard_d(customer_id). Admin trigger: POST /api/admin/wizard-d/run (admin_api.py:1057). MCP trigger: trigger_wizard('d')."));
