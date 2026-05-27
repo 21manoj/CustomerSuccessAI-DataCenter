@@ -8,8 +8,49 @@ const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, LevelFormat, HeadingLevel, BorderStyle, WidthType,
   ShadingType, PageBreak, Header, Footer, PageNumber, TabStopType,
-  TabStopPosition, TableOfContents
+  TabStopPosition, TableOfContents, ImageRun,
 } = require('docx');
+
+// Embed an image (PNG) constrained to ~580px Word width, preserving aspect ratio.
+function image(filename, maxWidth = 580, subdir = 'screenshots') {
+  const imgPath = path.join(__dirname, subdir, filename);
+  if (!fs.existsSync(imgPath)) {
+    return new Paragraph({ children: [new TextRun({ text: `[image missing: ${subdir}/${filename}]`, italics: true, color: "808080" })] });
+  }
+  const buf = fs.readFileSync(imgPath);
+  const origW = buf.readUInt32BE(16);
+  const origH = buf.readUInt32BE(20);
+  const scale = Math.min(1, maxWidth / origW);
+  const w = Math.round(origW * scale);
+  const h = Math.round(origH * scale);
+  return new Paragraph({
+    children: [new ImageRun({ data: buf, transformation: { width: w, height: h } })],
+    alignment: AlignmentType.CENTER, spacing: { before: 120, after: 120 },
+  });
+}
+function caption(text) {
+  return new Paragraph({
+    children: [new TextRun({ text, italics: true, size: 18, color: "606060" })],
+    alignment: AlignmentType.CENTER, spacing: { after: 240 },
+  });
+}
+function calloutList(intro, items) {
+  // Returns an array of paragraphs: intro line + numbered callouts.
+  const out = [
+    new Paragraph({ children: [new TextRun({ text: intro, bold: true, size: 20 })], spacing: { before: 60, after: 80 } }),
+  ];
+  items.forEach((text, i) => {
+    out.push(new Paragraph({
+      children: [
+        new TextRun({ text: `${i + 1}. `, bold: true, size: 20 }),
+        new TextRun({ text, size: 20 }),
+      ],
+      spacing: { after: 60 },
+      indent: { left: 200 },
+    }));
+  });
+  return out;
+}
 
 // ---------- helpers (copied from FDE Playbook for consistency) ----------
 const border = { style: BorderStyle.SINGLE, size: 4, color: "B8B8B8" };
@@ -195,6 +236,16 @@ children.push(para(
 
 children.push(h2("3.1 CRO — Revenue Intelligence (the headline persona)"));
 children.push(para("Route: /cro-dashboard. Component: CRODashboard.tsx. Audience: head of revenue, head of CS, CRO at a $50M–$5B ARR B2B SaaS."));
+children.push(image('persona_cro.png'));
+children.push(caption("CRO dashboard — top-of-fold on cust 334 (live screenshot, late May 2026)"));
+calloutList("On the screenshot above, look at:", [
+  "Top header — 'REVENUE INTELLIGENCE · Q2 2026' with the Q3/Q4/TTM tab selector to the right. Tab switching is a pure UI transform on cached data (no new API call fires).",
+  "'HOW TO READ CRO METRICS' — collapsed expandable metric guide (added by commit 904184fed, the Phases 0–5 honesty work).",
+  "'REVENUE INTELLIGENCE (CONTEXT GRAPH)' strip — Confirmed Revenue at Risk $39.9M / Protected $32.5M / Expansion Pipeline $24.5M. Each tile sourced from context-graph OUTCOME nodes (evidence-weighted), with 'View 8 sample outcomes →' drill-down per tile.",
+  "Below the strip: legacy main tiles (REVENUE AT RISK / REVENUE PROTECTED / EXPANSION PIPELINE), each with a 'Confirmed' badge after the honesty rework.",
+  "'TOP EXPANSION OPPORTUNITIES' + 'TOP AT-RISK ACCOUNTS' panels — these populate from the Predictor v3 (Wizard D-calibrated) per-account forecasts, ranked by ARR impact. CI bands hover inline.",
+  "Right sidebar: 'Pending Decisions' panel (PR #39) — 5 exec-altitude items awaiting CRO sign-off, sorted by revenue at stake. Below it: 'Power of 1 · ROI Engine' tile showing portfolio ROI (7.6%).",
+]).forEach(p => children.push(p));
 children.push(h3("Top-of-fold layout"));
 children.push(bullet("REVENUE INTELLIGENCE header with period selector (Q3 / Q4 / TTM tabs — PR #38 + commit 904184fed). Tab switching is a pure UI transform on cached data; no new API call fires per tab change (only a cro_period_change analytics event)."));
 children.push(bullet("HOW TO READ CRO METRICS — expandable metric guide added by 904184fed."));
@@ -220,6 +271,16 @@ children.push(bullet("Revenue Waterfall — per-account exposure → expected lo
 
 children.push(h2("3.2 CFO — Investment Intelligence (the auditor persona)"));
 children.push(para("Route: /cfo-dashboard. Component: CFODashboard.tsx. Audience: CFO, head of FP&A, board-prep finance partner."));
+children.push(image('persona_cfo.png'));
+children.push(caption("CFO dashboard — top-of-fold on cust 334 (live screenshot)"));
+calloutList("Key elements:", [
+  "Header: 'INVESTMENT INTELLIGENCE · Q2 2026' with Portfolio Pulse (16 Healthy / 9 At Risk / 5 Critical for cust 334).",
+  "'REVENUE INTELLIGENCE (CONTEXT GRAPH)' strip — same engine as CRO (evidence-weighted), proves the two persona dashboards reconcile. PR #38 Phase 1 audit pins this parity.",
+  "Confirmed Revenue at Risk $39.9M / Protected $32.5M / Expansion Pipeline $24.5M tiles, each with 'View 8 sample outcomes →' drill-downs into the actual context-graph OUTCOME nodes (audit trail).",
+  "Four-tile row: TOTAL ARR / CS INVESTMENT / REALIZED NRR — TTM (Wizard B counterfactual, 88.49% with Confirmed badge) / FORECAST NRR — NEXT 12MO (Predictor v3 — Wizard D-calibrated, 103.71%).",
+  "Below the fold (not visible in screenshot): the 'PAST — THREE LENSES' panel — Lens A (Historical, uploaded outcomes), Lens B (Counterfactual, Wizard B), Lens C (Realized, PlaybookExecutionV2 sums). The CFO's signature surface, fixed by PR #43 + #44 for label clarity.",
+  "Right sidebar: 'Pending Decisions' panel (CFO framing — 'Authorise budget to protect X' instead of CRO's 'Decide intervention for X'). Same 5 items, persona-aware sorting by $ spend.",
+]).forEach(p => children.push(p));
 
 children.push(h3("Top-of-fold"));
 children.push(bullet("INVESTMENT INTELLIGENCE header + Portfolio Pulse summary (16 Healthy / 9 At Risk / 5 Critical for cust 334)."));
@@ -244,7 +305,16 @@ children.push(para(
 ));
 
 children.push(h2("3.3 CEO — Executive Scorecard"));
-children.push(para("Route: /ceo-dashboard. Component: CEODashboard.tsx. Audience: CEO at the customer (or PE-portfolio CEO at the parent level if portfolio mode is on)."));
+children.push(para("Route: /ceo (also /saas-dashboard/ceo). Component: CEODashboard.tsx. Audience: CEO at the customer (or PE-portfolio CEO at the parent level if portfolio mode is on)."));
+children.push(image('persona_ceo.png'));
+children.push(caption("CEO dashboard — 'PORTFOLIO COMMAND CENTER' on cust 334 (single-tenant mode)"));
+calloutList("Key elements:", [
+  "'PORTFOLIO COMMAND CENTER' header — when only one customer exists under a portfolio_id (single-tenant mode for cust 334), shows the Executive Scorecard alternative added by PR #31.",
+  "4-tile top row: TOTAL PORTFOLIO ARR $175.4M / AVG HEALTH 83.6 / NET REVENUE RETENTION 104.0% / ACCOUNTS AT RISK 14. The NRR number is the Wizard D-calibrated forecast (Predictor v3, ARR-weighted, 12mo horizon).",
+  "TOP EXPANSION OPPORTUNITIES + TOP AT-RISK ACCOUNTS panels — same Wizard D data as the CRO surface, framed for board-altitude consumption.",
+  "Right side: Portfolio Health gauge (84) + Predictor v3 ROI tile (7,887% — note this is the historical ROI which the disclosure heuristic flags as non-repeatable; see Outcome ROI doc §5).",
+  "Below: Executive Scorecard table with per-tile summary metrics.",
+]).forEach(p => children.push(p));
 children.push(h3("Layout"));
 children.push(bullet("Single-tenant mode (when only one customer exists under a portfolio_id) — Executive Scorecard headline with portfolio NRR, total ARR, account-status breakdown."));
 children.push(bullet("Portfolio mode (PE-fund deployment with multiple customers under one portfolio_id) — Company Comparison Table with portfolio rollup. cust 334 today is single-tenant so this surface collapses; PR #31 (May 17) shipped the Executive Scorecard alternative for that case."));
@@ -252,7 +322,16 @@ children.push(bullet("Top 3 Strategic Moves tile (PR #31) — Conservative / Rec
 children.push(bullet("Quarter selector with live computation (was hardcoded 'Q1 2026' until 904184fed)."));
 
 children.push(h2("3.4 VP CS — Operations Intelligence"));
-children.push(para("Route: /vpcs-dashboard. Component: VPCSDashboard.tsx. Audience: VP of Customer Success — the operational counterpart to the CFO."));
+children.push(para("Route: /vpcs (also /saas-dashboard/vpcs). Component: VPCSDashboard.tsx. Audience: VP of Customer Success — the operational counterpart to the CFO."));
+children.push(image('persona_vpcs.png'));
+children.push(caption("VPCS dashboard — top-of-fold on cust 334"));
+calloutList("Key elements:", [
+  "TEAM CAPACITY tile (came online via PR #30 + commit fed7d7834) — hours-based utilization with resource_pool / utilization_pct / bottlenecks / recommendation. Replaced earlier account-count-derived fallback gauge.",
+  "Per-CSM Scorecards — accounts_rescued / accounts_lost / health_delta / playbook_success_rate. Counts are auditable via explicit lifecycle definitions (critical→healthy = rescue, healthy→critical = lost).",
+  "Top Performers panel — CSM ranking with composite score.",
+  "Renewal Pipeline widget (90-day window) — pulls renewal_date + forecast_category from CRM data.",
+  "Right sidebar typically shows playbook recommendations summary at the team level (vs CSM-cockpit per-account drill).",
+]).forEach(p => children.push(p));
 children.push(bullet("Team Capacity gauge — hours-based utilization (resource_pool / utilization_pct / bottlenecks / recommendation). Came online via PR #30 (May 17) — earlier the tile fell back to a client-side account-count derived gauge."));
 children.push(bullet("CSM Scorecards — per-CSM accounts_rescued / accounts_lost / health_delta / playbook_success_rate. Counts ARE auditable: critical→healthy = rescue, healthy→critical = lost; explicit lifecycle definitions."));
 children.push(bullet("Per-CSM ranking with composite score."));
@@ -260,7 +339,16 @@ children.push(bullet("Top Performers panel (PR fed7d7834, May 22)."));
 children.push(bullet("Renewal Pipeline widget — accounts with renewal_date < 90 days, with days_until + forecast_category from CRM data."));
 
 children.push(h2("3.5 CSM — Daily Cockpit"));
-children.push(para("Route: /csm or /saas-dashboard/csm. Component: CSMCockpit.tsx. Audience: individual CSM. This is the most-used surface in the product — designed for a 2-minute morning briefing."));
+children.push(para("Route: /saas-dashboard/csm. Component: CSMCockpit.tsx. Audience: individual CSM. This is the most-used surface in the product — designed for a 2-minute morning briefing."));
+children.push(image('persona_csm.png'));
+children.push(caption("CSM cockpit — 'Focus Mode' view on cust 334"));
+calloutList("Key elements:", [
+  "FOCUS MODE — sequential task queue across the CSM's book, prioritised by impact × time-decay. 'TODAY'S QUEUE >> 1/5' progresses through items one at a time.",
+  "Critical card centre-stage — health score, churn-risk %, recommended action ('Initiate emergency churn prevention'), renewal countdown ('renewal in N days').",
+  "Action panel bottom: Prev / Snooze 1d / Skip / Complete & Next / Ask AI — designed for fast triage without leaving the keyboard.",
+  "Right sidebar: 'KANBAN BOARD' alternate view — FIRE / THIS WEEK / OPPORTUNITY columns with drag-drop persistence via @dnd-kit (kanban_column stored in profile_metadata).",
+  "Account-drill drawer (opens on card click, not shown): pillar scores, signals timeline, vertical-aware playbook recommendations (PR #26 + #33 fix), stakeholder map, support tickets, journey timeline.",
+]).forEach(p => children.push(p));
 children.push(bullet("FOCUS MODE — sequential task queue across all CSM's accounts, prioritised by impact × time-decay."));
 children.push(bullet("KANBAN BOARD — FIRE (critical) / THIS WEEK / OPPORTUNITY columns. Drag-drop persistence via @dnd-kit (kanban_column PATCH stored in profile_metadata)."));
 children.push(bullet("Account-drill drawer — pillar scores, signals timeline, recommendations panel, stakeholder map, support tickets, journey timeline."));

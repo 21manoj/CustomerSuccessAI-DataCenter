@@ -227,6 +227,8 @@ children.push(para(
 ));
 
 children.push(h2("3.1 Schema"));
+children.push(diagram("d6_context_graph.png"));
+children.push(caption("Figure 3 — Context Graph schema. Two tables (ContextNode + ContextEdge) with 6 node_type values and 9 edge_type values, validated by 11 CI-enforced invariants. Polarity invariants (I2) are the most-watched — a positive signal cannot cause a negative-revenue OUTCOME."));
 children.push(h3("ContextNode (models.py:719)"));
 children.push(bullet("node_id (PK), customer_id, account_id — tenant + account isolation"));
 children.push(bullet("node_type — ACCOUNT / SIGNAL / STAKEHOLDER / DECISION / OUTCOME / EXTERNAL_CONTEXT"));
@@ -274,6 +276,8 @@ children.push(h1("4. Signal Engine (three channels)"));
 children.push(para(
   "Qualitative signals are the leading-indicator layer (per Vision/Architecture §1.1). Three ingest paths into the same destination — ContextNode rows with node_type='SIGNAL'."
 ));
+children.push(diagram("d7_signal_engine.png"));
+children.push(caption("Figure 4 — Signal engine three-channel pipeline. Channel 1 (CSV) bypasses enrichment; Channels 2+3 (live email/Slack) go through the shared LLM-enrichment + fusion + urgency pipeline. All three converge on the context graph + Qdrant index. CSV is default-ON, live channels are OFF until DPA signed (per playbook §2.4)."));
 
 children.push(h2("4.1 Channel 1 — CSV upload (default)"));
 children.push(bullet("File: qualitative_signals.csv or enhanced_qualitative_signals.csv (both accepted)"));
@@ -313,6 +317,8 @@ children.push(h1("5. Outcome ROI Engine"));
 children.push(para(
   "Three lenses of CS ROI proof: historical (what closed), forward (Power-of-1 projection), bridge (continuity narrative). The CFO dashboard reads from this engine; the Outcome ROI dashboard renders all three in one view."
 ));
+children.push(diagram("d8_outcome_roi.png"));
+children.push(caption("Figure 5 — Outcome ROI 3-lens architecture. Lens A (Historical) goes through the disclosure heuristic which fires the auditor caveat when ROI > 500% AND avg improvement > 2× forward steady-state. Bridge ties historical + forward + steers the reader to the credible headline number. Lens C (Realized) is rendered on the same CFO panel but takes a different data path — bottom-up sum of PlaybookExecutionV2.revenue_protected."));
 
 children.push(h2("5.1 The OutcomeROIResult dataclass (outcome_roi_engine.py:380+)"));
 children.push(bullet("view_type — 'historical' or 'forward'"));
@@ -376,6 +382,8 @@ children.push(para(
 
 children.push(h1("7. Database Schema (key tables)"));
 children.push(para("Highlights only. Full schema in kpi-dashboard/backend/models.py."));
+children.push(diagram("d9_db_schema.png", 600));
+children.push(caption("Figure 6 — ER diagram of the key tables. Customers is the root; everything fans out tenant-isolated. Note PREDICTOR_CALIBRATIONS (Wizard D output, 4 sub-models per active tenant), CONTEXT_NODES + CONTEXT_EDGES (the causal layer with self-referential edges via from/to_node_id), and LLM_USAGE_LOG (every LLM call tracked for cost attribution + governance audit)."));
 
 children.push(table([2800, 6800], [
   ["Table", "Purpose"],
@@ -440,6 +448,8 @@ children.push(bullet("MOD-002 approval gate + MOD-007 prompt register + MOD-008 
 // ============================================================
 
 children.push(h1("10. Testing Architecture"));
+children.push(diagram("d10_test_architecture.png"));
+children.push(caption("Figure 7 — Testing architecture. Red = CI gates (must pass to merge — narrow pytest subset + 2 audits + TypeScript compile). Green = opt-in post-merge or pre-release (persona grading, verify scripts, acceptance harness, load-driver E2E). Yellow = developer discipline enforced by code review (verify-diff, CHANGELOG, record_usage grep, local audit run)."));
 
 children.push(h2("10.1 What CI runs as a gate"));
 children.push(bullet("Narrow pytest subset — score calculator, account-column ORM audit (PR #32), Flask + MCP duplication-drift audit (PR #37)."));
