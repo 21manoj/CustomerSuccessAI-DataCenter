@@ -36,8 +36,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: "1.0"
+          memory: 4G
+          cpus: "2.0"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cspulse -d cs_pulse"]
       interval: 15s
@@ -112,8 +112,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3G
-          cpus: "2.0"
+          memory: 24G
+          cpus: "6.0"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5059/api/health"]
       interval: 30s
