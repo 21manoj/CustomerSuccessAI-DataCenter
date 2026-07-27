@@ -187,7 +187,7 @@ def format_health_trajectory(ctx: Dict) -> str:
 
 
 def call_claude(system_prompt: str, user_prompt: str, customer_id: int,
-                model: str = 'claude-sonnet-4-20250514', max_tokens: int = 2048,
+                model: str = 'claude-sonnet-4-6', max_tokens: int = 2048,
                 temperature: float = 0.3) -> tuple:
     """Call Claude API. Returns (parsed_json, usage_dict, duration_s) or (None, {}, duration)."""
     import time

@@ -30,7 +30,7 @@ def _run_ask_ai_for_question(
     customer_id: int,
     *,
     anthropic_client,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
     max_rounds: int = 5,
 ) -> tuple[str, list[str]]:
     """Run the Ask AI tool-use loop for one question.
@@ -209,7 +209,7 @@ def run_one_persona(
     customer_id: int,
     *,
     anthropic_client=None,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
     sleep_between_questions: float = 1.0,
     n_shots: int = 1,
 ) -> PersonaReport:
@@ -339,7 +339,7 @@ def run_all_personas(
             "personas, 5-yr for CSM). Same approach as the Apr 14-15 audit. "
             f"Each question graded {n_shots}× with mean reported as headline."
         ),
-        "grader_model": "claude-sonnet-4-20250514",
+        "grader_model": "claude-sonnet-4-6",
         "personas": reports,
         "summary": {
             p: {

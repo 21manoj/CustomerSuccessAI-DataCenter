@@ -131,7 +131,7 @@ def grade_response(
     tools_called: list[str],
     *,
     anthropic_client=None,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = "claude-sonnet-4-6",
 ) -> GradeResult:
     """Run the LLM-as-judge for one (question, response) pair.
 
