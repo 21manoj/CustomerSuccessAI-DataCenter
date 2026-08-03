@@ -20,7 +20,7 @@ from extensions import db
 from models import Customer, Account
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from openai import OpenAI
+import voyageai
 from sqlalchemy import text
 
 # Load environment variables
@@ -29,8 +29,8 @@ env_path = os.path.join(basedir, '.env')
 load_dotenv(dotenv_path=env_path)
 
 # Configuration
-EMBEDDING_MODEL = "text-embedding-3-large"
-EMBEDDING_DIM = 3072  # text-embedding-3-large dimension
+EMBEDDING_MODEL = "voyage-3-large"
+EMBEDDING_DIM = 1024  # voyage-3-large default output dimension
 COLLECTION_NAME_BASE = "kpi_dashboard_signals"  # Collection base name (matches KPI collection pattern)
 
 
@@ -48,24 +48,24 @@ def get_qdrant_client() -> QdrantClient:
     return QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=30)
 
 
-def get_openai_client(customer_id: Optional[int] = None) -> OpenAI:
-    """Get OpenAI client with customer-specific or global API key"""
+def get_voyage_client(customer_id: Optional[int] = None) -> "voyageai.Client":
+    """Get Voyage AI client with customer-specific or global API key"""
     # Try customer-specific key first
     if customer_id:
         try:
-            from openai_key_utils import get_openai_api_key
-            api_key = get_openai_api_key(customer_id)
+            from voyage_key_utils import get_voyage_api_key
+            api_key = get_voyage_api_key(customer_id)
             if api_key:
-                return OpenAI(api_key=api_key)
+                return voyageai.Client(api_key=api_key)
         except Exception as e:
-            print(f"⚠️  Could not get customer-specific OpenAI key: {e}")
-    
+            print(f"⚠️  Could not get customer-specific Voyage key: {e}")
+
     # Fallback to environment variable
-    api_key = os.getenv('OPENAI_API_KEY')
+    api_key = os.getenv('VOYAGE_API_KEY')
     if not api_key:
-        raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or configure customer-specific key.")
-    
-    return OpenAI(api_key=api_key)
+        raise ValueError("Voyage API key not found. Please set VOYAGE_API_KEY environment variable or configure customer-specific key.")
+
+    return voyageai.Client(api_key=api_key)
 
 
 def ensure_collection_exists(qdrant_client: QdrantClient, collection_name: str, recreate: bool = False):
@@ -214,9 +214,9 @@ def embed_and_upload_signals(
         qdrant_client = get_qdrant_client()
         print("✅ Connected to Qdrant")
         
-        print("\n2. Initializing OpenAI client...")
-        openai_client = get_openai_client(customer_id)
-        print("✅ OpenAI client initialized")
+        print("\n2. Initializing Voyage client...")
+        voyage_client = get_voyage_client(customer_id)
+        print("✅ Voyage client initialized")
         
         # Collection name
         collection_name = f"{COLLECTION_NAME_BASE}_customer_{customer_id}"
@@ -275,14 +275,15 @@ def embed_and_upload_signals(
                 # Create text for embedding
                 text_to_embed = create_signal_text(signal)
                 
-                # Generate embedding
-                response = openai_client.embeddings.create(
+                # Generate embedding (Voyage; input_type='document' for corpus indexing)
+                response = voyage_client.embed(
+                    [text_to_embed],
                     model=EMBEDDING_MODEL,
-                    input=text_to_embed
+                    input_type="document",
                 )
-                
-                embedding = response.data[0].embedding
-                total_tokens += response.usage.total_tokens
+
+                embedding = response.embeddings[0]
+                total_tokens += getattr(response, "total_tokens", 0)
                 
                 # Create point
                 point = PointStruct(
@@ -350,11 +351,12 @@ def embed_and_upload_signals(
         print(f"   Query: '{test_query}'")
         
         try:
-            query_response = openai_client.embeddings.create(
+            query_response = voyage_client.embed(
+                [test_query],
                 model=EMBEDDING_MODEL,
-                input=test_query
+                input_type="query",
             )
-            query_embedding = query_response.data[0].embedding
+            query_embedding = query_response.embeddings[0]
             
             results = qdrant_client.query_points(
                 collection_name=collection_name,

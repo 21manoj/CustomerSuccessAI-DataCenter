@@ -237,22 +237,9 @@ def governance_query():
                 'response_time_ms': int((time.time() - start_time) * 1000)
             })
         
-        # Use OpenAI to answer governance queries
-        from openai_key_utils import get_openai_api_key
-        import openai
-        import httpx
-        
-        api_key = get_openai_api_key(customer_id)
-        if not api_key:
-            return jsonify({
-                'error': 'OpenAI API key not configured',
-                'message': 'Please configure your OpenAI API key in Settings → OpenAI API Key.'
-            }), 400
-        
-        # Initialize OpenAI client with explicit httpx configuration
-        http_client = httpx.Client(timeout=60.0, follow_redirects=True)
-        client = openai.OpenAI(api_key=api_key, http_client=http_client)
-        
+        # Use Claude (Anthropic) to answer governance queries
+        from anthropic_chat_utils import generate_text, AnthropicKeyNotConfigured, DEFAULT_MODEL
+
         system_prompt = """You are a governance and compliance assistant for a KPI dashboard system.
 Your role is to help answer questions about user activities, system changes, audit logs, and compliance.
 
@@ -294,31 +281,29 @@ Please provide a comprehensive answer based on the governance data above."""
         except Exception:
             pass
 
-        # Call OpenAI
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.3,
-            max_tokens=1500
-        )
+        # Call Claude (Anthropic)
+        try:
+            response_text, input_tokens, output_tokens = generate_text(
+                customer_id, system_prompt, user_prompt,
+                max_tokens=1500, temperature=0.3,
+            )
+        except AnthropicKeyNotConfigured:
+            return jsonify({
+                'error': 'Anthropic API key not configured',
+                'message': 'Set ANTHROPIC_API_KEY or configure a per-customer key in Settings.'
+            }), 400
 
-        response_text = response.choices[0].message.content
         response_time_ms = int((time.time() - start_time) * 1000)
 
-        # Estimate cost (GPT-4 pricing: $0.03/1K input tokens, $0.06/1K output tokens)
-        input_tokens = response.usage.prompt_tokens
-        output_tokens = response.usage.completion_tokens
-        estimated_cost = (input_tokens / 1000 * 0.03) + (output_tokens / 1000 * 0.06)
+        # Estimate cost (Claude Sonnet 4.6 pricing: $3/1M input, $15/1M output)
+        estimated_cost = (input_tokens / 1_000_000 * 3.0) + (output_tokens / 1_000_000 * 15.0)
 
         # Record usage (fail-open)
         try:
             if _budget_record:
                 _budget_record(customer_id, 'rag_query',
                                tokens_in=input_tokens, tokens_out=output_tokens,
-                               model='gpt-4')
+                               model=DEFAULT_MODEL)
         except Exception:
             pass
         

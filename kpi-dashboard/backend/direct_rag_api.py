@@ -505,20 +505,9 @@ def direct_query():
         
         # Generate AI response
         try:
-            # Get API key from customer-specific encrypted storage or environment fallback
-            from openai_key_utils import get_openai_api_key
-            api_key = get_openai_api_key(customer_id)
-            if not api_key:
-                return jsonify({
-                    'error': 'OpenAI API key not configured',
-                    'message': 'Please configure your OpenAI API key in Settings > OpenAI Key Settings.'
-                }), 400
-                
-            # Initialize OpenAI client with explicit httpx configuration
-            import httpx
-            http_client = httpx.Client(timeout=30.0)
-            client = openai.OpenAI(api_key=api_key, http_client=http_client)
-            
+            # Claude (Anthropic) text generation — key handled by the helper
+            from anthropic_chat_utils import generate_text, AnthropicKeyNotConfigured, DEFAULT_MODEL
+
             context = "\n".join(context_data)
             
             playbook_instruction = ""
@@ -591,33 +580,32 @@ def direct_query():
             except Exception:
                 pass
 
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=1000,
-                temperature=0.3
-            )
+            try:
+                ai_response, _tok_in, _tok_out = generate_text(
+                    customer_id, system_prompt, user_prompt,
+                    max_tokens=1000, temperature=0.3,
+                )
+            except AnthropicKeyNotConfigured:
+                return jsonify({
+                    'error': 'Anthropic API key not configured',
+                    'message': 'Set ANTHROPIC_API_KEY or configure a per-customer key in Settings.'
+                }), 400
 
             # Record usage (fail-open)
             try:
                 if _budget_record:
                     _budget_record(customer_id, 'rag_query',
-                                   tokens_in=response.usage.prompt_tokens,
-                                   tokens_out=response.usage.completion_tokens,
-                                   model='gpt-4o')
+                                   tokens_in=_tok_in,
+                                   tokens_out=_tok_out,
+                                   model=DEFAULT_MODEL)
             except Exception:
                 pass
-
-            ai_response = response.choices[0].message.content
 
         except Exception as e:
             try:
                 if _budget_record:
                     _budget_record(customer_id, 'rag_query', 0, 0,
-                                   model='gpt-4o', success=False, error_message=str(e)[:200])
+                                   model=DEFAULT_MODEL, success=False, error_message=str(e)[:200])
             except Exception:
                 pass
             return jsonify({'error': f'Query failed: {str(e)}'}), 500
