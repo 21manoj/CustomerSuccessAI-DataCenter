@@ -20,7 +20,7 @@ from extensions import db
 from models import Customer, Account
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from openai import OpenAI
+import voyageai
 from sqlalchemy import text
 
 # Load environment variables
@@ -29,8 +29,8 @@ env_path = os.path.join(basedir, '.env')
 load_dotenv(dotenv_path=env_path)
 
 # Configuration
-EMBEDDING_MODEL = "text-embedding-3-large"
-EMBEDDING_DIM = 3072  # text-embedding-3-large dimension
+EMBEDDING_MODEL = "voyage-3-large"
+EMBEDDING_DIM = 1024  # voyage-3-large default output dimension
 COLLECTION_NAME_BASE = "kpi_dashboard_signals"  # Collection base name (matches KPI collection pattern)
 
 
@@ -48,24 +48,24 @@ def get_qdrant_client() -> QdrantClient:
     return QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=30)
 
 
-def get_openai_client(customer_id: Optional[int] = None) -> OpenAI:
-    """Get OpenAI client with customer-specific or global API key"""
+def get_voyage_client(customer_id: Optional[int] = None) -> "voyageai.Client":
+    """Get Voyage AI client with customer-specific or global API key"""
     # Try customer-specific key first
     if customer_id:
         try:
-            from openai_key_utils import get_openai_api_key
-            api_key = get_openai_api_key(customer_id)
+            from voyage_key_utils import get_voyage_api_key
+            api_key = get_voyage_api_key(customer_id)
             if api_key:
-                return OpenAI(api_key=api_key)
+                return voyageai.Client(api_key=api_key)
         except Exception as e:
-            print(f"⚠️  Could not get customer-specific OpenAI key: {e}")
-    
+            print(f"⚠️  Could not get customer-specific Voyage key: {e}")
+
     # Fallback to environment variable
-    api_key = os.getenv('OPENAI_API_KEY')
+    api_key = os.getenv('VOYAGE_API_KEY')
     if not api_key:
-        raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or configure customer-specific key.")
-    
-    return OpenAI(api_key=api_key)
+        raise ValueError("Voyage API key not found. Please set VOYAGE_API_KEY environment variable or configure customer-specific key.")
+
+    return voyageai.Client(api_key=api_key)
 
 
 def ensure_collection_exists(qdrant_client: QdrantClient, collection_name: str, recreate: bool = False):
@@ -103,35 +103,32 @@ def ensure_collection_exists(qdrant_client: QdrantClient, collection_name: str, 
 def fetch_signals_from_db(customer_id: int, since_date: Optional[str] = None) -> List:
     """Fetch qualitative signals from PostgreSQL database"""
     query = """
-        SELECT 
+        SELECT
             signal_id,
             account_id,
-            date,
+            signal_date,
             signal_type,
-            from_contact,
-            to_contact,
-            subject,
-            summary,
+            content,
             sentiment,
-            priority,
+            stakeholder_level,
+            stakeholder_title,
             keywords,
-            source_system,
-            created_at
+            source_type
         FROM qualitative_signals
         WHERE account_id IN (
-            SELECT account_id 
-            FROM accounts 
+            SELECT account_id
+            FROM accounts
             WHERE customer_id = :customer_id
         )
     """
-    
+
     params = {"customer_id": customer_id}
-    
+
     if since_date:
-        query += " AND created_at >= :since_date"
+        query += " AND signal_date >= :since_date"
         params["since_date"] = since_date
-    
-    query += " ORDER BY account_id, date DESC"
+
+    query += " ORDER BY account_id, signal_date DESC"
     
     result = db.session.execute(text(query), params)
     signals = result.fetchall()
@@ -163,17 +160,17 @@ def create_signal_text(signal) -> str:
     """Create text representation of signal for embedding"""
     parts = [
         f"Type: {signal.signal_type or 'N/A'}",
-        f"Subject: {signal.subject or 'N/A'}",
-        f"Summary: {signal.summary or 'N/A'}",
+        f"Content: {signal.content or 'N/A'}",
         f"Sentiment: {signal.sentiment or 'N/A'}",
-        f"Priority: {signal.priority or 'N/A'}",
     ]
-    
-    if signal.from_contact:
-        parts.append(f"From: {signal.from_contact}")
-    if signal.to_contact:
-        parts.append(f"To: {signal.to_contact}")
-    
+
+    if signal.stakeholder_level:
+        parts.append(f"Stakeholder level: {signal.stakeholder_level}")
+    if signal.stakeholder_title:
+        parts.append(f"Stakeholder title: {signal.stakeholder_title}")
+    if signal.keywords:
+        parts.append(f"Keywords: {signal.keywords}")
+
     return "\n".join(parts)
 
 
@@ -214,9 +211,9 @@ def embed_and_upload_signals(
         qdrant_client = get_qdrant_client()
         print("✅ Connected to Qdrant")
         
-        print("\n2. Initializing OpenAI client...")
-        openai_client = get_openai_client(customer_id)
-        print("✅ OpenAI client initialized")
+        print("\n2. Initializing Voyage client...")
+        voyage_client = get_voyage_client(customer_id)
+        print("✅ Voyage client initialized")
         
         # Collection name
         collection_name = f"{COLLECTION_NAME_BASE}_customer_{customer_id}"
@@ -255,7 +252,7 @@ def embed_and_upload_signals(
         if dry_run:
             print("\n[DRY RUN] Would embed these signals:")
             for i, sig in enumerate(signals[:10], 1):
-                print(f"   {i}. Signal ID: {sig.signal_id}, Subject: {sig.subject or 'N/A'}, Date: {sig.date}")
+                print(f"   {i}. Signal ID: {sig.signal_id}, Type: {sig.signal_type or 'N/A'}, Date: {sig.signal_date}")
             if len(signals) > 10:
                 print(f"   ... and {len(signals) - 10} more signals")
             print("\n✅ Dry run complete - no data was embedded")
@@ -275,14 +272,15 @@ def embed_and_upload_signals(
                 # Create text for embedding
                 text_to_embed = create_signal_text(signal)
                 
-                # Generate embedding
-                response = openai_client.embeddings.create(
+                # Generate embedding (Voyage; input_type='document' for corpus indexing)
+                response = voyage_client.embed(
+                    [text_to_embed],
                     model=EMBEDDING_MODEL,
-                    input=text_to_embed
+                    input_type="document",
                 )
-                
-                embedding = response.data[0].embedding
-                total_tokens += response.usage.total_tokens
+
+                embedding = response.embeddings[0]
+                total_tokens += getattr(response, "total_tokens", 0)
                 
                 # Create point
                 point = PointStruct(
@@ -293,16 +291,14 @@ def embed_and_upload_signals(
                         "customer_id": customer_id,
                         "signal_id": signal.signal_id,
                         "account_id": signal.account_id,
-                        "date": str(signal.date) if signal.date else None,
+                        "signal_date": str(signal.signal_date) if signal.signal_date else None,
                         "signal_type": signal.signal_type,
-                        "from_contact": signal.from_contact,
-                        "to_contact": signal.to_contact,
-                        "subject": signal.subject,
-                        "summary": signal.summary,
+                        "content": signal.content,
                         "sentiment": signal.sentiment,
-                        "priority": signal.priority,
+                        "stakeholder_level": signal.stakeholder_level,
+                        "stakeholder_title": signal.stakeholder_title,
                         "keywords": signal.keywords if signal.keywords else [],
-                        "source_system": signal.source_system if signal.source_system else "unknown",
+                        "source_type": signal.source_type if signal.source_type else "unknown",
                         "text": text_to_embed
                     }
                 )
@@ -350,11 +346,12 @@ def embed_and_upload_signals(
         print(f"   Query: '{test_query}'")
         
         try:
-            query_response = openai_client.embeddings.create(
+            query_response = voyage_client.embed(
+                [test_query],
                 model=EMBEDDING_MODEL,
-                input=test_query
+                input_type="query",
             )
-            query_embedding = query_response.data[0].embedding
+            query_embedding = query_response.embeddings[0]
             
             results = qdrant_client.query_points(
                 collection_name=collection_name,

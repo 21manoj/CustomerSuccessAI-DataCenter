@@ -36,12 +36,12 @@ load_dotenv()
 class EnhancedRAGSystemQdrant:
     def __init__(self):
         """Initialize the enhanced RAG system with Qdrant and OpenAI"""
-        # Initialize OpenAI client - will be set at query time
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
-        
-        # Use OpenAI's text-embedding-3-large model
-        self.embedding_model = 'text-embedding-3-large'
-        self.embedding_dimension = 3072  # text-embedding-3-large dimension
+        # Voyage embeddings client - will be set at query time
+        self.voyage_api_key = os.getenv('VOYAGE_API_KEY')
+
+        # Use Voyage AI's voyage-3-large model
+        self.embedding_model = 'voyage-3-large'
+        self.embedding_dimension = 1024  # voyage-3-large default output dimension
         
         # Initialize Qdrant client - ONLY support Qdrant Cloud (via URL)
         self.using_local_storage = False
@@ -98,43 +98,45 @@ class EnhancedRAGSystemQdrant:
         self.top_k = int(os.getenv('RAG_TOP_K', 10))
         self.similarity_threshold = float(os.getenv('RAG_SIMILARITY_THRESHOLD', 0.01))
         self.customer_id = None
-        self.openai_client = None  # Will be initialized when needed
+        self.voyage_client = None  # Will be initialized when needed
         self._build_in_progress = {}  # Track builds in progress to prevent loops
-    
-    def _get_openai_client(self, customer_id: int = None):
-        """Get OpenAI client with API key"""
-        if self.openai_client is None:
+
+    def _get_voyage_client(self, customer_id: int = None):
+        """Get Voyage AI client with API key"""
+        if self.voyage_client is None:
+            import voyageai
             # Try to get customer-specific API key first
             try:
-                from openai_key_utils import get_openai_api_key
+                from voyage_key_utils import get_voyage_api_key
                 if customer_id:
-                    api_key = get_openai_api_key(customer_id)
+                    api_key = get_voyage_api_key(customer_id)
                     if api_key:
-                        self.openai_api_key = api_key
+                        self.voyage_api_key = api_key
             except Exception as e:
-                print(f"⚠️ Could not get customer-specific OpenAI key: {e}")
-            
+                print(f"⚠️ Could not get customer-specific Voyage key: {e}")
+
             # Fallback to environment variable
-            if not self.openai_api_key:
-                self.openai_api_key = os.getenv('OPENAI_API_KEY')
-            
-            if not self.openai_api_key:
-                raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY environment variable or configure customer-specific key.")
-            
-            self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
-        
-        return self.openai_client
-    
-    def _generate_embedding(self, text: str, customer_id: int = None) -> List[float]:
-        """Generate embedding using OpenAI's text-embedding-3-large model"""
-        client = self._get_openai_client(customer_id)
-        
+            if not self.voyage_api_key:
+                self.voyage_api_key = os.getenv('VOYAGE_API_KEY')
+
+            if not self.voyage_api_key:
+                raise ValueError("Voyage API key not found. Please set VOYAGE_API_KEY environment variable or configure customer-specific key.")
+
+            self.voyage_client = voyageai.Client(api_key=self.voyage_api_key)
+
+        return self.voyage_client
+
+    def _generate_embedding(self, text: str, customer_id: int = None, input_type: str = "query") -> List[float]:
+        """Generate embedding using Voyage AI's voyage-3-large model"""
+        client = self._get_voyage_client(customer_id)
+
         try:
-            response = client.embeddings.create(
+            response = client.embed(
+                [text],
                 model=self.embedding_model,
-                input=text
+                input_type=input_type,
             )
-            return response.data[0].embedding
+            return response.embeddings[0]
         except Exception as e:
             print(f"❌ Error generating embedding: {e}")
             raise
@@ -155,7 +157,7 @@ class EnhancedRAGSystemQdrant:
                 self.qdrant_client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
-                        size=self.embedding_dimension,  # 3072 for text-embedding-3-large
+                        size=self.embedding_dimension,  # 1024 for voyage-3-large
                         distance=Distance.COSINE
                     )
                 )
@@ -194,7 +196,7 @@ class EnhancedRAGSystemQdrant:
     
     def build_knowledge_base(self, customer_id: int):
         """Build Qdrant vector database from KPI and account data for specific customer"""
-        print(f"🔍 Building Qdrant knowledge base for customer {customer_id} using OpenAI text-embedding-3-large...")
+        print(f"🔍 Building Qdrant knowledge base for customer {customer_id} using Voyage voyage-3-large...")
         
         # Store customer ID for this instance
         self.customer_id = customer_id
@@ -206,8 +208,8 @@ class EnhancedRAGSystemQdrant:
         # Ensure collection exists (will create if needed)
         self._ensure_collection_exists()
         
-        # Initialize OpenAI client with customer-specific key if available
-        self._get_openai_client(customer_id)
+        # Initialize Voyage client with customer-specific key if available
+        self._get_voyage_client(customer_id)
         
         # Check if customer uses DC vertical by checking accounts
         dc_accounts = Account.query.filter(
@@ -1255,13 +1257,10 @@ class EnhancedRAGSystemQdrant:
         Format your response in a clear, actionable manner.
         """
         
+        _cid = getattr(self, 'customer_id', 0) or 0
         try:
-            # Get API key from environment at query time
-            api_key = os.getenv('OPENAI_API_KEY')
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable not set")
-            
-            _cid = getattr(self, 'customer_id', 0) or 0
+            from anthropic_chat_utils import generate_text, AnthropicKeyNotConfigured, DEFAULT_MODEL
+
             # Budget check (fail-open)
             try:
                 if _budget_can_call and not _budget_can_call(_cid, 'rag_query'):
@@ -1269,31 +1268,28 @@ class EnhancedRAGSystemQdrant:
             except Exception:
                 pass
 
-            client = openai.OpenAI(api_key=api_key)
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=2000,
-                temperature=0.3
-            )
+            try:
+                answer, _tok_in, _tok_out = generate_text(
+                    _cid, system_prompt, user_prompt,
+                    max_tokens=2000, temperature=0.3,
+                )
+            except AnthropicKeyNotConfigured:
+                return "Anthropic API key not configured. Set ANTHROPIC_API_KEY or configure a per-customer key in Settings."
+
             # Record usage (fail-open)
             try:
                 if _budget_record:
                     _budget_record(_cid, 'rag_query',
-                                   tokens_in=response.usage.prompt_tokens,
-                                   tokens_out=response.usage.completion_tokens,
-                                   model='gpt-4')
+                                   tokens_in=_tok_in, tokens_out=_tok_out,
+                                   model=DEFAULT_MODEL)
             except Exception:
                 pass
-            return response.choices[0].message.content
+            return answer
         except Exception as e:
             try:
                 if _budget_record:
-                    _budget_record(getattr(self, 'customer_id', 0) or 0, 'rag_query',
-                                   0, 0, model='gpt-4', success=False, error_message=str(e)[:200])
+                    _budget_record(_cid, 'rag_query',
+                                   0, 0, model='claude-sonnet-4-6', success=False, error_message=str(e)[:200])
             except Exception:
                 pass
             return f"Error generating response: {str(e)}"

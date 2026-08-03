@@ -145,23 +145,24 @@ def _store_feedback_to_qdrant(feedback: ExecutionFeedback, payload: Dict) -> boo
     Returns True if successful.
     """
     qdrant_url = os.getenv('QDRANT_URL')
-    openai_api_key = os.getenv('OPENAI_API_KEY')
+    voyage_api_key = os.getenv('VOYAGE_API_KEY')
 
-    if not qdrant_url or not openai_api_key:
+    if not qdrant_url or not voyage_api_key:
         return False
 
     try:
         from qdrant_client import QdrantClient
         from qdrant_client.models import PointStruct
-        import openai
+        import voyageai
 
-        # Generate embedding for the feedback text
-        client = openai.OpenAI(api_key=openai_api_key)
-        embedding_response = client.embeddings.create(
-            model="text-embedding-3-large",
-            input=payload['text'],
+        # Generate embedding for the feedback text (Voyage; document for storage)
+        client = voyageai.Client(api_key=voyage_api_key)
+        embedding_response = client.embed(
+            [payload['text']],
+            model="voyage-3-large",
+            input_type="document",
         )
-        vector = embedding_response.data[0].embedding
+        vector = embedding_response.embeddings[0]
 
         # Store in Qdrant
         collection_name = f"kpi_dashboard_vectors_customer_{feedback.customer_id}"

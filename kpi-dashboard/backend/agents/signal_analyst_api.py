@@ -126,7 +126,7 @@ def analyze_account():
         except (ValueError, TypeError):
             # May be a UUID — try resolving
             try:
-                from uuid_utils import resolve_account
+                from id_resolve_utils import resolve_account
                 account = resolve_account(account_id_raw, customer_id=customer_id, allow_none=True)
                 if account:
                     account_id_int = account.account_id
@@ -636,7 +636,7 @@ def analyze_account():
         
         # Add UUID fields to response
         try:
-            from uuid_utils import enrich_with_uuid
+            from id_resolve_utils import enrich_with_uuid
             result_dict = enrich_with_uuid(result_dict, account)
         except Exception as e:
             logger.warning(f"Failed to enrich response with UUID: {e}")
@@ -714,7 +714,7 @@ def analyze_with_agentic_loop():
             ).first()
         except (ValueError, TypeError):
             try:
-                from uuid_utils import resolve_account
+                from id_resolve_utils import resolve_account
                 account = resolve_account(account_id_raw, customer_id=customer_id, allow_none=True)
                 if account:
                     account_id_int = account.account_id
@@ -892,7 +892,7 @@ def analyze_with_agentic_loop():
 
         # Add UUID fields to response
         try:
-            from uuid_utils import enrich_with_uuid
+            from id_resolve_utils import enrich_with_uuid
             response_data = enrich_with_uuid(response_data, account)
         except Exception as e:
             logger.warning(f"Failed to enrich agentic loop response with UUID: {e}")

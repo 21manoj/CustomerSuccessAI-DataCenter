@@ -35,7 +35,7 @@ from utils.config_loader import ConfigLoader
 from auth_middleware import get_current_user_id
 from werkzeug.security import generate_password_hash
 from id_generator import generate_id
-from uuid_utils import ensure_uuid, ensure_customer_uuid_on_account
+from id_resolve_utils import ensure_uuid, ensure_customer_uuid_on_account
 
 # File types supported for upload — regular 4-CSV model (every customer)
 FILE_TYPES = {

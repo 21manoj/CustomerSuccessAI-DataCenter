@@ -33,7 +33,7 @@ def backfill_uuids(app=None):
     """
     from extensions import db
     from models import Customer, Account, User
-    from uuid_utils import ensure_uuid, ensure_customer_uuid_on_account
+    from id_resolve_utils import ensure_uuid, ensure_customer_uuid_on_account
 
     stats = {
         'customers_updated': 0,

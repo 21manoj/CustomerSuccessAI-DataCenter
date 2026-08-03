@@ -326,7 +326,7 @@ class ApprovalQueueService:
 
         # Enrich with UUID fields (best-effort)
         try:
-            from uuid_utils import resolve_customer, resolve_account
+            from id_resolve_utils import resolve_customer, resolve_account
             customer = resolve_customer(request.customer_id, allow_none=True)
             if customer:
                 result['customer_uuid'] = getattr(customer, 'uuid', None)
