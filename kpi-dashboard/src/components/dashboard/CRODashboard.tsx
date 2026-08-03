@@ -211,10 +211,34 @@ interface CRODashboardData {
   customer_phase: CustomerPhase;
   playbook_roi_estimated: boolean;
   wizard_b_nrr: {
-    with_cs_pulse_nrr_pct?: number;
     without_cs_pulse_nrr_pct?: number;
+    with_cs_pulse_nrr_pct?: number;
+    with_interventions_nrr_pct?: number;
     delta_pct?: number;
+    arr_protected?: number;
+    accounts_saved?: number;
+    lens?: string;
+    engine?: string;
+    time_direction?: string;
   } | null;
+  predictor_v3_portfolio_nrr: {
+    arr_weighted_nrr_pct?: number;
+    simple_avg_nrr_pct?: number;
+    horizon?: string;
+    active_account_count?: number;
+    last_calibration_at?: string | null;
+    lens?: string;
+    engine?: string;
+    time_direction?: string;
+  } | null;
+  historical_actuals: {
+    historical_nrr_pct_ttm?: number | null;
+    lens?: string;
+    engine?: string;
+    time_direction?: string;
+  } | null;
+  nrr_projection_lens?: string;
+  forecast_nrr: number;
 }
 
 // ============================================================================
@@ -1315,6 +1339,13 @@ const CRODashboard: React.FC = () => {
             provenance: graphProv,
           };
           const arrExposure = json.arr_exposure || 0;
+          const v3 = json.predictor_v3_portfolio_nrr || null;
+          const wb = json.wizard_b_nrr || null;
+          const forecastNrr = v3?.arr_weighted_nrr_pct ?? json.nrr_projection ?? 100;
+          const forecastTooltip = v3
+            ? `Forward 12-month point forecast from Predictor v3 (calibrated ${v3.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3.active_account_count || 0} active accounts. Simple-avg: ${v3.simple_avg_nrr_pct}%. Same number as CFO "Forecast NRR — Next 12mo". Differs from "Realized NRR — TTM" (Wizard B, backward counterfactual).`
+            : 'Portfolio NRR forecast. Predictor v3 calibration not available — showing fallback estimate. See CFO Overview for lens definitions.';
+
           const transformed: CRODashboardData = {
             revenue_cards: [
               {
@@ -1349,7 +1380,7 @@ const CRODashboard: React.FC = () => {
               { label: 'Avg Health Score', value: (json.avg_health_score || 0).toFixed(1), change: `${json.health_score_change >= 0 ? '↑' : '↓'} ${Math.abs(json.health_score_change || 0).toFixed(1)} vs Q3`, trend: json.health_score_change >= 0 ? 'up' : 'down', tooltip: 'Revenue-weighted average across all accounts. Larger accounts (by ARR) have proportionally more influence on this score.' },
               { label: 'Early Warning Lead', value: `${json.early_warning_days || 0}d`, change: '↑ 12d vs Q3', trend: 'up', tooltip: 'Average number of days between first risk signal detection and health score decline. Higher = more lead time to intervene.' },
               { label: 'Playbook ROI', value: `${json.playbook_roi_pct || 0}%`, change: roiLabel, trend: 'up', tooltip: isEstimatedRoi ? 'Projected ROI from Power-of-1 industry benchmarks (TSIA, Gainsight Pulse, KeyBanc). Shows what 1% improvement across all metrics would deliver at your ARR.' : 'ROI from tracked playbook executions and measured health score improvements.' },
-              { label: 'NRR Projection', value: `${json.nrr_projection || 100}%`, change: `${(json.nrr_change || 0) >= 0 ? '↑' : '↓'} ${Math.abs(json.nrr_change || 0)}pp vs baseline`, trend: (json.nrr_change || 0) >= 0 ? 'up' : 'down', accent: (json.nrr_projection || 100) >= 100 ? 'cyan' : undefined, tooltip: 'Projected Net Revenue Retention derived from health score correlation. Health ≥70 → expansion (NRR>100%). Health <70 → contraction (NRR<100%). Based on industry benchmarks (TSIA, KeyBanc).' },
+              { label: 'Forecast NRR — Next 12mo', value: `${forecastNrr}%`, change: `${(json.nrr_change || 0) >= 0 ? '↑' : '↓'} ${Math.abs(json.nrr_change || 0)}pp vs 100% baseline`, trend: (json.nrr_change || 0) >= 0 ? 'up' : 'down', accent: forecastNrr >= 100 ? 'cyan' : undefined, tooltip: forecastTooltip },
             ],
             story_arcs: (json.story_arcs || []).map((arc: any) => ({
               id: arc.id || arc.name?.toLowerCase().replace(/\s+/g, '_') || 'unknown',
@@ -1402,7 +1433,11 @@ const CRODashboard: React.FC = () => {
             proof_data: proof,
             customer_phase: customerPhase,
             playbook_roi_estimated: isEstimatedRoi,
-            wizard_b_nrr: json.wizard_b_nrr || null,
+            wizard_b_nrr: wb,
+            predictor_v3_portfolio_nrr: v3,
+            historical_actuals: json.historical_actuals || null,
+            nrr_projection_lens: json.nrr_projection_lens,
+            forecast_nrr: forecastNrr,
           };
           setData(transformed);
           trackPageView('cro_dashboard', { accounts: transformed.risk_accounts?.length || 0 });
@@ -1729,7 +1764,7 @@ const CRODashboard: React.FC = () => {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] uppercase tracking-[0.18em] text-gray-500">
-                  Forward NRR Forecast
+                  Per-Account NRR Forecast
                 </div>
                 <div
                   className="inline-flex items-center gap-1 text-[11px]"
@@ -1787,59 +1822,60 @@ const CRODashboard: React.FC = () => {
             {d.metrics.slice(0, 3).map((m, i) => (
               <MetricCardComponent key={i} metric={m} />
             ))}
-            {/* Forward NRR Card — health-weighted projection at 90d horizon.
-                Distinct from CFO Overview's NRR tile, which shows realized
-                NRR from definitive lifecycle outcomes. This card projects
-                NRR forward by attributing residual at-risk ARR through the
-                health-to-churn-prob curve. Same Without/With dichotomy,
-                different time horizon. */}
+            {/* NRR lens card — Forecast (Predictor v3) + Realized (Wizard B).
+                Headline forecast matches CFO "Forecast NRR — Next 12mo". */}
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
               <div className="flex items-baseline justify-between mb-2">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Forward NRR</p>
-                <span className="text-[9px] text-gray-600">Wizard B · 90d horizon</span>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">NRR Lenses</p>
+                <span className="text-[9px] text-gray-600">matches CFO</span>
               </div>
-              {/* Truthful 3-column: natural-arc baseline → today (CS Pulse running, interventions not yet applied)
-                  → projected if all recommended interventions succeed. All three numbers are Wizard B outputs;
-                  prior labeling implied 88.49 was the "without CS Pulse" baseline, which is wrong — that's
-                  88.09 (without_cs_pulse_nrr_pct). 88.49 is the with-CS-Pulse current state. */}
-              {d.wizard_b_nrr?.without_cs_pulse_nrr_pct != null ? (
-                <div className="flex items-end gap-2 mb-2">
-                  <div className="flex-1">
-                    <p className="text-[9px] text-gray-500 mb-0.5">Natural-arc baseline</p>
-                    <p className="text-xl font-bold text-red-400">{d.wizard_b_nrr.without_cs_pulse_nrr_pct.toFixed(1)}%</p>
-                  </div>
-                  <div className="text-gray-600 text-base pb-1">&rarr;</div>
-                  <div className="flex-1">
-                    <p className="text-[9px] text-gray-500 mb-0.5">Today, with CS Pulse</p>
-                    <p className={`text-xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-amber-400'}`}>{d.nrr_current}%</p>
-                  </div>
-                  <div className="text-gray-600 text-base pb-1">&rarr;</div>
-                  <div className="flex-1">
-                    <p className="text-[9px] text-gray-500 mb-0.5">If interventions succeed</p>
-                    <p className="text-xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
-                  </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Forecast NRR — Next 12mo</p>
+                  <p
+                    className={`text-2xl font-bold ${d.forecast_nrr >= 100 ? 'text-cyan-400' : 'text-red-400'}`}
+                    title="Forward 12-month point forecast (Predictor v3, ARR-weighted). Same as CFO tile and metric above."
+                  >
+                    {d.forecast_nrr.toFixed(1)}%
+                  </p>
+                  <p className="text-[9px] text-gray-600 mt-0.5">
+                    Predictor v3 · forward · ARR-weighted
+                    {d.predictor_v3_portfolio_nrr?.active_account_count
+                      ? ` · ${d.predictor_v3_portfolio_nrr.active_account_count} active accounts`
+                      : ''}
+                  </p>
                 </div>
-              ) : (
-                <div className="flex items-end gap-3 mb-2">
-                  <div>
-                    <p className="text-[9px] text-gray-500 mb-0.5">Today, with CS Pulse</p>
-                    <p className={`text-2xl font-bold ${d.nrr_current >= 100 ? 'text-cyan-400' : 'text-amber-400'}`}>{d.nrr_current}%</p>
+                {d.wizard_b_nrr?.with_cs_pulse_nrr_pct != null && (
+                  <div className="pt-2 border-t border-gray-700/40">
+                    <p className="text-[9px] text-gray-500 mb-0.5">Realized NRR — TTM</p>
+                    <div className="flex items-end gap-2">
+                      <p className={`text-lg font-bold ${(d.wizard_b_nrr.without_cs_pulse_nrr_pct ?? 100) >= 100 ? 'text-gray-400' : 'text-red-400'}`}>
+                        {(d.wizard_b_nrr.without_cs_pulse_nrr_pct ?? 100).toFixed(1)}%
+                      </p>
+                      <span className="text-gray-600 text-sm pb-0.5">&rarr;</span>
+                      <p className="text-lg font-bold text-green-400">
+                        {d.wizard_b_nrr.with_cs_pulse_nrr_pct.toFixed(1)}%
+                      </p>
+                      {d.wizard_b_nrr.delta_pct != null && d.wizard_b_nrr.delta_pct !== 0 && (
+                        <span className="text-[10px] text-green-400/80 pb-0.5">
+                          +{d.wizard_b_nrr.delta_pct.toFixed(1)}pp CS Pulse
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-gray-600 mt-0.5">
+                      Wizard B counterfactual · backward · without &rarr; with CS Pulse
+                    </p>
                   </div>
-                  <div className="text-gray-600 text-lg pb-1">&rarr;</div>
-                  <div>
-                    <p className="text-[9px] text-gray-500 mb-0.5">If interventions succeed</p>
-                    <p className="text-2xl font-bold text-green-400">{d.nrr_with_intervention}%</p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
               {d.nrr_arr_protected > 0 && (
-                <p className="text-[10px] text-green-400/80">
-                  {formatCompact(d.nrr_arr_protected)} ARR protectable (attributed)
+                <p className="text-[10px] text-green-400/80 mt-2">
+                  {formatCompact(d.nrr_arr_protected)} ARR protectable (health-model waterfall)
                 </p>
               )}
               <p className="text-[9px] text-gray-600 mt-1">
-                Wizard B counterfactual at 90d horizon. CS Pulse is already running in the "today" and "interventions" scenarios; the natural-arc baseline is what Wizard B's model expects without any CS Pulse intervention. For 12mo Predictor v3 forecast see CFO Overview · NRR tile.
+                T+30/60/90 trajectory below is a short-horizon health trend model — not the 12mo forecast.
               </p>
             </div>
           </div>
@@ -1850,23 +1886,20 @@ const CRODashboard: React.FC = () => {
               <div className="px-5 py-3 border-b border-gray-700/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">NRR Forecast &middot; Revenue Waterfall</h3>
+                  <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">NRR Trajectory &middot; Revenue Waterfall</h3>
                 </div>
               </div>
               <div className="grid grid-cols-2 divide-x divide-gray-700/50">
-                {/* Left: T+30/60/90 trajectory.
-                    Issue #3 + #10 fix (May 4 2026): clarify methodology vs Forward NRR card.
-                    This trajectory uses ALL accounts with a 5% churn floor (every account
-                    contributes some loss); Forward NRR card uses at-risk-only without floor.
-                    Same data, different attribution windows — different numbers. */}
+                {/* Left: T+30/60/90 trajectory — short-horizon health trend model.
+                    Not the 12mo Predictor v3 forecast shown in the tile above. */}
                 <div className="p-4">
                   <div className="flex items-baseline justify-between mb-3">
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wide">Trajectory · all accounts</p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wide">Short-horizon trajectory · health trend</p>
                     <span
                       className="text-[8px] text-gray-600 italic cursor-help"
-                      title="Portfolio NRR projected at T+30/60/90 days using linear health trend continuation, with a 5% churn-probability floor on every account (no account is treated as risk-free). Differs from Forward NRR tile, which scopes to at-risk only with no floor — same data, two attribution windows."
+                      title="Portfolio NRR projected at T+30/60/90 days using linear health trend continuation from the health-model baseline. Not the 12mo Predictor v3 forecast — see Forecast NRR tile above."
                     >
-                      with 5% floor
+                      not 12mo forecast
                     </span>
                   </div>
                   <div className="flex items-end gap-6">

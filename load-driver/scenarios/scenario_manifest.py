@@ -738,7 +738,132 @@ class ManifestCSVGenerator:
             return self.SAAS_PRODUCTS
         return self.DC_PRODUCTS
 
-    RECOVERY_SIGNAL_TEMPLATES = {
+    @property
+    def _is_saas_vertical(self) -> bool:
+        return 'saas' in self.customer_info.get('vertical', 'dc2_s').lower()
+
+    # Outcomes incompatible with definitive lifecycle churn on the same account.
+    _CHURN_INCOMPATIBLE_OUTCOMES = frozenset({
+        'churn_averted', 'revenue_protected', 'engagement_recovery', 'renewal_secured',
+        'partial_recovery', 'expansion_approved', 'expansion_opportunity', 'revenue_growth',
+        'expansion_closed',
+    })
+
+    @staticmethod
+    def _clamp_sentiment_score(score: float) -> float:
+        return max(-1.0, min(1.0, round(float(score), 2)))
+
+    def _customer_email_domain(self) -> str:
+        domain = (self.customer_info.get('domain') or '').strip().lstrip('@')
+        if domain:
+            return domain
+        admin = self.customer_info.get('admin_email', '')
+        if '@' in admin:
+            return admin.split('@', 1)[1]
+        return 'example-saas.com' if self._is_saas_vertical else 'novastar-dc.com'
+
+    def _csm_email(self, csm_name: str) -> str:
+        local = csm_name.lower().replace(' ', '.')
+        return f'{local}@{self._customer_email_domain()}'
+
+    def _is_churn_account(self, acct: Dict[str, Any]) -> bool:
+        lc = self.lifecycle_events.get(acct['name'])
+        return bool(lc and lc.get('event') == 'churn')
+
+    @property
+    def _recovery_signal_templates(self) -> Dict[str, List[Dict[str, str]]]:
+        return (
+            self.SAAS_RECOVERY_SIGNAL_TEMPLATES
+            if self._is_saas_vertical
+            else self.DC_RECOVERY_SIGNAL_TEMPLATES
+        )
+
+    @property
+    def _recovery_decision_templates(self) -> Dict[str, List[tuple]]:
+        return (
+            self.SAAS_RECOVERY_DECISION_TEMPLATES
+            if self._is_saas_vertical
+            else self.DC_RECOVERY_DECISION_TEMPLATES
+        )
+
+    @property
+    def _narrative_signal_content_map(self) -> Dict[str, str]:
+        """Vertical-aware fallback prose for narrative-planned signal subtypes."""
+        deployment_improvement = (
+            'Time-to-value improving after intervention'
+            if self._is_saas_vertical
+            else 'Deployment velocity improving after intervention'
+        )
+        return {
+            'kpi_decline':            'KPI metrics declining below threshold',
+            'support_escalation':     'Support ticket escalated to management',
+            'expansion_signal':       'Account showing expansion readiness',
+            'critical_incident':      'Critical service incident reported',
+            'stakeholder_escalation': 'Stakeholder escalated concerns',
+            'champion_advocacy':      'Champion actively advocating for platform',
+            'usage_spike':            'Significant usage increase detected',
+            'routine_review':         'Routine quarterly review completed',
+            'csm_intervention':       'New CSM assigned and onboarding completed',
+            'kpi_recovery':           'KPI metrics recovering toward target',
+            'champion_reengagement':  'Champion re-engaged after outreach',
+            'deployment_improvement': deployment_improvement,
+            'executive_engagement':   'Executive sponsor re-engaged in account review',
+            'advocacy':               'Account champion actively advocating for platform',
+        }
+
+    def _account_stakeholder_roster(self, idx: int, acct: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
+        """Deterministic role → {name, title} for signal attribution."""
+        manifest = {
+            sh.get('role', 'contact'): {
+                'name': sh.get('name', ''),
+                'title': sh.get('title', sh.get('job_title', '')),
+            }
+            for sh in acct.get('stakeholders', [])
+            if sh.get('name')
+        }
+        if len(manifest) >= 3:
+            return manifest
+
+        csm_names = ['Sarah Rivera', 'Alex Chen', 'Jordan Blake', 'Morgan Lee', 'Taylor Kim']
+        first = ['Alex', 'Jordan', 'Morgan', 'Taylor', 'Casey', 'Riley', 'Jamie']
+        last = ['Chen', 'Patel', 'Kim', 'Rivera', 'Blake', 'Nguyen', 'Foster']
+        csm = csm_names[idx % len(csm_names)]
+        champion = f'{first[(idx + 1) % len(first)]} {last[(idx + 2) % len(last)]}'
+        exec_name = f'{first[(idx + 3) % len(first)]} {last[(idx + 4) % len(last)]}'
+        tech = f'{first[(idx + 5) % len(first)]} {last[(idx + 6) % len(last)]}'
+        return {
+            'champion': {'name': champion, 'title': 'VP Engineering'},
+            'executive_sponsor': {'name': exec_name, 'title': 'Chief Revenue Officer'},
+            'technical_lead': {'name': tech, 'title': 'Director of IT'},
+            'csm': {'name': csm, 'title': 'Customer Success Manager'},
+            **manifest,
+        }
+
+    def _stakeholder_for_signal(self, idx: int, acct: Dict[str, Any], signal_type: str) -> tuple:
+        """Return (stakeholder_name, stakeholder_title) for a signal row."""
+        roster = self._account_stakeholder_roster(idx, acct)
+        exec_types = {
+            'executive_engagement', 'executive_escalation', 'stakeholder_escalation',
+            'contract_dispute', 'downgrade_request',
+        }
+        csm_types = {'csm_intervention', 'csm_action', 'routine_review'}
+        tech_types = {
+            'support_escalation', 'critical_incident', 'kpi_decline', 'kpi_recovery',
+            'deployment_improvement', 'usage_spike',
+        }
+        if signal_type in exec_types:
+            sh = roster.get('executive_sponsor') or roster.get('economic_buyer') or roster.get('champion')
+        elif signal_type in csm_types:
+            sh = roster.get('csm') or roster.get('champion')
+        elif signal_type in tech_types:
+            sh = roster.get('technical_lead') or roster.get('champion')
+        else:
+            sh = roster.get('champion')
+        if not sh:
+            sh = next(iter(roster.values()), {'name': '', 'title': ''})
+        return sh.get('name', ''), sh.get('title', '')
+
+    DC_RECOVERY_SIGNAL_TEMPLATES = {
         'critical': [
             {"type": "csm_intervention", "content": "New CSM {csm_name} assigned. First QBR scheduled for next week.", "sentiment": "positive"},
             {"type": "kpi_recovery", "content": "GPU utilization recovering: 48% -> 67% after PB-03 optimization playbook.", "sentiment": "positive"},
@@ -755,6 +880,27 @@ class ManifestCSVGenerator:
             {"type": "advocacy", "content": "Customer agreed to co-present at annual user conference.", "sentiment": "positive"},
         ],
     }
+
+    SAAS_RECOVERY_SIGNAL_TEMPLATES = {
+        'critical': [
+            {"type": "csm_intervention", "content": "New CSM {csm_name} assigned. First QBR scheduled for next week.", "sentiment": "positive"},
+            {"type": "kpi_recovery", "content": "Product adoption recovering: DAU up 18% after guided onboarding refresh.", "sentiment": "positive"},
+            {"type": "executive_engagement", "content": "Executive sponsor re-engaged: CFO joined monthly business review cadence.", "sentiment": "positive"},
+            {"type": "churn_averted", "content": "Churn risk mitigated. Retention plan approved with 12-month commitment.", "sentiment": "very_positive"},
+        ],
+        'at_risk': [
+            {"type": "deployment_improvement", "content": "Time-to-value improved 30% after guided rollout playbook.", "sentiment": "positive"},
+            {"type": "champion_reengagement", "content": "Champion {champion_name} re-engaged. Quarterly roadmap session completed.", "sentiment": "positive"},
+            {"type": "health_improvement", "content": "Account health trending upward: +12 points over 4 weeks.", "sentiment": "positive"},
+        ],
+        'healthy': [
+            {"type": "expansion_signal", "content": "Account adding 120 seats across 3 departments. Expansion PO in procurement.", "sentiment": "very_positive"},
+            {"type": "advocacy", "content": "Customer agreed to co-present at annual user conference.", "sentiment": "positive"},
+        ],
+    }
+
+    # Backward-compatible alias for tests referencing the old name.
+    RECOVERY_SIGNAL_TEMPLATES = DC_RECOVERY_SIGNAL_TEMPLATES
 
     RECOVERY_OUTCOME_TEMPLATES = {
         'critical': [
@@ -773,7 +919,7 @@ class ManifestCSVGenerator:
         ],
     }
 
-    RECOVERY_DECISION_TEMPLATES = {
+    DC_RECOVERY_DECISION_TEMPLATES = {
         'critical': [
             ("CSM resource allocation approved", "executive_sponsor", "Assign dedicated senior CSM", "Resource reallocation approved", "high"),
             ("Executive QBR cadence established", "executive_sponsor", "Weekly executive check-ins for 90 days", "Cadence approved", "high"),
@@ -787,6 +933,23 @@ class ManifestCSVGenerator:
             ("Expansion proposal submitted", "champion", "Propose additional capacity", "Expansion under review", "low"),
         ],
     }
+
+    SAAS_RECOVERY_DECISION_TEMPLATES = {
+        'critical': [
+            ("CSM resource allocation approved", "executive_sponsor", "Assign dedicated senior CSM", "Resource reallocation approved", "high"),
+            ("Executive QBR cadence established", "executive_sponsor", "Weekly executive check-ins for 90 days", "Cadence approved", "high"),
+            ("Adoption recovery playbook initiated", "technical_lead", "Deploy guided onboarding refresh", "Playbook execution started", "medium"),
+        ],
+        'at_risk': [
+            ("Renewal incentive package approved", "economic_buyer", "Offer multi-year discount", "Incentive approved", "medium"),
+            ("Product remediation plan", "technical_lead", "Address top 3 workflow friction points", "Remediation in progress", "medium"),
+        ],
+        'healthy': [
+            ("Expansion proposal submitted", "champion", "Propose additional seat expansion", "Expansion under review", "low"),
+        ],
+    }
+
+    RECOVERY_DECISION_TEMPLATES = DC_RECOVERY_DECISION_TEMPLATES
 
     # ── Lifecycle decision/outcome metadata for dynamic ARR events ──
     LIFECYCLE_DECISION_META = {
@@ -1505,18 +1668,19 @@ class ManifestCSVGenerator:
 
             csm_names = ['Sarah Rivera', 'Alex Chen', 'Jordan Blake', 'Morgan Lee', 'Taylor Kim']
             csm = csm_names[idx % len(csm_names)]
-            csm_email = csm.lower().replace(' ', '.') + '@novastar-dc.com'
+            csm_email = self._csm_email(csm)
 
             # Products: select 3-5 based on ARR tier (same logic as generate_products_csv)
             acct_rng_prod = random.Random(self.seed + idx + 3000)
+            product_catalog = self._product_catalog
             if arr >= 5_000_000:
                 n_products = acct_rng_prod.randint(4, 5)
             elif arr >= 2_000_000:
                 n_products = acct_rng_prod.randint(3, 5)
             else:
                 n_products = acct_rng_prod.randint(3, 4)
-            n_products = min(n_products, len(self.DC_PRODUCTS))
-            selected_products = acct_rng_prod.sample(self.DC_PRODUCTS, n_products)
+            n_products = min(n_products, len(product_catalog))
+            selected_products = acct_rng_prod.sample(product_catalog, n_products)
             products_str = ' | '.join(p['name'] for p in selected_products)
 
             # Stakeholder count from manifest
@@ -1649,7 +1813,7 @@ class ManifestCSVGenerator:
             # ── CSM assignment ──
             csm_names = ['Sarah Rivera', 'Alex Chen', 'Jordan Blake', 'Morgan Lee', 'Taylor Kim']
             csm = csm_names[idx % len(csm_names)]
-            csm_email = csm.lower().replace(' ', '.') + '@novastar-dc.com'
+            csm_email = self._csm_email(csm)
 
             # ── Products: from manifest or generated ──
             manifest_products = acct.get('products', [])
@@ -1834,6 +1998,7 @@ class ManifestCSVGenerator:
         w.writerow([
             'signal_id', 'source_account_id', 'signal_date', 'signal_type',
             'content', 'sentiment', 'sentiment_score',
+            'stakeholder_name', 'stakeholder_title',
             'arc_id', 'story_phase', 'linked_node_id', 'signal_ref',
         ])
 
@@ -1843,22 +2008,7 @@ class ManifestCSVGenerator:
             'neutral': 0.1,
             'negative': -0.6, 'very_negative': -0.9,
         }
-        content_map = {
-            'kpi_decline':            'KPI metrics declining below threshold',
-            'support_escalation':     'Support ticket escalated to management',
-            'expansion_signal':       'Account showing expansion readiness',
-            'critical_incident':      'Critical service incident reported',
-            'stakeholder_escalation': 'Stakeholder escalated concerns',
-            'champion_advocacy':      'Champion actively advocating for platform',
-            'usage_spike':            'Significant usage increase detected',
-            'routine_review':         'Routine quarterly review completed',
-            'csm_intervention':       'New CSM assigned and onboarding completed',
-            'kpi_recovery':           'KPI metrics recovering toward target',
-            'champion_reengagement':  'Champion re-engaged after outreach',
-            'deployment_improvement': 'Deployment velocity improving after intervention',
-            'executive_engagement':   'Executive sponsor re-engaged in account review',
-            'advocacy':               'Account champion actively advocating for platform',
-        }
+        content_map = self._narrative_signal_content_map
 
         for idx, acct in enumerate(self.accounts):
             counter = 0  # reset per account — ordinals are 1-based per account
@@ -1883,12 +2033,16 @@ class ManifestCSVGenerator:
                     'stakeholder_escalation',
                 ) else 'positive'
                 score = -0.6 if sentiment == 'negative' else 0.7
+                base_content = content_map.get(pe.event_subtype, f'Signal: {pe.event_subtype}')
+                content = f'{base_content} ({acct["name"]})'
+                sh_name, sh_title = self._stakeholder_for_signal(idx, acct, pe.event_subtype)
                 w.writerow([
                     sig_ref, aid, pe.date_str,
                     pe.event_subtype,
-                    content_map.get(pe.event_subtype, f'Signal: {pe.event_subtype}'),
+                    content,
                     sentiment,
-                    round(score + random.gauss(0, 0.1), 2),
+                    self._clamp_sentiment_score(score + random.gauss(0, 0.1)),
+                    sh_name, sh_title,
                     arc, pe.phase, '', sig_ref,
                 ])
                 self._registry.register_signal(aid, sig_ref, pe.date_str)
@@ -1899,12 +2053,18 @@ class ManifestCSVGenerator:
                 sentiment = sig.get('sentiment', 'neutral')
                 sig_ref = f'{phase_prefix}sig_{aid}_{counter}'
                 date_str = sig.get('date', '2026-01-01')
+                sig_type = sig.get('type', 'observation')
+                sh_name = sig.get('stakeholder_name') or ''
+                sh_title = sig.get('stakeholder_title') or ''
+                if not sh_name:
+                    sh_name, sh_title = self._stakeholder_for_signal(idx, acct, sig_type)
                 w.writerow([
                     sig_ref, aid, date_str,
-                    sig.get('type', 'observation'),
+                    sig_type,
                     sig.get('content', ''),
                     sentiment.replace('very_', ''),
-                    score_map.get(sentiment, 0.0),
+                    self._clamp_sentiment_score(score_map.get(sentiment, 0.0)),
+                    sh_name, sh_title,
                     arc, '', '', sig_ref,
                 ])
                 self._registry.register_signal(aid, sig_ref, date_str)
@@ -1915,18 +2075,23 @@ class ManifestCSVGenerator:
             # Intervention-phase recovery signals (from V2 — manifest-defined)
             # Fire when --phase=intervention OR when running full (phase=None)
             intervention = acct.get('intervention', {})
-            _emit_intervention = self.phase in ('intervention', None)
+            _emit_intervention = (
+                self.phase in ('intervention', None) and not self._is_churn_account(acct)
+            )
             if _emit_intervention and intervention.get('recovery_signals'):
                 for rs in intervention['recovery_signals']:
                     counter += 1
                     sig_ref = f'{phase_prefix}recovery_{aid}_{counter}'
                     date_str = rs.get('date', '2026-03-01')
+                    rs_type = rs.get('type', 'recovery_signal')
+                    sh_name, sh_title = self._stakeholder_for_signal(idx, acct, rs_type)
                     w.writerow([
                         sig_ref, aid, date_str,
-                        rs.get('type', 'recovery_signal'),
+                        rs_type,
                         rs.get('content', ''),
                         rs.get('sentiment', 'positive'),
-                        0.7 if rs.get('sentiment') == 'positive' else 0.1,
+                        self._clamp_sentiment_score(0.7 if rs.get('sentiment') == 'positive' else 0.1),
+                        sh_name, sh_title,
                         arc, 'recovery', '', sig_ref,
                     ])
                     self._registry.register_signal(aid, sig_ref, date_str)
@@ -1937,18 +2102,20 @@ class ManifestCSVGenerator:
                     counter += 1
                     sig_ref = f'{phase_prefix}csm_action_{aid}_{counter}'
                     date_str = ca.get('date', '2026-02-01')
+                    sh_name, sh_title = self._stakeholder_for_signal(idx, acct, 'csm_action')
                     w.writerow([
                         sig_ref, aid, date_str,
                         'csm_action',
                         f'{ca["action"]} -> {ca["outcome"]}',
                         'positive', 0.8,
+                        sh_name, sh_title,
                         arc, 'intervention', '', sig_ref,
                     ])
                     self._registry.register_signal(aid, sig_ref, date_str)
 
             # V3.1: Auto-generated recovery signals for intervention phase
             if _emit_intervention:
-                recovery_templates = self.RECOVERY_SIGNAL_TEMPLATES.get(cls, [])
+                recovery_templates = self._recovery_signal_templates.get(cls, [])
                 acct_rng = random.Random(self.seed + aid + 7000)
                 # Determine how many recovery signals
                 if cls == 'critical':
@@ -1993,6 +2160,7 @@ class ManifestCSVGenerator:
                         csm_name=csm_name,
                         champion_name=champion_name,
                     )
+                    content = f'{content} — {acct["name"]}'
                     sentiment = rtpl.get('sentiment', 'positive')
                     auto_score_map = {
                         'very_positive': 0.9, 'positive': 0.7,
@@ -2000,12 +2168,17 @@ class ManifestCSVGenerator:
                     }
                     sig_ref = f'{phase_prefix}auto_recovery_{aid}_{counter}'
                     date_str = sig_date.strftime('%Y-%m-%d')
+                    auto_type = rtpl.get('type', 'recovery_signal')
+                    sh_name, sh_title = self._stakeholder_for_signal(idx, acct, auto_type)
                     w.writerow([
                         sig_ref, aid, date_str,
-                        rtpl.get('type', 'recovery_signal'),
+                        auto_type,
                         content,
                         sentiment.replace('very_', ''),
-                        round(auto_score_map.get(sentiment, 0.7) + acct_rng.gauss(0, 0.05), 2),
+                        self._clamp_sentiment_score(
+                            auto_score_map.get(sentiment, 0.7) + acct_rng.gauss(0, 0.05),
+                        ),
+                        sh_name, sh_title,
                         arc, 'recovery', '', sig_ref,
                     ])
                     self._registry.register_signal(aid, sig_ref, date_str)
@@ -2342,6 +2515,7 @@ class ManifestCSVGenerator:
             #           superseded by the definitive lifecycle expansion_closed.
             # Contract: arc negatives superseded by lifecycle contraction.
             _lc = self.lifecycle_events.get(acct['name'])
+            _is_churn_lifecycle = bool(_lc and _lc.get('event') == 'churn')
             _suppress_arc_negatives = (_lc and _lc['event'] in ('churn', 'contract'))
             _suppress_arc_expansions = (_lc and _lc['event'] == 'expand')
             _negative_outcome_types = {
@@ -2353,6 +2527,7 @@ class ManifestCSVGenerator:
                 'expansion_closed', 'expansion_approved', 'expansion_opportunity',
                 'revenue_growth',
             }
+            _emitted_outcome_types: set = set()
 
             for p in phases_to_emit:
                 for e in arc_def.get(p, []):
@@ -2361,6 +2536,10 @@ class ManifestCSVGenerator:
                     if _suppress_arc_negatives and e['subtype'] in _negative_outcome_types:
                         continue
                     if _suppress_arc_expansions and e['subtype'] in _expansion_outcome_types:
+                        continue
+                    if _is_churn_lifecycle and e['subtype'] in self._CHURN_INCOMPATIBLE_OUTCOMES:
+                        continue
+                    if e['subtype'] in _emitted_outcome_types:
                         continue
                     arc_outcome_events.append(e)
 
@@ -2388,6 +2567,8 @@ class ManifestCSVGenerator:
                 if _has_nps_friction and otype in _expansion_outcome_types:
                     _expansion_suppressed.add(otype)
                     continue
+                if otype in _emitted_outcome_types:
+                    continue
 
                 meta = self.OUTCOME_METADATA.get(otype, (
                     otype.replace('_', ' ').title(), 'Outcome recorded.', 0.0, 'open'
@@ -2413,6 +2594,7 @@ class ManifestCSVGenerator:
                     first_sig,
                 ])
                 self._registry.register_outcome(aid, otype, otype, outcome_date)
+                _emitted_outcome_types.add(otype)
 
             # Intervention revenue outcome (from V2 — manifest-defined)
             intervention = acct.get('intervention', {})
@@ -2430,7 +2612,7 @@ class ManifestCSVGenerator:
                 self._registry.register_outcome(aid, ro['type'], ro['type'], ro_date)
 
             # Auto-generated recovery outcomes for intervention phase (V3.1)
-            if self.phase == 'intervention':
+            if self.phase == 'intervention' and not _is_churn_lifecycle:
                 recovery_outcome_templates = self.RECOVERY_OUTCOME_TEMPLATES.get(cls, [])
                 if cls == 'critical':
                     n_recovery_outcomes = acct_rng.randint(2, min(3, len(recovery_outcome_templates)))
@@ -2443,6 +2625,10 @@ class ManifestCSVGenerator:
                     recovery_outcome_templates,
                     min(n_recovery_outcomes, len(recovery_outcome_templates)),
                 )
+                # Drop outcome types already emitted for this account (dedupe revenue_protected, etc.)
+                selected_recovery = [
+                    tpl for tpl in selected_recovery if tpl[0] not in _emitted_outcome_types
+                ]
 
                 for ri, (ro_type, ro_title, ro_desc, ro_status) in enumerate(selected_recovery):
                     # Deterministic: use OUTCOME_METADATA percentages (not random)
@@ -2463,6 +2649,7 @@ class ManifestCSVGenerator:
                         auto_sig_ref,
                     ])
                     self._registry.register_outcome(aid, ro_type, ro_type, outcome_date)
+                    _emitted_outcome_types.add(ro_type)
 
             # ── Revenue reconciliation audit (log expected bucket totals) ──
             _expansion_types = {'expansion_opportunity', 'expansion_approved',
@@ -2608,9 +2795,9 @@ class ManifestCSVGenerator:
                     self._registry.register_decision(aid, dec_id, dec['date'])
 
             # Auto-generated recovery decisions for intervention phase (V3.1)
-            if self.phase == 'intervention':
+            if self.phase == 'intervention' and not self._is_churn_account(acct):
                 acct_rng = random.Random(self.seed + aid + 9000)
-                recovery_decision_templates = self.RECOVERY_DECISION_TEMPLATES.get(cls, [])
+                recovery_decision_templates = self._recovery_decision_templates.get(cls, [])
                 total_days = max(1, (self.end_date - self.start_date).days)
 
                 for rdi, (rd_title, rd_role, rd_chosen, rd_outcome, rd_risk) in enumerate(recovery_decision_templates):

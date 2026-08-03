@@ -528,6 +528,131 @@ def _get_expansion_candidates(customer_id, account_ids):
     return len(expansion_nodes)
 
 
+def _compute_historical_actuals(customer_id: int, total_arr: float):
+    """Row A NRR lens — raw OUTCOME aggregates (backward TTM)."""
+    try:
+        from sqlalchemy import text as _sql_text
+        from extensions import db as _db
+
+        ha_rows = _db.session.execute(_sql_text(
+            """
+            SELECT
+                SUM(CASE WHEN node_subtype = 'churn_lost'      THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_churned,
+                SUM(CASE WHEN node_subtype = 'expansion_closed' THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_expanded,
+                SUM(CASE WHEN node_subtype = 'contraction'      THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_contracted,
+                COUNT(*) FILTER (WHERE node_subtype = 'churn_lost')       AS n_churned,
+                COUNT(*) FILTER (WHERE node_subtype = 'expansion_closed') AS n_expanded,
+                COUNT(*) FILTER (WHERE node_subtype = 'contraction')      AS n_contracted
+            FROM context_nodes
+            WHERE customer_id = :cust
+              AND node_type = 'OUTCOME'
+              AND node_subtype IN ('churn_lost', 'expansion_closed', 'contraction')
+            """
+        ), {'cust': customer_id}).fetchone()
+
+        if not ha_rows:
+            return None
+
+        arr_churned = float(ha_rows[0] or 0)
+        arr_expanded = float(ha_rows[1] or 0)
+        arr_contracted = float(ha_rows[2] or 0)
+        starting_arr_ttm = total_arr + abs(arr_churned)
+        if starting_arr_ttm <= 0:
+            return None
+
+        historical_nrr_ttm = (
+            (starting_arr_ttm + arr_expanded + arr_churned + arr_contracted)
+            / starting_arr_ttm
+        ) * 100
+
+        return {
+            'historical_nrr_pct_ttm': round(historical_nrr_ttm, 2),
+            'arr_churned': round(arr_churned, 0),
+            'arr_expanded': round(arr_expanded, 0),
+            'arr_contracted': round(arr_contracted, 0),
+            'starting_arr_ttm': round(starting_arr_ttm, 0),
+            'n_churned_accounts': int(ha_rows[3] or 0),
+            'n_expansion_events': int(ha_rows[4] or 0),
+            'n_contraction_events': int(ha_rows[5] or 0),
+            'lens': 'historical_actuals',
+            'engine': 'raw_outcomes',
+            'time_direction': 'backward',
+            'source': 'context graph OUTCOME nodes (uploaded outcomes · not GL-reconciled)',
+        }
+    except Exception as e:
+        logger.warning(f"historical_actuals computation failed: {e}")
+        return None
+
+
+def _compute_predictor_v3_portfolio_nrr(accounts) -> dict | None:
+    """Forward 12mo NRR lens — ARR-weighted Predictor v3 (matches CFO tile)."""
+    try:
+        from predictor.inference import predict_for_account_id
+        from models import PredictorCalibration
+
+        v3_rows = []
+        v3_failed = 0
+        for a in accounts:
+            try:
+                pred = predict_for_account_id(account_id=a.account_id, horizon='12mo')
+                v3_rows.append({
+                    'account_id': a.account_id,
+                    'account_name': a.account_name,
+                    'arr': float(a.revenue or 0),
+                    'nrr_point': pred['expected_nrr']['point'],
+                    'method': pred.get('prediction_method', '?'),
+                })
+            except Exception:
+                v3_failed += 1
+
+        if not v3_rows:
+            return None
+
+        v3_total_arr = sum(r['arr'] for r in v3_rows)
+        arr_weighted = (
+            sum(r['arr'] * r['nrr_point'] for r in v3_rows) / v3_total_arr
+            if v3_total_arr > 0 else 0
+        )
+        simple_avg = sum(r['nrr_point'] for r in v3_rows) / len(v3_rows)
+        method_counts: dict[str, int] = {}
+        for r in v3_rows:
+            method_counts[r['method']] = method_counts.get(r['method'], 0) + 1
+
+        latest_cal = (
+            PredictorCalibration.query
+            .filter(PredictorCalibration.is_active == True)  # noqa: E712
+            .order_by(PredictorCalibration.created_at.desc())
+            .first()
+        )
+
+        return {
+            'arr_weighted_nrr_pct': round(arr_weighted * 100, 2),
+            'simple_avg_nrr_pct': round(simple_avg * 100, 2),
+            'horizon': '12mo',
+            'account_count': len(v3_rows),
+            'active_account_count': sum(1 for r in v3_rows if r['arr'] > 0),
+            'failed_count': v3_failed,
+            'prediction_method_counts': method_counts,
+            'last_calibration_id': latest_cal.calibration_id if latest_cal else None,
+            'last_calibration_at': (
+                latest_cal.created_at.isoformat() if latest_cal else None
+            ),
+            'lens': 'point_forecast_ntm',
+            'engine': 'predictor_v3',
+            'time_direction': 'forward',
+            'method_note': (
+                'ARR-weighted average of per-account expected_nrr. '
+                'Excludes $0-ARR accounts from weight (typically '
+                'already-churned). simple_avg counts all equally. '
+                'Differs from wizard_b_nrr by design — forward vs '
+                'backward, point vs counterfactual.'
+            ),
+        }
+    except Exception as e:
+        logger.warning(f"predictor_v3_portfolio_nrr computation failed: {e}")
+        return None
+
+
 # ─── 1. CRO Dashboard ────────────────────────────────────────────────────────
 
 @executive_dashboard_api.route('/api/executive/cro-dashboard', methods=['GET'])
@@ -660,7 +785,7 @@ def cro_dashboard():
             pass
         has_proof = cro_proof['total_cost'] > 0 or cro_proof['revenue_protected'] > 0
 
-        # ── WIZARD B NRR (actual portfolio forecast) ──
+        # ── WIZARD B NRR (backward counterfactual — Realized NRR TTM) ──
         cro_wizard_b_nrr = None
         try:
             from wizards.wizard_b_pattern_db import run_wizard_b
@@ -674,23 +799,39 @@ def cro_dashboard():
                     'arr_protected': forecast.get('cs_pulse_arr_protected', 0),
                     'accounts_saved': forecast.get('cs_pulse_accounts_saved', 0),
                     'with_interventions_nrr_pct': forecast.get('with_interventions_nrr_pct', 100),
+                    'lens': 'counterfactual_ttm',
+                    'engine': 'wizard_b',
+                    'time_direction': 'backward',
                 }
         except Exception:
             pass
+
+        historical_actuals = _compute_historical_actuals(customer_id, total_revenue)
+        predictor_v3_portfolio_nrr = _compute_predictor_v3_portfolio_nrr(accounts)
 
         # ── ROI from actual playbook data (no Power-of-1 fallback for CRO) ──
         playbook_roi_pct = cro_proof['realized_roi'] if has_proof else 0
         is_estimated_roi = not has_proof
 
-        # ── NRR: use Wizard B when available ──
-        if cro_wizard_b_nrr:
+        # ── NRR headline: Predictor v3 forward forecast (matches CFO tile) ──
+        if (
+            predictor_v3_portfolio_nrr
+            and predictor_v3_portfolio_nrr.get('arr_weighted_nrr_pct') is not None
+        ):
+            nrr_projection = round(predictor_v3_portfolio_nrr['arr_weighted_nrr_pct'], 1)
+            nrr_projection_lens = 'predictor_v3'
+        elif cro_wizard_b_nrr:
             nrr_projection = round(cro_wizard_b_nrr['with_cs_pulse_nrr_pct'], 1)
+            nrr_projection_lens = 'wizard_b'
         elif avg_health >= 70:
             nrr_projection = round(100 + (avg_health - 70) * 0.33)
+            nrr_projection_lens = 'health_heuristic'
         elif avg_health >= 40:
             nrr_projection = round(90 + (avg_health - 40) * 0.33)
+            nrr_projection_lens = 'health_heuristic'
         else:
             nrr_projection = round(85 + avg_health * 0.125)
+            nrr_projection_lens = 'health_heuristic'
         nrr_change = round(nrr_projection - 100, 1)
 
         # ── Highest risk accounts (only at-risk/critical, sorted by lowest health) ──
@@ -881,11 +1022,14 @@ def cro_dashboard():
             'cs_investment': cro_proof['total_cost'],
             'proof_data': cro_proof,
             'wizard_b_nrr': cro_wizard_b_nrr,
+            'historical_actuals': historical_actuals,
+            'predictor_v3_portfolio_nrr': predictor_v3_portfolio_nrr,
             'nrr_projection': nrr_projection,
+            'nrr_projection_lens': nrr_projection_lens,
             'nrr_change': nrr_change,
-            # Dual NRR: use Wizard B when available
-            'nrr_current': cro_wizard_b_nrr['with_cs_pulse_nrr_pct'] if cro_wizard_b_nrr else nrr_current,
-            'nrr_with_intervention': cro_wizard_b_nrr['with_interventions_nrr_pct'] if cro_wizard_b_nrr else nrr_with_intervention,
+            # Health-model baseline for waterfall / trajectory (not the headline forecast)
+            'nrr_current': nrr_current,
+            'nrr_with_intervention': nrr_with_intervention,
             'nrr_arr_protected': nrr_arr_protected,
             'nrr_trajectory': nrr_trajectory,
             'nrr_waterfall_summary': nrr_waterfall_summary,
@@ -1262,61 +1406,7 @@ def cfo_dashboard():
         time_saved_hours = efficiency_block.get('time_saved_hours', 0)
 
         # ── HISTORICAL ACTUALS (Row A of "Past — Three Lenses") ──
-        # Raw OUTCOME aggregates from the customer's own uploaded data.
-        # This is the "audit-grade, reconciles-with-P&L" lens, distinct
-        # from Wizard B's counterfactual (Row B) and proof_data's playbook
-        # attribution (Row C).
-        historical_actuals = None
-        try:
-            from sqlalchemy import text as _sql_text
-            from extensions import db as _db
-            ha_rows = _db.session.execute(_sql_text(
-                """
-                SELECT
-                    SUM(CASE WHEN node_subtype = 'churn_lost'      THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_churned,
-                    SUM(CASE WHEN node_subtype = 'expansion_closed' THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_expanded,
-                    SUM(CASE WHEN node_subtype = 'contraction'      THEN COALESCE(revenue_impact, 0) ELSE 0 END) AS arr_contracted,
-                    COUNT(*) FILTER (WHERE node_subtype = 'churn_lost')       AS n_churned,
-                    COUNT(*) FILTER (WHERE node_subtype = 'expansion_closed') AS n_expanded,
-                    COUNT(*) FILTER (WHERE node_subtype = 'contraction')      AS n_contracted
-                FROM context_nodes
-                WHERE customer_id = :cust
-                  AND node_type = 'OUTCOME'
-                  AND node_subtype IN ('churn_lost', 'expansion_closed', 'contraction')
-                """
-            ), {'cust': customer_id}).fetchone()
-
-            if ha_rows:
-                arr_churned    = float(ha_rows[0] or 0)  # negative
-                arr_expanded   = float(ha_rows[1] or 0)  # positive
-                arr_contracted = float(ha_rows[2] or 0)  # negative
-                # Historical NRR ≈ (Total ARR currently + expansion - |churn| - |contraction|) / starting ARR.
-                # Starting ARR for TTM = current_arr + |churn_lost| (the accounts that LEFT had revenue at start).
-                starting_arr_ttm = total_arr + abs(arr_churned)
-                if starting_arr_ttm > 0:
-                    historical_nrr_ttm = (
-                        (starting_arr_ttm + arr_expanded + arr_churned + arr_contracted)
-                        / starting_arr_ttm
-                    ) * 100
-                else:
-                    historical_nrr_ttm = None
-                historical_actuals = {
-                    'historical_nrr_pct_ttm': round(historical_nrr_ttm, 2) if historical_nrr_ttm is not None else None,
-                    'arr_churned': round(arr_churned, 0),
-                    'arr_expanded': round(arr_expanded, 0),
-                    'arr_contracted': round(arr_contracted, 0),
-                    'starting_arr_ttm': round(starting_arr_ttm, 0),
-                    'n_churned_accounts': int(ha_rows[3] or 0),
-                    'n_expansion_events': int(ha_rows[4] or 0),
-                    'n_contraction_events': int(ha_rows[5] or 0),
-                    # Lens metadata
-                    'lens': 'historical_actuals',
-                    'engine': 'raw_outcomes',
-                    'time_direction': 'backward',
-                    'source': 'context graph OUTCOME nodes (uploaded outcomes · not GL-reconciled)',
-                }
-        except Exception as e:
-            logger.warning(f"CFO historical_actuals computation failed: {e}")
+        historical_actuals = _compute_historical_actuals(customer_id, total_arr)
 
         # ── WIZARD B NRR: backward counterfactual (with/without CS Pulse) ──
         wizard_b_nrr = None
@@ -1346,75 +1436,7 @@ def cfo_dashboard():
             logger.warning(f"CFO wizard_b_nrr computation failed: {e}")
 
         # ── PREDICTOR v3 PORTFOLIO NRR: forward point forecast ──
-        # ARR-weighted aggregate of per-account predict_for_account_id over
-        # the 12mo horizon. Drives the "Forecast NRR — Next 12mo" tile.
-        # Coexists with wizard_b_nrr above by design — different lens, see
-        # SIGNAL_TO_NRR_AUDIT_NARRATIVE.md for the role split.
-        predictor_v3_portfolio_nrr = None
-        try:
-            from predictor.inference import predict_for_account_id
-            from models import PredictorCalibration
-
-            v3_rows = []
-            v3_failed = 0
-            for a in accounts:
-                try:
-                    pred = predict_for_account_id(
-                        account_id=a.account_id, horizon='12mo'
-                    )
-                    v3_rows.append({
-                        'account_id': a.account_id,
-                        'account_name': a.account_name,
-                        'arr': float(a.revenue or 0),
-                        'nrr_point': pred['expected_nrr']['point'],
-                        'method': pred.get('prediction_method', '?'),
-                    })
-                except Exception:
-                    v3_failed += 1
-
-            if v3_rows:
-                v3_total_arr = sum(r['arr'] for r in v3_rows)
-                arr_weighted = (
-                    sum(r['arr'] * r['nrr_point'] for r in v3_rows) / v3_total_arr
-                    if v3_total_arr > 0 else 0
-                )
-                simple_avg = sum(r['nrr_point'] for r in v3_rows) / len(v3_rows)
-                method_counts: dict[str, int] = {}
-                for r in v3_rows:
-                    method_counts[r['method']] = method_counts.get(r['method'], 0) + 1
-
-                latest_cal = (
-                    PredictorCalibration.query
-                    .filter(PredictorCalibration.is_active == True)  # noqa: E712
-                    .order_by(PredictorCalibration.created_at.desc())
-                    .first()
-                )
-                predictor_v3_portfolio_nrr = {
-                    'arr_weighted_nrr_pct': round(arr_weighted * 100, 2),
-                    'simple_avg_nrr_pct': round(simple_avg * 100, 2),
-                    'horizon': '12mo',
-                    'account_count': len(v3_rows),
-                    'active_account_count': sum(1 for r in v3_rows if r['arr'] > 0),
-                    'failed_count': v3_failed,
-                    'prediction_method_counts': method_counts,
-                    'last_calibration_id': latest_cal.calibration_id if latest_cal else None,
-                    'last_calibration_at': (
-                        latest_cal.created_at.isoformat() if latest_cal else None
-                    ),
-                    # Lens metadata
-                    'lens': 'point_forecast_ntm',
-                    'engine': 'predictor_v3',
-                    'time_direction': 'forward',
-                    'method_note': (
-                        'ARR-weighted average of per-account expected_nrr. '
-                        'Excludes $0-ARR accounts from weight (typically '
-                        'already-churned). simple_avg counts all equally. '
-                        'Differs from wizard_b_nrr by design — forward vs '
-                        'backward, point vs counterfactual.'
-                    ),
-                }
-        except Exception as e:
-            logger.warning(f"CFO predictor_v3_portfolio_nrr computation failed: {e}")
+        predictor_v3_portfolio_nrr = _compute_predictor_v3_portfolio_nrr(accounts)
 
         return jsonify({
             'status': 'success',
@@ -1987,17 +2009,9 @@ Current Question: {query_text}
 
 Answer as the {persona_config['role']}'s AI advisor. Be specific, quantified, and actionable."""
 
-        # ── 5. Call OpenAI ────────────────────────────────────────────────
+        # ── 5. Call Claude (Anthropic) ────────────────────────────────────
 
-        import openai
-        from openai_key_utils import get_openai_api_key
-
-        api_key = get_openai_api_key(customer_id)
-        if not api_key:
-            return jsonify({
-                'error': 'OpenAI API key not configured',
-                'message': 'Please configure your OpenAI API key in Settings.',
-            }), 400
+        from anthropic_chat_utils import generate_text, AnthropicKeyNotConfigured, DEFAULT_MODEL
 
         # Budget check (fail-open)
         try:
@@ -2006,28 +2020,26 @@ Answer as the {persona_config['role']}'s AI advisor. Be specific, quantified, an
         except Exception:
             pass
 
-        client = openai.OpenAI(api_key=api_key)
-        completion = client.chat.completions.create(
-            model='gpt-4o',
-            temperature=0.3,
-            max_tokens=1200,
-            messages=[
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': user_prompt},
-            ],
-        )
+        try:
+            response_text, _tok_in, _tok_out = generate_text(
+                customer_id, system_prompt, user_prompt,
+                max_tokens=1200, temperature=0.3,
+            )
+        except AnthropicKeyNotConfigured:
+            return jsonify({
+                'error': 'Anthropic API key not configured',
+                'message': 'Set ANTHROPIC_API_KEY or configure a per-customer key in Settings.',
+            }), 400
 
         # Record usage (fail-open)
         try:
             if _budget_record:
                 _budget_record(customer_id, 'exec_dashboard',
-                               tokens_in=completion.usage.prompt_tokens,
-                               tokens_out=completion.usage.completion_tokens,
-                               model='gpt-4o')
+                               tokens_in=_tok_in,
+                               tokens_out=_tok_out,
+                               model=DEFAULT_MODEL)
         except Exception:
             pass
-
-        response_text = completion.choices[0].message.content
 
         elapsed_ms = int((_time.time() - start_time) * 1000)
 
