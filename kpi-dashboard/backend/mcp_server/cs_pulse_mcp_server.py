@@ -17,14 +17,17 @@ Feature gated: Requires FeatureToggle.MCP_SERVER to be ON.
 
 Architecture:
   This file defines the `mcp` FastMCP instance and all shared helpers.
-  Tools are split across modules that import `mcp` and register on it:
-    - cs_pulse_intelligence.py  (7 tools: context graph / revenue intel)
-    - cs_pulse_revenue.py       (7 tools: ROI / portfolio / playbooks)
-    - cs_pulse_onboarding.py    (11 tools: onboarding / clone / CSV)
-    - cs_pulse_admin.py         (7 tools: CRM / tickets / feedback / CSM actions / partner / llm_cost / csm_ranking)
-  This file keeps 7 core tools: platform_instructions, list_customers,
-  get_kpi_catalog, list_accounts, get_account_health, get_at_risk_accounts,
-  plus the system prompt resource.
+  Tools register across modules (import triggers @mcp.tool):
+    - cs_pulse_mcp_server.py   (6 core: platform, catalog, accounts, health, at-risk)
+    - cs_pulse_intelligence.py (13: context graph, revenue, LLM analysis)
+    - cs_pulse_revenue.py      (13: ROI, playbooks, portfolio)
+    - cs_pulse_onboarding.py   (15: discovery, CSV, process_data, clone)
+    - cs_pulse_admin.py        (9: CRM, CSM scorecard, calibration, LLM cost)
+    - cs_pulse_predictor.py    (4: Predictor v3 NRR forecast)
+    - cs_pulse_executive.py    (3: CRO/CFO/CEO dashboard summaries)
+    - cs_pulse_integrations.py (4: connectors, sync health, webhook triggers)
+    - cs_pulse_onboarding_agent.py (2: activation plan, TTFV status — read-only)
+  Total ~69 tools when all modules load.
 """
 
 import os
@@ -907,7 +910,11 @@ def get_at_risk_accounts(customer_id: int, threshold: float = 70.0) -> dict:
 # AFTER sys.modules aliasing fixes the dual-instance bug.
 # ===================================================================
 if __name__ != "__main__":
-    _module_tools = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 7, 'predictor': 4}
+    _module_tools = {
+        'intelligence': 13, 'revenue': 13, 'onboarding': 15, 'admin': 9,
+        'predictor': 4, 'executive': 3, 'integrations': 4,
+        'onboarding_agent': 2,
+    }
     for _mod_name, _expected in _module_tools.items():
         try:
             __import__(f'cs_pulse_{_mod_name}')
@@ -929,7 +936,11 @@ if __name__ == "__main__":
     sys.modules['cs_pulse_mcp_server'] = sys.modules['__main__']
 
     # Now import submodules — they'll get our mcp instance
-    _module_tools_main = {'intelligence': 7, 'revenue': 7, 'onboarding': 11, 'admin': 7, 'predictor': 4}
+    _module_tools_main = {
+        'intelligence': 13, 'revenue': 13, 'onboarding': 15, 'admin': 9,
+        'predictor': 4, 'executive': 3, 'integrations': 4,
+        'onboarding_agent': 2,
+    }
     for _mod, _exp in _module_tools_main.items():
         try:
             __import__(f'cs_pulse_{_mod}')

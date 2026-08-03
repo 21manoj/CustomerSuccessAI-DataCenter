@@ -24,10 +24,18 @@ if _mcp_dir not in sys.path:
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-# Always use direct DB queries. The MCP module functions are @mcp.tool-decorated
-# FunctionTool objects (not callable as plain functions). Direct DB queries are
-# faster (same process, no transport) and avoid the FunctionTool issue.
-_MCP_AVAILABLE = False
+# Prefer MCP @mcp.tool implementations (same code path as external agents).
+# Falls back to _execute_direct when fastmcp / MCP modules are unavailable (local dev).
+def _mcp_stack_available() -> bool:
+    try:
+        import fastmcp  # noqa: F401
+        import mcp_server.cs_pulse_mcp_server  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+_MCP_AVAILABLE = _mcp_stack_available()
 
 # ─── Tool Definitions (Claude tool_use format) ───────────────────────────────
 # Each mirrors an MCP tool but uses Claude's JSON Schema tool format.
@@ -370,123 +378,16 @@ TOOL_DEFINITIONS = [
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def _portfolio_revenue_breakdown_enriched(customer_id: int) -> dict:
-    """Portfolio revenue breakdown + top-3 accounts per bucket.
+    """Backward-compat wrapper — delegates to shared util (MCP uses same path)."""
+    from utils.portfolio_revenue_breakdown import build_portfolio_revenue_breakdown
+    return build_portfolio_revenue_breakdown(customer_id)
 
-    Apr 27 2026 (Fix A). The vanilla portfolio aggregation
-    (utils.context_graph.aggregate_revenue_across_accounts) returns dollar
-    totals only — at-risk, protected, expansion_realized, expansion_approved.
-    On cust 331 the AI synthesized from the totals immediately. On cust 387
-    the AI drilled per-account "to verify" and hit max_rounds=5 truncation.
 
-    This wrapper returns the same totals PLUS:
-      - top_at_risk_accounts: [{account_id, account_name, arr, at_risk_amount,
-                               health_score}, ...] (up to 3, sorted desc)
-      - top_expansion_accounts: same shape, expansion (realized + approved)
-      - top_protected_accounts: same shape
-
-    With this enrichment the AI has account-level context in one call and
-    doesn't need to loop get_revenue_at_risk per-account.
-    """
-    from utils.context_graph import aggregate_revenue_across_accounts
-    from models import Account, ContextNode, HealthScore
-    from collections import defaultdict
-
-    account_rows = Account.query.filter_by(customer_id=customer_id).all()
-    account_ids = [a.account_id for a in account_rows]
-    accounts_by_id = {a.account_id: a for a in account_rows}
-
-    # 1. Portfolio totals (existing logic)
-    totals = aggregate_revenue_across_accounts(
-        customer_id=customer_id, account_ids=account_ids,
-    )
-
-    # 2. Per-account totals — same classification logic, but grouped per account
-    RISK_TYPES = {'at_risk', 'lost', 'revenue_at_risk', 'churn_lost', 'churn_risk',
-                  'engagement_decline', 'renewal_uncertainty', 'capacity_constraint',
-                  'partner_friction', 'partial_recovery'}
-    PROTECTED_TYPES = {'protected', 'revenue_protected', 'churn_averted',
-                       'renewal_secured', 'revenue_saved', 'engagement_recovery',
-                       'escalation_resolved', 'intervention_outcome'}
-    EXPANSION_TYPES = {'expansion', 'expansion_closed', 'expansion_realized',
-                       'revenue_expanded', 'revenue_growth', 'new_logo',
-                       'upsell', 'cross_sell'}
-    PIPELINE_TYPES = {'expansion_approved', 'expansion_opportunity', 'pipeline'}
-
-    per_acct_at_risk = defaultdict(float)
-    per_acct_protected = defaultdict(float)
-    per_acct_expansion = defaultdict(float)  # realized + approved combined
-
-    outcome_nodes = (
-        ContextNode.query.filter(
-            ContextNode.customer_id == customer_id,
-            ContextNode.account_id.in_(account_ids),
-            ContextNode.node_type == 'OUTCOME',
-            ContextNode.revenue_impact.isnot(None),
-        ).all()
-    )
-    for node in outcome_nodes:
-        try:
-            raw = float(node.revenue_impact)
-        except (TypeError, ValueError):
-            continue
-        impact_type = (node.revenue_impact_type or '').lower()
-        subtype = (node.node_subtype or '').lower()
-        amt = abs(raw)
-        if impact_type in RISK_TYPES or subtype in RISK_TYPES:
-            per_acct_at_risk[node.account_id] += amt
-        elif impact_type in PIPELINE_TYPES or subtype in PIPELINE_TYPES:
-            per_acct_expansion[node.account_id] += amt
-        elif impact_type in EXPANSION_TYPES or subtype in EXPANSION_TYPES:
-            per_acct_expansion[node.account_id] += amt
-        elif impact_type in PROTECTED_TYPES or subtype in PROTECTED_TYPES:
-            per_acct_protected[node.account_id] += amt
-        elif raw < 0:
-            per_acct_at_risk[node.account_id] += amt
-        elif raw > 0:
-            per_acct_protected[node.account_id] += raw
-
-    # 3. Latest health per account (one query, joined in Python)
-    latest_health = {}
-    for aid in account_ids:
-        hs = (HealthScore.query
-              .filter_by(account_id=aid)
-              .order_by(HealthScore.measurement_month.desc())
-              .first())
-        if hs and hs.health_score is not None:
-            latest_health[aid] = round(float(hs.health_score), 1)
-
-    def _format_top(per_acct_dict, top_n=3):
-        sorted_accts = sorted(per_acct_dict.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
-        out = []
-        for aid, amount in sorted_accts:
-            if amount <= 0:
-                continue
-            acct = accounts_by_id.get(aid)
-            if not acct:
-                continue
-            out.append({
-                'account_id': aid,
-                'account_name': acct.account_name,
-                'arr': float(acct.revenue or 0),
-                'amount': round(amount, 2),
-                'health_score': latest_health.get(aid),
-            })
-        return out
-
-    return {
-        # Original fields — back-compat with downstream callers
-        **totals,
-        # New enrichment — top-3 per bucket so AI doesn't need per-account drill
-        'top_at_risk_accounts':   _format_top(per_acct_at_risk),
-        'top_expansion_accounts': _format_top(per_acct_expansion),
-        'top_protected_accounts': _format_top(per_acct_protected),
-        # Synthesis hint to discourage per-account looping after this call
-        '_synthesis_hint': (
-            'Use top_*_accounts for per-account narrative. Do NOT call '
-            'get_revenue_at_risk per-account — top_*_accounts already '
-            'contains the highest-impact per-account dollar amounts.'
-        ),
-    }
+def _call_mcp(module_path: str, fn_name: str, **kwargs) -> dict:
+    """Import an MCP tool and invoke its underlying .fn implementation."""
+    import importlib
+    mod = importlib.import_module(module_path)
+    return _invoke_mcp_tool(getattr(mod, fn_name), **kwargs)
 
 
 # ─── Tool Dispatcher ─────────────────────────────────────────────────────────
@@ -516,12 +417,16 @@ def execute_tool(tool_name: str, tool_input: dict, customer_id: int) -> dict:
     tool_input['customer_id'] = customer_id
 
     try:
-        logger.info(f"execute_tool: {tool_name} input={tool_input} customer={customer_id} mcp={_MCP_AVAILABLE}")
-        # Route to the appropriate implementation
+        logger.info(
+            f"execute_tool: {tool_name} input={tool_input} customer={customer_id} "
+            f"mcp={_MCP_AVAILABLE}"
+        )
         if _MCP_AVAILABLE:
-            return _execute_via_mcp(tool_name, tool_input, customer_id)
-        else:
-            return _execute_direct(tool_name, tool_input, customer_id)
+            try:
+                return _execute_via_mcp(tool_name, tool_input, customer_id)
+            except ImportError as imp_err:
+                logger.warning(f"MCP import failed for {tool_name}, using direct: {imp_err}")
+        return _execute_direct(tool_name, tool_input, customer_id)
 
     except Exception as e:
         logger.error(f"Tool execution error [{tool_name}]: {e}", exc_info=True)
@@ -529,145 +434,142 @@ def execute_tool(tool_name: str, tool_input: dict, customer_id: int) -> dict:
 
 
 def _execute_via_mcp(tool_name: str, tool_input: dict, customer_id: int) -> dict:
-    """Execute via MCP module functions (when fastmcp is installed)."""
+    """Execute via MCP @mcp.tool implementations (single source of truth)."""
     if tool_name == 'list_accounts':
-        from mcp_server.cs_pulse_mcp_server import list_accounts
-        return list_accounts(customer_id=customer_id)
-    elif tool_name == 'get_account_health':
-        from mcp_server.cs_pulse_mcp_server import get_account_health
-        return get_account_health(customer_id=customer_id, account_id=tool_input['account_id'])
-    elif tool_name == 'get_at_risk_accounts':
-        from mcp_server.cs_pulse_mcp_server import get_at_risk_accounts
-        return get_at_risk_accounts(customer_id=customer_id, threshold=tool_input.get('threshold', 70.0))
-    elif tool_name == 'get_revenue_at_risk':
-        from mcp_server.cs_pulse_intelligence import get_revenue_at_risk
-        return get_revenue_at_risk(customer_id=customer_id, account_id=tool_input['account_id'])
-    elif tool_name == 'get_portfolio_revenue_breakdown':
-        # Apr 26-27 2026 (Sprint 1.3 + Fix A).
-        # Sprint 1.3 (Item 7): one-shot portfolio aggregation instead of N
-        # per-account get_revenue_at_risk loops.
-        # Fix A (Apr 27): enriched with top-3 accounts per bucket. The portfolio
-        # totals alone caused the AI on cust 387 to drill per-account anyway,
-        # hitting max_rounds=5 truncation. Returning top-3-with-detail in one
-        # call gives the AI everything it needs for synthesis without drilling.
-        return _portfolio_revenue_breakdown_enriched(customer_id)
-    elif tool_name == 'get_context_graph_mermaid':
-        from mcp_server.cs_pulse_intelligence import get_context_graph_mermaid
-        return get_context_graph_mermaid(customer_id=customer_id, account_id=tool_input['account_id'], max_nodes=tool_input.get('max_nodes', 30))
-    elif tool_name == 'get_account_journey_timeline':
-        from mcp_server.cs_pulse_intelligence import get_account_journey_timeline
-        return get_account_journey_timeline(customer_id=customer_id, account_id=tool_input['account_id'], limit=tool_input.get('limit', 50))
-    elif tool_name == 'search_signals':
-        from mcp_server.cs_pulse_intelligence import search_signals
-        return search_signals(customer_id=customer_id, account_id=tool_input['account_id'], node_type=tool_input.get('node_type', 'SIGNAL'), node_subtype=tool_input.get('node_subtype'), limit=tool_input.get('limit', 20))
-    elif tool_name == 'get_stakeholder_map':
-        from mcp_server.cs_pulse_intelligence import get_stakeholder_map
-        return get_stakeholder_map(customer_id=customer_id, account_id=tool_input['account_id'])
-    elif tool_name == 'get_csm_daily_actions':
-        from mcp_server.cs_pulse_admin import get_csm_daily_actions
-        return _invoke_mcp_tool(get_csm_daily_actions, customer_id=customer_id)
-    elif tool_name == 'get_csm_scorecard':
-        # Apr 26 2026 (Phase 1): per-CSM aggregation tool exposed from
-        # MCP server into Ask AI's TOOL_DEFINITIONS. Closes the VP CS
-        # structural gap (vpcs-q01/q03 require per-CSM names + metrics
-        # which previously had no tool surface).
-        from mcp_server.cs_pulse_admin import get_csm_scorecard
-        return _invoke_mcp_tool(
-            get_csm_scorecard,
-            customer_id=customer_id,
-            csm_name=tool_input.get('csm_name'),
+        return _call_mcp('mcp_server.cs_pulse_mcp_server', 'list_accounts', customer_id=customer_id)
+    if tool_name == 'get_account_health':
+        return _call_mcp(
+            'mcp_server.cs_pulse_mcp_server', 'get_account_health',
+            customer_id=customer_id, account_id=tool_input['account_id'],
         )
-    elif tool_name == 'get_csm_ranking':
-        from mcp_server.cs_pulse_admin import get_csm_ranking
-        return _invoke_mcp_tool(
-            get_csm_ranking,
-            customer_id=customer_id,
-            metric=tool_input.get('metric', 'composite'),
+    if tool_name == 'get_at_risk_accounts':
+        return _call_mcp(
+            'mcp_server.cs_pulse_mcp_server', 'get_at_risk_accounts',
+            customer_id=customer_id, threshold=tool_input.get('threshold', 70.0),
         )
-    elif tool_name == 'get_team_capacity':
-        from mcp_server.cs_pulse_revenue import get_team_capacity
-        return _invoke_mcp_tool(get_team_capacity, customer_id=customer_id)
-    elif tool_name == 'calculate_power_of_1':
-        from mcp_server.cs_pulse_revenue import calculate_power_of_1
-        return calculate_power_of_1(customer_id=customer_id, metric_id=tool_input['metric_id'], improvement_pct=tool_input.get('improvement_pct', 1.0))
-    elif tool_name == 'get_outcome_roi_story':
-        from mcp_server.cs_pulse_revenue import get_outcome_roi_story
-        return get_outcome_roi_story(customer_id=customer_id, account_id=tool_input['account_id'], target_improvement_pct=tool_input.get('target_improvement_pct', 10), projection_months=tool_input.get('projection_months', 12))
-    elif tool_name == 'get_playbook_recommendations':
-        from mcp_server.cs_pulse_revenue import get_playbook_recommendations
-        return get_playbook_recommendations(customer_id=customer_id, account_id=tool_input['account_id'])
-    elif tool_name == 'get_portfolio_roi_summary':
-        from mcp_server.cs_pulse_revenue import get_portfolio_roi_summary
-        return get_portfolio_roi_summary(customer_id=customer_id)
-    elif tool_name == 'analyze_root_cause':
-        from llm.causal_reasoning import analyze_root_cause
-        return analyze_root_cause(
-            customer_id=customer_id,
-            account_id=tool_input['account_id'],
+    if tool_name == 'get_revenue_at_risk':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'get_revenue_at_risk',
+            customer_id=customer_id, account_id=tool_input['account_id'],
         )
-    elif tool_name == 'explain_kpi_anomaly':
-        from llm.anomaly_explainer import explain_anomaly
-        return explain_anomaly(
+    if tool_name == 'get_portfolio_revenue_breakdown':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'get_portfolio_revenue_breakdown',
             customer_id=customer_id,
-            account_id=tool_input['account_id'],
+        )
+    if tool_name == 'get_context_graph_mermaid':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'get_context_graph_mermaid',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+            max_nodes=tool_input.get('max_nodes', 30),
+        )
+    if tool_name == 'get_account_journey_timeline':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'get_account_journey_timeline',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+            limit=tool_input.get('limit', 50),
+        )
+    if tool_name == 'search_signals':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'search_signals',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+            node_type=tool_input.get('node_type', 'SIGNAL'),
+            node_subtype=tool_input.get('node_subtype'),
+            limit=tool_input.get('limit', 20),
+        )
+    if tool_name == 'get_stakeholder_map':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'get_stakeholder_map',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+        )
+    if tool_name == 'get_csm_daily_actions':
+        return _call_mcp('mcp_server.cs_pulse_admin', 'get_csm_daily_actions', customer_id=customer_id)
+    if tool_name == 'get_csm_scorecard':
+        return _call_mcp(
+            'mcp_server.cs_pulse_admin', 'get_csm_scorecard',
+            customer_id=customer_id, csm_name=tool_input.get('csm_name'),
+        )
+    if tool_name == 'get_csm_ranking':
+        return _call_mcp(
+            'mcp_server.cs_pulse_admin', 'get_csm_ranking',
+            customer_id=customer_id, metric=tool_input.get('metric', 'composite'),
+        )
+    if tool_name == 'get_team_capacity':
+        return _call_mcp('mcp_server.cs_pulse_revenue', 'get_team_capacity', customer_id=customer_id)
+    if tool_name == 'calculate_power_of_1':
+        return _call_mcp(
+            'mcp_server.cs_pulse_revenue', 'calculate_power_of_1',
+            customer_id=customer_id, metric_id=tool_input['metric_id'],
+            improvement_pct=tool_input.get('improvement_pct', 1.0),
+        )
+    if tool_name == 'get_outcome_roi_story':
+        return _call_mcp(
+            'mcp_server.cs_pulse_revenue', 'get_outcome_roi_story',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+            target_improvement_pct=tool_input.get('target_improvement_pct', 10),
+            projection_months=tool_input.get('projection_months', 12),
+        )
+    if tool_name == 'get_playbook_recommendations':
+        return _call_mcp(
+            'mcp_server.cs_pulse_revenue', 'get_playbook_recommendations',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+        )
+    if tool_name == 'get_portfolio_roi_summary':
+        return _call_mcp(
+            'mcp_server.cs_pulse_revenue', 'get_portfolio_roi_summary',
+            customer_id=customer_id,
+        )
+    if tool_name == 'analyze_root_cause':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'analyze_root_cause',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+        )
+    if tool_name == 'explain_kpi_anomaly':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'explain_kpi_anomaly',
+            customer_id=customer_id, account_id=tool_input['account_id'],
             kpi_code=tool_input['kpi_code'],
         )
-    elif tool_name == 'generate_action_plan':
-        from llm.action_plan_generator import generate_action_plan
-        return generate_action_plan(
-            customer_id=customer_id,
-            account_id=tool_input['account_id'],
-            horizon_days=tool_input.get('planning_horizon_days', 90),
+    if tool_name == 'generate_action_plan':
+        return _call_mcp(
+            'mcp_server.cs_pulse_intelligence', 'generate_action_plan',
+            customer_id=customer_id, account_id=tool_input['account_id'],
+            planning_horizon_days=tool_input.get('planning_horizon_days', 90),
         )
-    elif tool_name == 'get_calibration_history':
-        return _get_calibration_history(customer_id, tool_input.get('limit', 10))
-    # ─── NRR forecast tools (Predictor v3 + Wizard B) ───
-    # Use the MCP @mcp.tool implementations directly — they already
-    # have the right code path (predict_for_account_id wrapping etc).
-    elif tool_name == 'get_account_nrr_forecast':
-        from mcp_server.cs_pulse_predictor import get_account_nrr_forecast as _t
-        impl = getattr(_t, 'fn', _t)
-        # customer_id from Ask AI session context — the MCP tool requires
-        # it for tenant-isolation auth. The LLM-supplied customer_id (if
-        # any) is ignored: Ask AI is always scoped to the session's tenant.
-        return impl(
-            customer_id=customer_id,
-            account_id=tool_input['account_id'],
+    if tool_name == 'get_calibration_history':
+        return _call_mcp(
+            'mcp_server.cs_pulse_admin', 'get_calibration_history',
+            customer_id=customer_id, limit=tool_input.get('limit', 10),
+        )
+    if tool_name == 'get_account_nrr_forecast':
+        return _call_mcp(
+            'mcp_server.cs_pulse_predictor', 'get_account_nrr_forecast',
+            customer_id=customer_id, account_id=tool_input['account_id'],
             horizon=tool_input.get('horizon', '12mo'),
         )
-    elif tool_name == 'get_portfolio_nrr_forecast_v3':
-        from mcp_server.cs_pulse_predictor import get_portfolio_nrr_forecast_v3 as _t
-        impl = getattr(_t, 'fn', _t)
-        return impl(
-            customer_id=customer_id,
-            horizon=tool_input.get('horizon', '12mo'),
+    if tool_name == 'get_portfolio_nrr_forecast_v3':
+        return _call_mcp(
+            'mcp_server.cs_pulse_predictor', 'get_portfolio_nrr_forecast_v3',
+            customer_id=customer_id, horizon=tool_input.get('horizon', '12mo'),
         )
-    elif tool_name == 'get_top_expansion_opportunities_v3':
-        from mcp_server.cs_pulse_predictor import get_top_expansion_opportunities_v3 as _t
-        impl = getattr(_t, 'fn', _t)
-        return impl(
-            customer_id=customer_id,
-            horizon=tool_input.get('horizon', '12mo'),
+    if tool_name == 'get_top_expansion_opportunities_v3':
+        return _call_mcp(
+            'mcp_server.cs_pulse_predictor', 'get_top_expansion_opportunities_v3',
+            customer_id=customer_id, horizon=tool_input.get('horizon', '12mo'),
             limit=tool_input.get('limit', 5),
         )
-    elif tool_name == 'get_top_at_risk_accounts_v3':
-        from mcp_server.cs_pulse_predictor import get_top_at_risk_accounts_v3 as _t
-        impl = getattr(_t, 'fn', _t)
-        return impl(
-            customer_id=customer_id,
-            horizon=tool_input.get('horizon', '12mo'),
+    if tool_name == 'get_top_at_risk_accounts_v3':
+        return _call_mcp(
+            'mcp_server.cs_pulse_predictor', 'get_top_at_risk_accounts_v3',
+            customer_id=customer_id, horizon=tool_input.get('horizon', '12mo'),
             limit=tool_input.get('limit', 5),
         )
-    elif tool_name == 'get_realized_nrr_counterfactual':
-        # Wizard B counterfactual — existing MCP tool was named get_nrr_forecast
-        from mcp_server.cs_pulse_revenue import get_nrr_forecast as _t
-        impl = getattr(_t, 'fn', _t)
-        return impl(
-            customer_id=customer_id,
-            months=tool_input.get('months', 3),
+    if tool_name == 'get_realized_nrr_counterfactual':
+        return _call_mcp(
+            'mcp_server.cs_pulse_revenue', 'get_nrr_forecast',
+            customer_id=customer_id, months=tool_input.get('months', 3),
         )
-    else:
-        return {"error": f"Unknown tool: {tool_name}"}
+    return {"error": f"Unknown tool: {tool_name}"}
 
 
 def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
@@ -1323,52 +1225,9 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
 # ─── Calibration History ─────────────────────────────────────────────────────
 
 def _get_calibration_history(customer_id: int, limit: int = 10) -> dict:
-    """Query weight calibration history for what-if analysis and drift detection."""
-    from models import WeightCalibrationHistory, db
-
-    records = (
-        WeightCalibrationHistory.query
-        .filter_by(customer_id=int(customer_id))
-        .order_by(WeightCalibrationHistory.calibrated_at.desc())
-        .limit(limit)
-        .all()
-    )
-
-    if not records:
-        return {
-            'customer_id': customer_id,
-            'calibrations': [],
-            'count': 0,
-            'message': 'No calibration history found. Run Wizard C or configure_customer_kpis to create weight records.',
-        }
-
-    calibrations = [r.to_dict() for r in records]
-
-    # Compute drift summary: compare latest vs earliest
-    latest = records[0]
-    earliest = records[-1]
-    drift = {}
-    if latest.pillar_weights and earliest.pillar_weights:
-        for pillar in latest.pillar_weights:
-            new_w = latest.pillar_weights.get(pillar, 0)
-            old_w = earliest.pillar_weights.get(pillar, 0)
-            if old_w > 0:
-                drift[pillar] = {
-                    'current': round(new_w, 4),
-                    'earliest': round(old_w, 4),
-                    'change_pct': round((new_w - old_w) / old_w * 100, 1),
-                }
-
-    return {
-        'customer_id': customer_id,
-        'calibrations': calibrations,
-        'count': len(calibrations),
-        'drift_summary': drift,
-        'latest_source': latest.triggered_by or latest.source,
-        'latest_date': latest.calibrated_at.isoformat() if latest.calibrated_at else None,
-        'note': 'Use pillar_weights and correlation_scores for what-if analysis. '
-                'drift_summary shows how weights evolved from earliest to latest calibration.',
-    }
+    """Fallback when MCP stack unavailable — same util as MCP tool."""
+    from utils.calibration_history import fetch_calibration_history
+    return fetch_calibration_history(customer_id, limit=limit)
 
 
 # ─── Artifact Extraction ─────────────────────────────────────────────────────

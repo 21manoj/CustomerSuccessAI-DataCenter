@@ -589,6 +589,82 @@ def publish_health_events(customer_id: int, acct_ids: List[int]) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════
+# Stage 8: Onboarding Agent activation plan (once per customer)
+# ═══════════════════════════════════════════════════════════════
+
+def run_onboarding_agent_analyze(customer_id: int) -> Tuple[Optional[str], float]:
+    """Ensure an activation plan exists after process_data.
+
+    Skips if a plan is already stored. Uses LLM when onboarding_agent
+    entitlement is active and an API key is configured; otherwise stores
+    a rule-based fallback plan so read endpoints do not 404.
+    """
+    t0 = time.time()
+    duration = lambda: round(time.time() - t0, 2)
+
+    try:
+        from agents.onboarding_agent import OnboardingAgent
+        from agents.onboarding_agent_api import _load_customer_data
+
+        agent = OnboardingAgent(customer_id=customer_id)
+        if agent.get_activation_plan():
+            return 'onboarding_plan_exists', duration()
+
+        customer_data = _load_customer_data(customer_id)
+        if not customer_data or not customer_data.get('accounts'):
+            logger.info(
+                f"onboarding_agent: skip customer {customer_id} — no account data"
+            )
+            return None, duration()
+
+        entitled = False
+        try:
+            from entitlements import check_entitlement
+            entitled = check_entitlement(customer_id, 'onboarding_agent')
+        except Exception:
+            pass
+
+        has_llm = bool(os.getenv('OPENAI_API_KEY') or os.getenv('ANTHROPIC_API_KEY'))
+
+        if entitled and has_llm:
+            try:
+                plan = agent.analyze_new_customer(
+                    customer_name=customer_data['customer_name'],
+                    industry=customer_data['industry'],
+                    onboarding_mode=customer_data.get('onboarding_mode', 'demo'),
+                    accounts=customer_data['accounts'],
+                    kpi_snapshot=customer_data.get('kpi_snapshot'),
+                )
+                return (
+                    f"onboarding_plan_llm_{len(plan.plan_entries)}_accounts",
+                    duration(),
+                )
+            except Exception as e:
+                logger.warning(
+                    f"onboarding_agent LLM failed for customer {customer_id}, "
+                    f"using fallback: {e}"
+                )
+
+        plan = agent._fallback_plan(
+            customer_data['customer_name'],
+            customer_data['industry'],
+            customer_data['accounts'],
+        )
+        agent._store_plan_in_memory(plan)
+        return (
+            f"onboarding_plan_fallback_{len(plan.plan_entries)}_accounts",
+            duration(),
+        )
+
+    except Exception as e:
+        logger.warning(
+            f"Onboarding agent analyze failed (non-fatal) for customer {customer_id}: {e}",
+            exc_info=True,
+        )
+        return None, duration()
+
+
+# ═══════════════════════════════════════════════════════════════
 # Stage 9: Record WizardRun for audit + incremental detection
 # ═══════════════════════════════════════════════════════════════
 

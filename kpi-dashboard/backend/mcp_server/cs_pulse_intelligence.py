@@ -4,6 +4,7 @@ CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
 
 10 tools:
   - get_revenue_at_risk
+  - get_portfolio_revenue_breakdown
   - get_causal_chain
   - get_graph_summary
   - search_signals
@@ -12,7 +13,9 @@ CS Pulse MCP — Intelligence Tools (Context Graph / Revenue Intelligence).
   - get_context_graph_mermaid
   - get_stakeholder_map
   - get_health_score_history
-  - get_nrr_forecast (requires 'nrr_intelligence' feature flag)
+  - analyze_root_cause (WITH_LLM)
+  - explain_kpi_anomaly (WITH_LLM)
+  - generate_action_plan (WITH_LLM)
 
 All tools register on the shared `mcp` instance from cs_pulse_mcp_server.
 """
@@ -1104,6 +1107,88 @@ def get_health_score_history(
             "transitions": transitions,
             "accounts": portfolio_history,
         }
+
+
+# ===================================================================
+# Tool: get_portfolio_revenue_breakdown
+# ===================================================================
+
+@mcp.tool
+def get_portfolio_revenue_breakdown(customer_id: int) -> dict:
+    """Portfolio-wide revenue breakdown across ALL accounts in one call.
+
+    Returns portfolio totals (at-risk, protected, expansion) plus top-3
+    accounts per bucket so callers do not need per-account get_revenue_at_risk loops.
+
+    Args:
+        customer_id: The customer (tenant) ID
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        _check_context_graph(customer_id)
+        from utils.portfolio_revenue_breakdown import build_portfolio_revenue_breakdown
+        return build_portfolio_revenue_breakdown(customer_id)
+
+
+# ===================================================================
+# LLM analysis tools (Ask AI parity — require WITH_LLM where noted)
+# ===================================================================
+
+@mcp.tool
+def analyze_root_cause(customer_id: int, account_id: int) -> dict:
+    """Analyze root cause of an account health trajectory (requires WITH_LLM).
+
+    Returns causal chain, contributing factors, stakeholder dynamics, and prediction.
+    """
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        _validate_account_ownership(customer_id, account_id)
+        from llm.causal_reasoning import analyze_root_cause as _analyze
+        return _analyze(customer_id=customer_id, account_id=account_id)
+
+
+@mcp.tool
+def explain_kpi_anomaly(customer_id: int, account_id: int, kpi_code: str) -> dict:
+    """Explain a significant KPI change using correlated signals (requires WITH_LLM)."""
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        _validate_account_ownership(customer_id, account_id)
+        from llm.anomaly_explainer import explain_anomaly
+        return explain_anomaly(
+            customer_id=customer_id,
+            account_id=account_id,
+            kpi_code=kpi_code,
+        )
+
+
+@mcp.tool
+def generate_action_plan(
+    customer_id: int,
+    account_id: int,
+    planning_horizon_days: int = 90,
+) -> dict:
+    """Generate a time-bound CSM action plan for an account (requires WITH_LLM)."""
+    _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        _validate_account_ownership(customer_id, account_id)
+        from llm.action_plan_generator import generate_action_plan as _gen
+        return _gen(
+            customer_id=customer_id,
+            account_id=account_id,
+            horizon_days=planning_horizon_days,
+        )
 
 
 # ---------------------------------------------------------------------------

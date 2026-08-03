@@ -24,19 +24,27 @@ import hashlib
 from datetime import datetime
 from typing import Optional, Dict, List
 
+from cs_pulse_mcp_server import (
+    mcp,
+    _check_mcp_enabled,
+    _require_auth,
+    ToolError,
+)
+
 logger = logging.getLogger(__name__)
 
 
 def _get_app_context():
     """Get Flask app context for DB operations."""
-    from app_v3_minimal import app
-    return app.app_context()
+    from cs_pulse_mcp_server import _get_flask_app
+    return _get_flask_app().app_context()
 
 
 # ============================================================
-# Connector Management Tools
+# Connector Management Tools (MCP-registered)
 # ============================================================
 
+@mcp.tool
 def list_integration_connectors(customer_id: int) -> Dict:
     """
     List all integration connectors for a customer.
@@ -45,6 +53,8 @@ def list_integration_connectors(customer_id: int) -> Dict:
     Args:
         customer_id: The customer (tenant) ID
     """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
     with _get_app_context():
         from integration_models import IntegrationConnector
 
@@ -53,6 +63,8 @@ def list_integration_connectors(customer_id: int) -> Dict:
         ).all()
 
         return {
+            'scope': 'customer',
+            'customer_id': customer_id,
             'connectors': [c.to_dict() for c in connectors],
             'total': len(connectors),
             'summary': {
@@ -120,6 +132,7 @@ def create_integration_connector(
         return result
 
 
+@mcp.tool
 def get_integration_health(customer_id: int) -> Dict:
     """
     Get overall integration health summary for CS Ops monitoring.
@@ -128,6 +141,8 @@ def get_integration_health(customer_id: int) -> Dict:
     Args:
         customer_id: The customer (tenant) ID
     """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
     with _get_app_context():
         from integration_models import IntegrationConnector, IntegrationSyncLog, WebhookEvent
         from datetime import timedelta
@@ -170,6 +185,8 @@ def get_integration_health(customer_id: int) -> Dict:
             status = 'no_connectors'
 
         return {
+            'scope': 'customer',
+            'customer_id': customer_id,
             'overall_status': status,
             'connectors': {'total': total, 'active': active, 'errored': errored, 'stale': stale},
             'last_24h': {'syncs': len(recent_logs), 'records_processed': total_records},
@@ -187,6 +204,7 @@ def get_integration_health(customer_id: int) -> Dict:
         }
 
 
+@mcp.tool
 def get_sync_logs(customer_id: int, connector_id: int = None, limit: int = 20) -> Dict:
     """
     Get recent sync activity logs.
@@ -196,6 +214,8 @@ def get_sync_logs(customer_id: int, connector_id: int = None, limit: int = 20) -
         connector_id: Optional connector ID to filter by
         limit: Max logs to return (default 20)
     """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
     with _get_app_context():
         from integration_models import IntegrationSyncLog
         from sqlalchemy import desc
@@ -207,6 +227,8 @@ def get_sync_logs(customer_id: int, connector_id: int = None, limit: int = 20) -
         logs = query.order_by(desc(IntegrationSyncLog.started_at)).limit(limit).all()
 
         return {
+            'scope': 'customer',
+            'customer_id': customer_id,
             'logs': [l.to_dict() for l in logs],
             'total': len(logs),
         }
@@ -387,6 +409,7 @@ def trigger_n8n_workflow(
 # Playbook Webhook Management Tools
 # ============================================================
 
+@mcp.tool
 def list_playbook_webhook_triggers(customer_id: int) -> Dict:
     """
     List all playbook webhook triggers (outbound: CS Pulse → n8n).
@@ -395,6 +418,8 @@ def list_playbook_webhook_triggers(customer_id: int) -> Dict:
     Args:
         customer_id: The customer (tenant) ID
     """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
     with _get_app_context():
         from integration_models import PlaybookWebhookTrigger, PlaybookWebhookLog
         from sqlalchemy import desc
@@ -413,7 +438,12 @@ def list_playbook_webhook_triggers(customer_id: int) -> Dict:
             entry['recent_fires'] = [l.to_dict() for l in recent]
             result.append(entry)
 
-        return {'triggers': result, 'total': len(result)}
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'triggers': result,
+            'total': len(result),
+        }
 
 
 def create_playbook_webhook_trigger(
