@@ -63,6 +63,8 @@ The rest of this guide assumes A or B.
 ## 4. Documentation pack (already in `GTM-docs/` and `engineering-docs/`)
 
 **Customer-facing:**
+- `CS_Pulse_GTM_2Pager.docx` / `.md` — 3-page buyer overview with Three Layers of Intelligence (`node docs/GTM-docs/generate_gtm_2pager.js`)
+- `CS_Pulse_GTM_2Pager_Infographic.pptx` / `.html` — glossy infographic; HTML is 2-page PDF; persona **workspace** screenshots in `screens/`
 - `Signal_Ingestion_Guide.md` — 3 channels (CRM CSV, email, Slack)
 - `qualitative_signals_template.csv` + `outcomes_template.csv` — 4-CSV upload templates
 - `CS_Pulse_User_Guide_Sandalwood_419.docx`

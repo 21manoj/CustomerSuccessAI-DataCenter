@@ -26,6 +26,7 @@ if str(_REPO_ROOT) not in sys.path:
 from scripts.ec2_acceptance.config import load_config
 from scripts.ec2_acceptance.http_client import AcceptanceClient
 from scripts.ec2_acceptance import checks
+from scripts.ec2_acceptance.number_correctness import verify_number_correctness
 
 
 SUITES = {
@@ -33,6 +34,9 @@ SUITES = {
     "cfo-phase1": ("CFO Phase 0–2", checks.verify_cfo_phase1),
     "cro": ("CRO Phases 0–5", checks.verify_cro_phases),
     "vpcs": ("VPCS Phases 0–5", checks.verify_vpcs_phases),
+    # Arithmetic correctness: re-derives portfolio aggregates from per-account
+    # primitives and asserts the dashboards return the correct value.
+    "numbers": ("Dashboard number-correctness", verify_number_correctness),
 }
 
 
