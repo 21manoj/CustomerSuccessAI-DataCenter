@@ -2,9 +2,13 @@
 """
 CS Pulse MCP — Onboarding Tools (frictionless auth).
 
-11 tools moved from cs_pulse_mcp_server.py:
+15 onboarding/discovery tools:
   - list_verticals
+  - get_reference_customer
+  - get_vertical_config
   - get_csv_templates
+  - get_onboarding_status
+  - validate_csv
   - create_customer
   - configure_customer_kpis
   - enable_features
@@ -38,30 +42,37 @@ from cs_pulse_mcp_server import (
     _backend_dir,
     ToolError,
 )
-
-
-# ===================================================================
-# Onboarding tool set (used by auth.py for frictionless auth)
-# ===================================================================
-
-ONBOARDING_TOOLS = {
-    'list_verticals',
-    'get_csv_templates',
-    'create_customer',
-    'configure_customer_kpis',
-    'enable_features',
-    'upload_csv',
-    'process_data',
-    'trigger_wizard',
-    'complete_onboarding',
-    'clone_customer',
-    'download_customer_csv',
-}
+from onboarding_tool_registry import ONBOARDING_TOOLS
 
 
 def _is_onboarding_tool(name: str) -> bool:
     """Return True if the tool name is in the frictionless onboarding set."""
     return name in ONBOARDING_TOOLS
+
+
+def _reference_customer_for_vertical(vertical: str):
+    """Demo/reference tenant for a vertical (used by list_verticals + get_reference_customer)."""
+    from models import Customer, Account
+
+    ref_customer = None
+    try:
+        ref_customer = Customer.query.filter_by(
+            is_reference=True,
+            reference_for=vertical,
+        ).first()
+    except Exception:
+        pass
+    if not ref_customer:
+        ref_customer = Customer.query.filter_by(vertical=vertical).first()
+    if not ref_customer:
+        return None
+    acct_count = Account.query.filter_by(customer_id=ref_customer.customer_id).count()
+    return {
+        'customer_id': ref_customer.customer_id,
+        'name': ref_customer.customer_name,
+        'vertical': vertical,
+        'account_count': acct_count,
+    }
 
 
 # ===================================================================
@@ -148,32 +159,8 @@ def list_verticals() -> dict:
                 pass  # Registry not available — return empty
 
         try:
-            from models import Customer, Account
-
             for v_slug, v_info in verticals.items():
-                ref_customer = None
-                try:
-                    ref_customer = Customer.query.filter_by(
-                        is_reference=True,
-                        reference_for=v_slug,
-                    ).first()
-                except Exception:
-                    pass
-
-                if not ref_customer:
-                    ref_customer = Customer.query.filter_by(vertical=v_slug).first()
-
-                if ref_customer:
-                    acct_count = Account.query.filter_by(
-                        customer_id=ref_customer.customer_id,
-                    ).count()
-                    v_info['reference_customer'] = {
-                        'customer_id': ref_customer.customer_id,
-                        'name': ref_customer.customer_name,
-                        'account_count': acct_count,
-                    }
-                else:
-                    v_info['reference_customer'] = None
+                v_info['reference_customer'] = _reference_customer_for_vertical(v_slug)
         except Exception:
             for v_info in verticals.values():
                 v_info['reference_customer'] = None
@@ -254,6 +241,211 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
         'total_file_types': len(all_files),
         'schemas': all_files,
     }
+
+
+# ===================================================================
+# Tool: get_reference_customer
+# ===================================================================
+
+@mcp.tool
+def get_reference_customer(vertical: str) -> dict:
+    """Return the demo/reference customer for a vertical.
+
+    Prospects use this after list_verticals() to find a tenant ID they can
+    explore with intelligence tools or clone via clone_customer().
+
+    Args:
+        vertical: Vertical slug (e.g. 'saas_premium', 'dc2_s')
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        ref = _reference_customer_for_vertical(vertical)
+        if not ref:
+            return {
+                'scope': 'platform',
+                'vertical': vertical,
+                'found': False,
+                'message': f'No reference customer found for vertical {vertical!r}.',
+            }
+        return {
+            'scope': 'platform',
+            'vertical': vertical,
+            'found': True,
+            'reference_customer': ref,
+        }
+
+
+# ===================================================================
+# Tool: get_vertical_config
+# ===================================================================
+
+@mcp.tool
+def get_vertical_config(vertical: str) -> dict:
+    """Return KPI pillars, KPI count, and playbook catalog for a vertical.
+
+    Discovery tool — no authentication required. Use before configure_customer_kpis()
+    or when explaining what a vertical supports to a prospect.
+
+    Args:
+        vertical: Vertical slug (e.g. 'saas_premium', 'dc2_s')
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        import utils.health_thresholds as ht
+
+        pillars: dict = {}
+        kpis: dict = {}
+        try:
+            from utils.vertical_registry import get_pillars, get_kpis, SUPPORTED_VERTICALS
+            if vertical not in SUPPORTED_VERTICALS:
+                raise ToolError(
+                    f"Unknown vertical {vertical!r}. "
+                    f"Supported: {sorted(SUPPORTED_VERTICALS)}"
+                )
+            pillar_defs = get_pillars(vertical)
+            kpi_defs = get_kpis(vertical)
+            pillars = {
+                pid: {
+                    'name': p.get('name', pid),
+                    'weight': p.get('weight'),
+                    'kpi_count': sum(
+                        1 for k in kpi_defs.values()
+                        if k.get('pillar') == pid
+                    ),
+                }
+                for pid, p in pillar_defs.items()
+            }
+            kpis = {
+                code: {
+                    'name': k.get('name', code),
+                    'pillar': k.get('pillar'),
+                    'unit': k.get('unit'),
+                }
+                for code, k in kpi_defs.items()
+            }
+        except ToolError:
+            raise
+        except Exception as exc:
+            raise ToolError(f"Could not load vertical config for {vertical!r}: {exc}") from exc
+
+        playbook_config = _get_playbook_config(vertical) or {}
+        playbooks = {
+            pb_id: {
+                'name': cfg.get('name', pb_id),
+                'estimated_duration_days': cfg.get('estimated_duration_days'),
+                'trigger_conditions': cfg.get('trigger_conditions'),
+            }
+            for pb_id, cfg in playbook_config.items()
+        }
+
+        tier_config = _load_tier_config()
+        saas_tiers = list(tier_config.get('tiers', {}).keys()) if tier_config else []
+
+        return {
+            'scope': 'platform',
+            'vertical': vertical,
+            'pillar_count': len(pillars),
+            'pillars': pillars,
+            'kpi_count': len(kpis),
+            'kpis': kpis,
+            'playbook_count': len(playbooks),
+            'playbooks': playbooks,
+            'health_bands': {
+                'healthy_min': ht.HEALTHY_MIN,
+                'at_risk_min': ht.AT_RISK_MIN,
+            },
+            'saas_kpi_tiers': saas_tiers if vertical in ('saas_premium', 'saas') else [],
+        }
+
+
+# ===================================================================
+# Tool: validate_csv
+# ===================================================================
+
+@mcp.tool
+def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
+    """Validate CSV content against platform schema without persisting.
+
+    Same validation path as upload_csv(dry_run=True) and POST /api/onboarding/validate-csv.
+    Use before upload_csv() to catch column or schema errors early.
+
+    Args:
+        customer_id: Customer ID (needed for config-aware KPI filtering when applicable)
+        file_type: CSV file type (e.g. 'kpi_measurements.csv', 'accounts.csv')
+        csv_content: Raw CSV string
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        from utils.csv_upload import _upload_csv_impl
+        result = _upload_csv_impl(
+            customer_id=customer_id,
+            file_type=file_type,
+            csv_content=csv_content,
+            dry_run=True,
+            storage_mode='disk',
+        )
+        result['scope'] = 'customer'
+        result['customer_id'] = customer_id
+        result['validated'] = True
+        return result
+
+
+# ===================================================================
+# Tool: get_onboarding_status
+# ===================================================================
+
+@mcp.tool
+def get_onboarding_status(customer_id: int) -> dict:
+    """Poll onboarding progress: checklist + in-flight process_data status.
+
+    Combines complete_onboarding(check_only=True) with the process-data progress
+    tracker (GET /api/onboarding/status/<id>). Use while process_data() is running
+    or to verify Month-1 CSV requirements before finalize.
+
+    Args:
+        customer_id: The customer ID to inspect
+    """
+    _check_mcp_enabled()
+    app = _get_flask_app()
+
+    with app.app_context():
+        checklist_impl = getattr(complete_onboarding, 'fn', complete_onboarding)
+        checklist_result = checklist_impl(customer_id=customer_id, check_only=True)
+        process_progress = None
+        try:
+            from utils.onboarding_progress_file import read_progress
+            process_progress = read_progress(int(customer_id))
+        except Exception:
+            pass
+
+        if not process_progress:
+            try:
+                from onboarding_api_v2_config_aware import _onboarding_progress
+                process_progress = _onboarding_progress.get(int(customer_id))
+            except Exception:
+                pass
+
+        in_progress = bool(process_progress and process_progress.get('in_progress'))
+        return {
+            'scope': 'customer',
+            'customer_id': customer_id,
+            'checklist': checklist_result,
+            'process_data': {
+                'in_progress': in_progress,
+                'status': (process_progress or {}).get('status'),
+                'current_step': (process_progress or {}).get('current_step'),
+                'steps_completed': (process_progress or {}).get('steps_completed', []),
+                'started_at': (process_progress or {}).get('started_at'),
+                'completed_at': (process_progress or {}).get('completed_at'),
+                'error': (process_progress or {}).get('error'),
+            },
+        }
 
 
 # ===================================================================
@@ -1261,6 +1453,14 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     if exists:
                                         continue
 
+                                sh_name = str(row.get('stakeholder_name', '') or '').strip()
+                                sh_title = str(row.get('stakeholder_title', '') or '').strip()
+                                stakeholder_roles = None
+                                if sh_name:
+                                    stakeholder_roles = [
+                                        {'name': sh_name, 'role': sh_title or 'contact'},
+                                    ]
+
                                 sig = QualitativeSignal(
                                     signal_id=sig_id, customer_id=int(customer_id),
                                     account_id=acct_id,
@@ -1269,6 +1469,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     sentiment=row.get('sentiment', 'neutral'),
                                     sentiment_score=float(row.get('sentiment_score', 0.5)),
                                     signal_date=row.get('signal_date', row.get('date')),
+                                    stakeholder_roles=stakeholder_roles,
                                 )
                                 _db.session.add(sig)
                                 sig_ref = row.get('signal_ref')
@@ -1285,15 +1486,22 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     ).first()
                                     if _existing_cn:
                                         continue
+                                    _sig_props = {
+                                        'signal_ref': str(sig_ref),
+                                        'sentiment': str(row.get('sentiment', '') or ''),
+                                        'sentiment_score': str(row.get('sentiment_score', '') or ''),
+                                    }
+                                    if sh_name:
+                                        _sig_props['stakeholder_name'] = sh_name
+                                    if sh_title:
+                                        _sig_props['stakeholder_title'] = sh_title
                                     sig_node = CN_(
                                         customer_id=customer_id, account_id=acct_id,
                                         node_type='SIGNAL',
                                         source='observed',
                                         node_subtype=str(row.get('signal_type', 'signal') or 'signal'),
                                         title=str(row.get('content') if str(row.get('content', '')).lower() not in ('nan', '', 'none') else row.get('signal_type', 'Signal'))[:200],
-                                        properties={'signal_ref': str(sig_ref),
-                                                    'sentiment': str(row.get('sentiment', '') or ''),
-                                                    'sentiment_score': str(row.get('sentiment_score', '') or '')},
+                                        properties=_sig_props,
                                         tier=2,
                                         occurred_at=pd.to_datetime(row.get('signal_date')) if row.get('signal_date') else _dt.utcnow(),
                                         source_platform=str(row.get('source_platform', 'csv_import')),
@@ -1816,6 +2024,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             run_urgent_scanner,
             run_roi_engine,
             run_qdrant_indexing,
+            run_onboarding_agent_analyze,
             publish_health_events,
             record_wizard_run,
         )
@@ -1929,12 +2138,18 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             steps_completed.append(_qdrant_step)
         _step_timings['qdrant'] = round(_time.time() - _t_stage, 2)
 
+        # Stage 8: Onboarding activation plan (once per customer; non-fatal)
+        _onboarding_step, _onboarding_duration = run_onboarding_agent_analyze(customer_id)
+        if _onboarding_step:
+            steps_completed.append(_onboarding_step)
+        _step_timings['onboarding_agent'] = _onboarding_duration
+
         # ── Result + tracking ──
         status = 'success' if steps_completed and not errors else 'partial' if steps_completed else 'failed'
         _pipeline_duration = round(_time.time() - _pipeline_t0, 1)
         _step_timings['total'] = _pipeline_duration
 
-        # Stage 8: Record WizardRun for audit trail
+        # Record WizardRun for audit trail
         _scores_written = int(_health_step.split('_')[-2]) if _health_step and '_' in _health_step else 0
         record_wizard_run(
             customer_id=customer_id,
@@ -2002,6 +2217,7 @@ def process_data(customer_id: int, mode: str = 'auto') -> dict:
     3. Wizard A — arc classification + context graph generation (rule-based)
     4. Wizard B — pattern analysis (requires ≥5 accounts)
     5. Signal analysis + ROI engine
+    6. Onboarding activation plan (LLM if entitled, else rule-based fallback)
 
     With just 3 CSVs (accounts, kpis, signals), the pipeline generates a full
     context graph automatically:
@@ -2842,6 +3058,176 @@ def clone_customer(
         return result
 
 
+def _build_kpi_catalog_lookup(customer) -> dict:
+    """Map kpi_code → display fields for CSV export (DB stores code only)."""
+    try:
+        vertical = _resolve_customer_vertical(customer.customer_id)
+    except Exception:
+        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+    defs = _get_kpi_definitions(vertical) or {}
+    lookup = {}
+    for code, defn in defs.items():
+        lookup[code] = {
+            'kpi_name': defn.get('name') or defn.get('kpi_name') or code,
+            'unit': defn.get('unit', ''),
+            'pillar': defn.get('pillar', ''),
+        }
+    return lookup
+
+
+def _build_signal_export_indexes(customer_id: int, account_ids: list):
+    """Index context nodes + edges for enriching qualitative signal exports."""
+    from models import ContextNode, ContextEdge
+
+    if not account_ids:
+        return {}, {}, {}
+
+    nodes = ContextNode.query.filter(
+        ContextNode.customer_id == customer_id,
+        ContextNode.account_id.in_(account_ids),
+    ).all()
+    node_by_id = {n.node_id: n for n in nodes}
+
+    sig_ref_to_node = {}
+    for n in nodes:
+        if n.node_type != 'SIGNAL':
+            continue
+        keys = []
+        if n.source_event_id:
+            keys.append((n.account_id, str(n.source_event_id)))
+        props = n.properties if isinstance(n.properties, dict) else {}
+        sr = props.get('signal_ref')
+        if sr:
+            keys.append((n.account_id, str(sr)))
+        for key in keys:
+            sig_ref_to_node.setdefault(key, n)
+
+    edges = ContextEdge.query.filter_by(customer_id=customer_id).all()
+    outgoing = {}
+    for e in edges:
+        outgoing.setdefault(e.from_node_id, []).append(e)
+
+    return sig_ref_to_node, node_by_id, outgoing
+
+
+def _signal_id_lookup_keys(customer_id: int, account_id: int, signal_id: str):
+    """Match QualitativeSignal.signal_id to ContextNode source_event_id / signal_ref."""
+    sid = str(signal_id or '')
+    keys = [(account_id, sid)]
+    prefix = f'c{customer_id}_'
+    if sid.startswith(prefix):
+        keys.append((account_id, sid[len(prefix):]))
+    return keys
+
+
+def _stakeholder_name_from_signal(signal) -> str:
+    roles = getattr(signal, 'stakeholder_roles', None)
+    if isinstance(roles, list):
+        for entry in roles:
+            if isinstance(entry, dict):
+                name = entry.get('name') or entry.get('stakeholder_name')
+                if name:
+                    return str(name)
+            elif entry:
+                return str(entry)
+    return ''
+
+
+def _confidence_export_value(raw) -> str:
+    if raw is None or raw == '':
+        return ''
+    if isinstance(raw, (int, float)):
+        return str(float(raw))
+    if isinstance(raw, dict):
+        for key in ('overall', 'score', 'point'):
+            if key in raw and raw[key] is not None:
+                try:
+                    return str(float(raw[key]))
+                except (TypeError, ValueError):
+                    pass
+        nums = []
+        for v in raw.values():
+            try:
+                nums.append(float(v))
+            except (TypeError, ValueError):
+                continue
+        if nums:
+            return str(max(nums))
+        return ''
+    try:
+        return str(float(raw))
+    except (TypeError, ValueError):
+        return str(raw)
+
+
+def _node_export_ref(node) -> str:
+    if not node:
+        return ''
+    props = node.properties if isinstance(node.properties, dict) else {}
+    return (
+        str(node.source_event_id or props.get('signal_ref') or node.source_ref or '')
+    )
+
+
+def _enrich_signal_export_row(signal, customer_id: int, sig_ref_to_node, node_by_id, outgoing):
+    """Fill stakeholder / causal / platform fields absent from QualitativeSignal rows."""
+    node = None
+    if getattr(signal, 'cg_node_id', None):
+        node = node_by_id.get(signal.cg_node_id)
+    if not node:
+        for key in _signal_id_lookup_keys(customer_id, signal.account_id, signal.signal_id):
+            node = sig_ref_to_node.get(key)
+            if node:
+                break
+
+    stakeholder_name = _stakeholder_name_from_signal(signal)
+    source_platform = getattr(signal, 'source_type', None) or ''
+    causal_chain_ref = ''
+    revenue_impact = ''
+    confidence = _confidence_export_value(getattr(signal, 'confidence', None))
+
+    if node:
+        props = node.properties if isinstance(node.properties, dict) else {}
+        if not stakeholder_name:
+            stakeholder_name = str(props.get('stakeholder_name') or '')
+        if not source_platform:
+            source_platform = node.source_platform or 'csv_import'
+        if node.confidence is not None and not confidence:
+            confidence = str(float(node.confidence))
+        if node.revenue_impact is not None:
+            revenue_impact = float(node.revenue_impact)
+
+        out_edges = outgoing.get(node.node_id, [])
+        if out_edges:
+            refs = []
+            rev_total = 0.0
+            rev_seen = False
+            for edge in sorted(out_edges, key=lambda e: e.edge_id):
+                if edge.confidence is not None and not confidence:
+                    confidence = str(float(edge.confidence))
+                if edge.revenue_impact is not None:
+                    rev_total += float(edge.revenue_impact)
+                    rev_seen = True
+                target_ref = _node_export_ref(node_by_id.get(edge.to_node_id))
+                if target_ref:
+                    refs.append(target_ref)
+            if refs:
+                causal_chain_ref = ';'.join(refs[:5])
+            if rev_seen and not revenue_impact:
+                revenue_impact = rev_total
+
+    if not source_platform:
+        source_platform = 'cs_pulse'
+
+    return {
+        'stakeholder_name': stakeholder_name,
+        'causal_chain_ref': causal_chain_ref,
+        'revenue_impact': revenue_impact if revenue_impact != '' else '',
+        'confidence': confidence,
+        'source_platform': source_platform,
+    }
+
+
 # ===================================================================
 # Tool: download_customer_csv
 # ===================================================================
@@ -2915,6 +3301,13 @@ def download_customer_csv(
         requested = valid_types if file_type == 'all' else [file_type]
         csvs = {}
 
+        kpi_catalog = _build_kpi_catalog_lookup(customer)
+        need_signal_indexes = 'signals' in requested
+        sig_ref_to_node, node_by_id, outgoing_edges = (
+            _build_signal_export_indexes(int(customer_id), account_ids)
+            if need_signal_indexes else ({}, {}, {})
+        )
+
         if 'accounts' in requested:
             cols = ['account_id', 'customer_id', 'account_name', 'industry', 'region',
                     'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
@@ -2944,13 +3337,17 @@ def download_customer_csv(
             if account_ids:
                 kpis = DC2SKPI.query.filter(DC2SKPI.account_id.in_(account_ids)).all()
                 for k in kpis:
+                    meta = kpi_catalog.get(k.kpi_code, {})
                     rows.append({
                         'account_id': k.account_id, 'kpi_code': k.kpi_code,
                         'measured_at': k.measured_at.isoformat() if k.measured_at else '',
-                        'value': float(k.value), 'kpi_name': '', 'pillar': k.pillar or '',
+                        'value': float(k.value),
+                        'kpi_name': meta.get('kpi_name') or k.kpi_code,
+                        'pillar': k.pillar or meta.get('pillar', ''),
                         'target': float(k.target) if k.target else '',
                         'weight': float(k.weight) if k.weight else '',
-                        'unit': '', 'status': k.status or '',
+                        'unit': meta.get('unit', ''),
+                        'status': k.status or '',
                     })
             csvs['kpi_measurements.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
 
@@ -2964,15 +3361,21 @@ def download_customer_csv(
                     QualitativeSignal.account_id.in_(account_ids)
                 ).all()
                 for s in signals:
+                    extra = _enrich_signal_export_row(
+                        s, int(customer_id), sig_ref_to_node, node_by_id, outgoing_edges,
+                    )
                     rows.append({
                         'account_id': s.account_id,
                         'signal_date': s.signal_date.isoformat() if s.signal_date else '',
                         'signal_type': s.signal_type or '', 'content': s.content or '',
                         'sentiment': s.sentiment or '', 'signal_ref': s.signal_id or '',
                         'sentiment_score': float(s.sentiment_score) if s.sentiment_score else '',
-                        'stakeholder_name': '', 'stakeholder_title': s.stakeholder_title or '',
-                        'causal_chain_ref': '', 'revenue_impact': '', 'confidence': '',
-                        'source_platform': '',
+                        'stakeholder_name': extra['stakeholder_name'],
+                        'stakeholder_title': s.stakeholder_title or '',
+                        'causal_chain_ref': extra['causal_chain_ref'],
+                        'revenue_impact': extra['revenue_impact'],
+                        'confidence': extra['confidence'],
+                        'source_platform': extra['source_platform'],
                     })
             csvs['enhanced_qualitative_signals.csv'] = {'content': _csv_string(cols, rows), 'rows': len(rows)}
 

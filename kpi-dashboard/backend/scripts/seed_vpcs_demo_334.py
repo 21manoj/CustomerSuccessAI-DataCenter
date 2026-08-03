@@ -12,11 +12,10 @@ from datetime import date, datetime, timedelta
 
 from app_v3_minimal import app
 from extensions import db
-from models import Account, PlaybookExecutionV2
+from models import Account, Customer, PlaybookExecutionV2
+from utils.vertical_playbook_routing import playbook_ids_for_vertical
 
 CUSTOMER_ID = 334
-EXPANSION_PLAYBOOKS = ('PB-DC-04', 'PB-DC-06', 'PB-DC-01')
-RECOVERY_PLAYBOOKS = ('PB-DC-01', 'PB-DC-02', 'PB-DC-04')
 
 
 def seed_renewal_dates(accounts: list) -> int:
@@ -38,8 +37,12 @@ def seed_renewal_dates(accounts: list) -> int:
     return updated
 
 
-def seed_playbook_attribution(accounts: list) -> int:
+def seed_playbook_attribution(accounts: list, customer_id: int = CUSTOMER_ID) -> int:
     """Close executions with expansion/protection $ and health deltas."""
+    cust = Customer.query.get(customer_id)
+    vertical = getattr(cust, 'vertical', None) or 'dc2_s'
+    expansion_playbooks, recovery_playbooks = playbook_ids_for_vertical(vertical)
+
     acct_arr = {a.account_id: float(a.revenue or 0) for a in accounts}
     execs = (
         PlaybookExecutionV2.query.filter_by(customer_id=CUSTOMER_ID)
@@ -54,7 +57,10 @@ def seed_playbook_attribution(accounts: list) -> int:
     for i, ex in enumerate(execs):
         arr = acct_arr.get(ex.account_id, 500_000)
         pb = ex.playbook_id or ''
-        is_expansion = any(x in pb for x in ('04', '06', 'expansion')) or i % 3 == 0
+        is_expansion = (
+            any(x in pb for x in ('04', '06', 'expansion', 'accelerator'))
+            or i % 3 == 0
+        )
         ex.outcome = 'resolved'
         ex.status = 'completed'
         ex.health_at_trigger = ex.health_at_trigger or 55.0
@@ -63,13 +69,11 @@ def seed_playbook_attribution(accounts: list) -> int:
         if is_expansion:
             ex.revenue_expanded = round(max(arr * 0.08, 75_000) * (0.6 + (i % 4) * 0.1), 0)
             ex.revenue_protected = 0
-            if pb and 'DC' not in pb:
-                ex.playbook_id = EXPANSION_PLAYBOOKS[i % len(EXPANSION_PLAYBOOKS)]
+            ex.playbook_id = expansion_playbooks[i % len(expansion_playbooks)]
         else:
             ex.revenue_protected = round(max(arr * 0.05, 50_000), 0)
             ex.revenue_expanded = round(max(arr * 0.02, 25_000), 0) if i % 2 == 0 else 0
-            if pb and 'DC' not in pb:
-                ex.playbook_id = RECOVERY_PLAYBOOKS[i % len(RECOVERY_PLAYBOOKS)]
+            ex.playbook_id = recovery_playbooks[i % len(recovery_playbooks)]
         cost = float(ex.total_cost or 0) or float(ex.csm_hours_planned or 8) * 85
         ex.total_cost = cost
         rev = float(ex.revenue_protected or 0) + float(ex.revenue_expanded or 0)
@@ -88,7 +92,7 @@ def seed_vpcs_demo_334(customer_id: int = CUSTOMER_ID) -> dict:
         return {'error': f'no accounts for customer {customer_id}'}
 
     renew_n = seed_renewal_dates(accounts)
-    pb_n = seed_playbook_attribution(accounts)
+    pb_n = seed_playbook_attribution(accounts, customer_id=customer_id)
     db.session.commit()
 
     renewals_api = sum(

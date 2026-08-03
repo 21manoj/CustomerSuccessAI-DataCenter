@@ -192,6 +192,56 @@ def test_get_playbook_economics_single_lookup_routes_by_vertical():
 # ──────────────────────────────────────────────────────────────────────────
 
 
+# ──────────────────────────────────────────────────────────────────────────
+# Signal analyst: SaaS tenants must NOT get PB-DC-* playbook IDs
+# ──────────────────────────────────────────────────────────────────────────
+
+def test_signal_routing_saas_uses_saas_playbooks_not_pb_dc():
+    """get_high_risk_signal_types for saas_premium must never return PB-DC-*."""
+    from utils.vertical_playbook_routing import get_high_risk_signal_types
+
+    risk = get_high_risk_signal_types('saas_premium')
+    assert risk, "SaaS risk map is empty"
+    pb_dc = {
+        sig: info['playbook']
+        for sig, info in risk.items()
+        if str(info.get('playbook', '')).startswith('PB-DC')
+    }
+    assert not pb_dc, (
+        f"SaaS signal routing leaked PB-DC playbooks: {pb_dc}. "
+        f"Use renewal-safeguard / sla-stabilizer / activation-blitz / voc-sprint."
+    )
+    saas_ids = {info['playbook'] for info in risk.values()}
+    assert saas_ids & {'renewal-safeguard', 'sla-stabilizer', 'activation-blitz', 'voc-sprint'}, (
+        f"SaaS signal routing missing canonical playbooks. Got: {saas_ids}"
+    )
+
+
+def test_signal_routing_dc_uses_pb_dc_playbooks():
+    """DC tenants keep PB-DC-* routing for signal-triggered executions."""
+    from utils.vertical_playbook_routing import get_high_risk_signal_types
+
+    risk = get_high_risk_signal_types('dc2_s')
+    assert risk, "DC risk map is empty"
+    pb_ids = {info['playbook'] for info in risk.values()}
+    assert all(pb.startswith('PB-DC') for pb in pb_ids), (
+        f"DC signal routing should use PB-DC-* only. Got: {pb_ids}"
+    )
+
+
+def test_playbook_ids_for_vertical_seed_helpers():
+    """Seed/attribution scripts get vertical-appropriate expansion/recovery tuples."""
+    from utils.vertical_playbook_routing import playbook_ids_for_vertical
+
+    saas_exp, saas_rec = playbook_ids_for_vertical('saas_premium')
+    assert not any(pb.startswith('PB-DC') for pb in saas_exp + saas_rec)
+    assert 'renewal-safeguard' in saas_rec
+    assert 'expansion-accelerator' in saas_exp
+
+    dc_exp, dc_rec = playbook_ids_for_vertical('dc2_s')
+    assert all(pb.startswith('PB-DC') for pb in dc_exp + dc_rec)
+
+
 def test_v1_recommendations_route_uses_vertical_aware_engine():
     """The /api/v1/recommendations/<account_id> handler must delegate to
     playbook_recommendations_api.get_recommendations_for_account (which is

@@ -1407,6 +1407,29 @@ def get_csm_ranking(customer_id: int, metric: str = 'composite') -> dict:
 
 
 # ===================================================================
+# Tool: get_calibration_history
+# ===================================================================
+
+@mcp.tool
+def get_calibration_history(customer_id: int, limit: int = 10) -> dict:
+    """Weight calibration history for Wizard C and manual KPI weight changes.
+
+    Use for drift detection and what-if analysis on pillar/KPI weights.
+
+    Args:
+        customer_id: The customer (tenant) ID
+        limit: Max records to return (default 10)
+    """
+    _check_mcp_enabled()
+    _require_auth(customer_id)
+    app = _get_flask_app()
+
+    with app.app_context():
+        from utils.calibration_history import fetch_calibration_history
+        return fetch_calibration_history(customer_id, limit=limit)
+
+
+# ===================================================================
 # Tool: get_llm_cost_summary
 # ===================================================================
 

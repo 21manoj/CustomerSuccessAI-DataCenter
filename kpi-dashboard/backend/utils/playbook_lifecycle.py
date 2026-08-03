@@ -16,12 +16,9 @@ from models import Account, HealthScore, PlaybookExecutionV2, ContextNode, Conte
 logger = logging.getLogger(__name__)
 
 # ── Playbook name lookup (shared across all callers) ──
-PLAYBOOK_NAMES = {
-    'PB-01': 'Deployment Acceleration', 'PB-02': 'RMA Prevention',
-    'PB-03': 'GPU Optimization', 'PB-04': 'Capacity Planning',
-    'PB-05': 'Health Monitoring', 'PB-06': 'Customer Engagement',
-    'PB-07': 'Seasonal Planning', 'PB-08': 'Expansion Accelerator',
-}
+from utils.vertical_playbook_routing import playbook_display_names
+
+PLAYBOOK_NAMES = playbook_display_names()
 
 # Industry benchmark: 40-60% of churn reduction attributable to intervention
 # (Source: TSIA CS Benchmark 2024, Gainsight Pulse)

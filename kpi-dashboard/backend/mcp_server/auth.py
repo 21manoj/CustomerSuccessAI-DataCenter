@@ -60,28 +60,8 @@ if not MCP_AUTH_REQUIRED:
 # ---------------------------------------------------------------------------
 # Onboarding tools — frictionless auth (no API key required)
 # ---------------------------------------------------------------------------
-# These 13 tools are open for prospects. They let an AI assistant walk a
-# prospect through discovery, customer creation, data upload, and
-# onboarding finalization without needing a pre-existing API key.
-#
-# The create_customer tool auto-generates an API key that the prospect
-# can later use for the intelligence tools (Groups 1-5).
-# ---------------------------------------------------------------------------
-ONBOARDING_TOOLS = {
-    'list_verticals',
-    'get_reference_customer',
-    'get_csv_templates',
-    'get_vertical_config',
-    'get_onboarding_status',
-    'create_customer',
-    'configure_customer_kpis',
-    'enable_features',
-    'validate_csv',
-    'upload_csv',
-    'process_data',
-    'trigger_wizard',
-    'complete_onboarding',
-}
+# Canonical set: onboarding_tool_registry.py (15 frictionless tools).
+from onboarding_tool_registry import ONBOARDING_TOOLS
 
 # Write-scope tools — require 'write' scope on the API key
 WRITE_TOOLS = {
