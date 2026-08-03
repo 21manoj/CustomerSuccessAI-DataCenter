@@ -103,35 +103,32 @@ def ensure_collection_exists(qdrant_client: QdrantClient, collection_name: str, 
 def fetch_signals_from_db(customer_id: int, since_date: Optional[str] = None) -> List:
     """Fetch qualitative signals from PostgreSQL database"""
     query = """
-        SELECT 
+        SELECT
             signal_id,
             account_id,
-            date,
+            signal_date,
             signal_type,
-            from_contact,
-            to_contact,
-            subject,
-            summary,
+            content,
             sentiment,
-            priority,
+            stakeholder_level,
+            stakeholder_title,
             keywords,
-            source_system,
-            created_at
+            source_type
         FROM qualitative_signals
         WHERE account_id IN (
-            SELECT account_id 
-            FROM accounts 
+            SELECT account_id
+            FROM accounts
             WHERE customer_id = :customer_id
         )
     """
-    
+
     params = {"customer_id": customer_id}
-    
+
     if since_date:
-        query += " AND created_at >= :since_date"
+        query += " AND signal_date >= :since_date"
         params["since_date"] = since_date
-    
-    query += " ORDER BY account_id, date DESC"
+
+    query += " ORDER BY account_id, signal_date DESC"
     
     result = db.session.execute(text(query), params)
     signals = result.fetchall()
@@ -163,17 +160,17 @@ def create_signal_text(signal) -> str:
     """Create text representation of signal for embedding"""
     parts = [
         f"Type: {signal.signal_type or 'N/A'}",
-        f"Subject: {signal.subject or 'N/A'}",
-        f"Summary: {signal.summary or 'N/A'}",
+        f"Content: {signal.content or 'N/A'}",
         f"Sentiment: {signal.sentiment or 'N/A'}",
-        f"Priority: {signal.priority or 'N/A'}",
     ]
-    
-    if signal.from_contact:
-        parts.append(f"From: {signal.from_contact}")
-    if signal.to_contact:
-        parts.append(f"To: {signal.to_contact}")
-    
+
+    if signal.stakeholder_level:
+        parts.append(f"Stakeholder level: {signal.stakeholder_level}")
+    if signal.stakeholder_title:
+        parts.append(f"Stakeholder title: {signal.stakeholder_title}")
+    if signal.keywords:
+        parts.append(f"Keywords: {signal.keywords}")
+
     return "\n".join(parts)
 
 
@@ -255,7 +252,7 @@ def embed_and_upload_signals(
         if dry_run:
             print("\n[DRY RUN] Would embed these signals:")
             for i, sig in enumerate(signals[:10], 1):
-                print(f"   {i}. Signal ID: {sig.signal_id}, Subject: {sig.subject or 'N/A'}, Date: {sig.date}")
+                print(f"   {i}. Signal ID: {sig.signal_id}, Type: {sig.signal_type or 'N/A'}, Date: {sig.signal_date}")
             if len(signals) > 10:
                 print(f"   ... and {len(signals) - 10} more signals")
             print("\n✅ Dry run complete - no data was embedded")
@@ -294,16 +291,14 @@ def embed_and_upload_signals(
                         "customer_id": customer_id,
                         "signal_id": signal.signal_id,
                         "account_id": signal.account_id,
-                        "date": str(signal.date) if signal.date else None,
+                        "signal_date": str(signal.signal_date) if signal.signal_date else None,
                         "signal_type": signal.signal_type,
-                        "from_contact": signal.from_contact,
-                        "to_contact": signal.to_contact,
-                        "subject": signal.subject,
-                        "summary": signal.summary,
+                        "content": signal.content,
                         "sentiment": signal.sentiment,
-                        "priority": signal.priority,
+                        "stakeholder_level": signal.stakeholder_level,
+                        "stakeholder_title": signal.stakeholder_title,
                         "keywords": signal.keywords if signal.keywords else [],
-                        "source_system": signal.source_system if signal.source_system else "unknown",
+                        "source_type": signal.source_type if signal.source_type else "unknown",
                         "text": text_to_embed
                     }
                 )
