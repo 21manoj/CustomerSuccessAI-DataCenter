@@ -41,6 +41,7 @@ import PlaybookReports from './PlaybookReports';
 import AccountHealthHeatmap from './AccountHealthHeatmap';
 import OutcomeROIDashboard from './dashboard/OutcomeROIDashboard';
 import PortcoCEODashboard from './dashboard/PortcoCEODashboard';
+import NavLogoutButton from './shared/NavLogoutButton';
 
 interface Product {
   product_id: number;
@@ -3706,8 +3707,8 @@ const CSPlatform = () => {
 
       <div className="flex">
         {/* Sidebar */}
-        <nav className="w-64 bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 shadow-sm px-4 py-6">
-          <div className="space-y-2">
+        <nav className="w-64 bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 shadow-sm px-4 py-6 flex flex-col min-h-[calc(100vh-73px)]">
+          <div className="space-y-2 flex-1">
                     {[
           { id: 'dashboard', label: 'Customer Success Performance Console', icon: BarChart3 },
           { id: 'upload', label: 'Data Integration', icon: Upload },
@@ -3734,6 +3735,9 @@ const CSPlatform = () => {
                 <span className="font-medium text-sm">{item.label}</span>
               </button>
             ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <NavLogoutButton variant="light-sidebar" />
           </div>
         </nav>
 

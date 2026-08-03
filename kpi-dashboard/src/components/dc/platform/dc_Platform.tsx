@@ -48,6 +48,7 @@ import {
 import { useSession } from '../../../contexts/SessionContext';
 import { useEntitlements, tierLabel, getRequiredTier } from '../../../hooks/useEntitlement';
 import ProductTour, { STARTER_TOUR_STEPS } from '../../shared/ProductTour';
+import NavLogoutButton from '../../shared/NavLogoutButton';
 import KPIGlossaryDrawer from '../../shared/KPIGlossaryDrawer';
 
 // Import tab components
@@ -478,6 +479,9 @@ const DCPlatform: React.FC = () => {
                 );
               })
             )}
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <NavLogoutButton variant="light-sidebar" />
           </div>
         </nav>
 

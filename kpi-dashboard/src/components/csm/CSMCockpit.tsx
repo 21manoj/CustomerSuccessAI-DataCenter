@@ -16,6 +16,7 @@ import NotificationBell from './NotificationBell';
 import UrgentAlertBanner from './UrgentAlertBanner';
 import ActivePlaybookTracker from './ActivePlaybookTracker';
 import EmailDraftModal from './EmailDraftModal';
+import NavLogoutButton from '../shared/NavLogoutButton';
 import {
   MOCK_ACCOUNTS, MOCK_ACTIONS, MOCK_APPROVALS,
   MOCK_ACCOUNT_DETAIL, MOCK_RECOMMENDATIONS,
@@ -1286,6 +1287,7 @@ const CSMCockpit: React.FC<CSMCockpitProps> = ({ notifications = [], unreadCount
                 {t.label}
               </button>
             ))}
+            <NavLogoutButton variant="nav-tab" />
           </nav>
         </div>
 

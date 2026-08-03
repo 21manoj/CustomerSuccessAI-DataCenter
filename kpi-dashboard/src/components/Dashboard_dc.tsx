@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from '../contexts/SessionContext';
 import { getCustomerIdentifier } from '../utils/api';
 import { Activity, AlertTriangle, Users, Zap, BarChart3, Upload, Target, MessageSquare, Settings, FileText, LogOut, ChevronDown, ChevronRight, TrendingDown, Eye } from 'lucide-react';
+import NavLogoutButton from './shared/NavLogoutButton';
 import { useNavigate } from 'react-router-dom';
 import { classify, classifyColor, classifyLabel } from '../utils/healthThresholds';
 import KPICard_dc from './KPICard_dc';
@@ -340,8 +341,8 @@ const Dashboard_dc: React.FC = () => {
 
       <div className="flex">
         {/* Sidebar */}
-        <nav className="w-64 bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 shadow-sm px-4 py-6">
-          <div className="space-y-2">
+        <nav className="w-64 bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 shadow-sm px-4 py-6 flex flex-col min-h-[calc(100vh-73px)]">
+          <div className="space-y-2 flex-1">
             {[
               { id: 'dashboard', label: 'Data Center Dashboard', icon: BarChart3 },
               { id: 'tenants', label: 'Tenants', icon: Users },
@@ -367,6 +368,9 @@ const Dashboard_dc: React.FC = () => {
                 <span className="font-medium text-sm">{item.label}</span>
               </button>
             ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <NavLogoutButton variant="light-sidebar" />
           </div>
         </nav>
 

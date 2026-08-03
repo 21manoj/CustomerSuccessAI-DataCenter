@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Activity, ChevronDown, AlertTriangle, TrendingUp, TrendingDown, Zap, Info } from 'lucide-react';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ── Types ──
 
@@ -318,6 +319,7 @@ const JourneyIntelligenceView: React.FC = () => {
           <h1 className="text-2xl font-bold">Journey Intelligence</h1>
         </div>
 
+        <div className="flex items-center gap-3">
         {/* Account Selector */}
         <div className="relative">
           <button
@@ -352,6 +354,8 @@ const JourneyIntelligenceView: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+          <NavLogoutButton variant="inline" className="text-gray-300 hover:text-white hover:bg-gray-800" />
         </div>
       </div>
 

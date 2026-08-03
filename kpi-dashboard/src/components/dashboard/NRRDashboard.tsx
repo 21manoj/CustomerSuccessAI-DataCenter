@@ -30,6 +30,7 @@ import {
 import { useSession } from '../../contexts/SessionContext';
 import { getCustomerIdentifier } from '../../utils/api';
 import { classify } from '../../utils/healthThresholds';
+import DashboardTopBar from './DashboardTopBar';
 
 // ============================================================================
 // TYPES
@@ -286,8 +287,9 @@ const NRRDashboard: React.FC = () => {
   const f = forecast!;
 
   return (
-    <div className="min-h-screen bg-[#0f1419] text-white">
-      <div className="max-w-7xl mx-auto px-6 py-6">
+    <div className="min-h-screen bg-[#0f1419] text-white flex flex-col">
+      <DashboardTopBar accent="teal" />
+      <div className="max-w-7xl mx-auto px-6 py-6 flex-1 w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>

@@ -23,6 +23,7 @@ import {
   ArrowUpRight, ArrowDownRight, ChevronRight, Search, X,
   Workflow, Bell, Shield, BarChart3,
 } from 'lucide-react';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ============================================================
 // Types
@@ -352,7 +353,7 @@ const CSOpsIntegrationDashboard: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mt-4">
+        <div className="flex gap-1 mt-4 items-center">
           {(['overview', 'connectors', 'activity', 'triggers'] as const).map(tab => (
             <button
               key={tab}
@@ -370,6 +371,9 @@ const CSOpsIntegrationDashboard: React.FC = () => {
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
+          <div className="ml-auto">
+            <NavLogoutButton variant="inline" />
+          </div>
         </div>
       </div>
 

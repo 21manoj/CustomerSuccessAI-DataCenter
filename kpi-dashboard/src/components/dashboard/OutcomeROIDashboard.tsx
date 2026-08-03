@@ -7,6 +7,7 @@ import {
   GitBranch, Star, Diamond, Signal, CalendarDays, Map, Gauge, Rocket
 } from 'lucide-react';
 import { apiCall } from '../../utils/api';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ────────────────────────────────────────────────────────
 // Types
@@ -2013,7 +2014,7 @@ const OutcomeROIDashboard: React.FC = () => {
 
       {/* Tab navigation */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="flex gap-0 -mb-px">
+        <nav className="flex gap-0 -mb-px items-center">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -2028,6 +2029,9 @@ const OutcomeROIDashboard: React.FC = () => {
               {tab.label}
             </button>
           ))}
+          <div className="ml-auto pb-1">
+            <NavLogoutButton variant="inline" />
+          </div>
         </nav>
       </div>
 

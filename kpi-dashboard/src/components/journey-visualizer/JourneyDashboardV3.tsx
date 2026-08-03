@@ -46,6 +46,7 @@ import {
   Play, RefreshCw, ExternalLink, CheckCircle, XCircle,
   AlertCircle, BarChart2, PieChart as PieChartIcon
 } from 'lucide-react';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ============================================================================
 // TYPES
@@ -1473,7 +1474,7 @@ const JourneyDashboardV3: React.FC<JourneyDashboardV3Props> = ({ accountId: prop
       {/* View Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             {views.map(view => (
               <button
                 key={view.id}
@@ -1488,6 +1489,9 @@ const JourneyDashboardV3: React.FC<JourneyDashboardV3Props> = ({ accountId: prop
                 {view.label}
               </button>
             ))}
+            <div className="ml-auto">
+              <NavLogoutButton variant="inline" />
+            </div>
           </div>
         </div>
       </div>

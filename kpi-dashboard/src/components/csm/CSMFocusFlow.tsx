@@ -38,6 +38,7 @@ import UrgentAlertBanner from './UrgentAlertBanner';
 import PlaybookStartModal from './PlaybookStartModal';
 import ActivePlaybookTracker from './ActivePlaybookTracker';
 import EmailDraftModal from './EmailDraftModal';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ============================================================================
 // TYPES
@@ -636,6 +637,9 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           </button>
         );
       })}
+      <div className="mt-auto pt-2">
+        <NavLogoutButton variant="icon-rail" />
+      </div>
     </nav>
   );
 

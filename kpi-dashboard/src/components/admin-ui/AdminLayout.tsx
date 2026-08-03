@@ -113,7 +113,7 @@ const AdminLayout: React.FC = () => {
           className={`${baseLinkClasses} text-indigo-200 hover:bg-red-600 hover:text-white w-full`}
         >
           <LogOut size={18} />
-          <span>Sign Out</span>
+          <span>Logout</span>
         </button>
       </div>
     </div>
