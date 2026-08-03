@@ -7,7 +7,7 @@ Provides helpers for:
 3. Enriching API responses with UUID fields
 
 Usage:
-    from uuid_utils import resolve_customer, resolve_account, enrich_response, ensure_uuid
+    from id_resolve_utils import resolve_customer, resolve_account, enrich_response, ensure_uuid
 
     # In API endpoint — accept either UUID or integer
     customer = resolve_customer(some_id)  # works with int or "dc_cust_019..."

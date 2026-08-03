@@ -264,7 +264,7 @@ def get_current_customer_id():
             except (ValueError, TypeError):
                 # UUID string — resolve to integer customer_id
                 try:
-                    from uuid_utils import resolve_customer
+                    from id_resolve_utils import resolve_customer
                     customer = resolve_customer(header_val, allow_none=True)
                     if customer:
                         header_customer_id = customer.customer_id

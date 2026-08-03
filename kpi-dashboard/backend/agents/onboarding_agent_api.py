@@ -95,7 +95,7 @@ def analyze_new_customer(customer_id):
 
         # Enrich with UUID
         try:
-            from uuid_utils import enrich_with_uuid, resolve_customer
+            from id_resolve_utils import enrich_with_uuid, resolve_customer
             customer = resolve_customer(customer_id_int, allow_none=True)
             if customer:
                 response = enrich_with_uuid(response, customer)
@@ -272,7 +272,7 @@ def _resolve_customer_id(identifier) -> int:
         pass
     # Try UUID resolution
     try:
-        from uuid_utils import resolve_customer
+        from id_resolve_utils import resolve_customer
         customer = resolve_customer(identifier, allow_none=True)
         if customer:
             return customer.customer_id

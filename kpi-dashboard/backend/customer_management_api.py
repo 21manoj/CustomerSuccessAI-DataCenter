@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify
 from auth_middleware import get_current_customer_id, get_current_user_id
 from models import db, Customer, CustomerConfig, Account, KPIUpload
 from enhanced_rag_qdrant import get_qdrant_rag_system
-from uuid_utils import ensure_uuid, enrich_with_uuid
+from id_resolve_utils import ensure_uuid, enrich_with_uuid
 import json
 from datetime import datetime
 
@@ -118,7 +118,7 @@ def list_customers():
 def get_customer_kb_status(customer_id):
     """Get knowledge base status for a specific customer (accepts integer ID or UUID)"""
     try:
-        from uuid_utils import resolve_customer
+        from id_resolve_utils import resolve_customer
         customer = resolve_customer(customer_id, allow_none=True)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
@@ -158,7 +158,7 @@ def get_customer_kb_status(customer_id):
 def build_customer_knowledge_base(customer_id):
     """Build knowledge base for a specific customer (accepts integer ID or UUID)"""
     try:
-        from uuid_utils import resolve_customer
+        from id_resolve_utils import resolve_customer
         customer = resolve_customer(customer_id, allow_none=True)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
@@ -195,7 +195,7 @@ def build_customer_knowledge_base(customer_id):
 def get_customer_data_summary(customer_id):
     """Get data summary for a specific customer (accepts integer ID or UUID)"""
     try:
-        from uuid_utils import resolve_customer
+        from id_resolve_utils import resolve_customer
         customer = resolve_customer(customer_id, allow_none=True)
         if not customer:
             return jsonify({'error': 'Customer not found'}), 404
