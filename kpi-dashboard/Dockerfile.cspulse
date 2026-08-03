@@ -69,7 +69,7 @@ RUN python setup_cython.py build_ext --inplace 2>&1 | tail -5
 # KEEP: migrations/add_customer_id_to_wizard_learnings.py, add_arc_fields_to_accounts.py — runnable in container
 RUN find ./templates -name "*.py" -delete 2>/dev/null || true && \
     find ./migrations -name "*.py" ! -name "add_customer_id_to_wizard_learnings.py" ! -name "add_arc_fields_to_accounts.py" ! -name "refine_provenance_source_values.py" -delete 2>/dev/null || true && \
-    find ./scripts -name "*.py" ! -name "generate_synthetic_*.py" ! -name "migrate_schema_sync.py" ! -name "sqs_onboarding_worker.py" ! -name "seed_vpcs_demo_334.py" -delete 2>/dev/null || true
+    find ./scripts -name "*.py" ! -name "generate_synthetic_*.py" ! -name "migrate_schema_sync.py" ! -name "sqs_onboarding_worker.py" ! -name "seed_vpcs_demo_334.py" ! -name "runtime_explorer.py" ! -name "ec2_persona_audit.py" -delete 2>/dev/null || true
 
 # Clean up build artifacts
 RUN rm -rf build/ *.egg-info/ setup_cython.py
