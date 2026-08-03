@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { classify, classifyColor, thresholdValues } from '../../utils/healthThresholds';
 import DashboardTopBar from './DashboardTopBar';
+import NavLogoutButton from '../shared/NavLogoutButton';
 import { useSession } from '../../contexts/SessionContext';
 import { apiCall, getCustomerIdentifier } from '../../utils/api';
 import { trackPageView } from '../../utils/activityTracker';
@@ -261,9 +262,9 @@ const SidebarNav: React.FC<{ activeId: string; onNavigate: (path: string) => voi
       </nav>
     </div>
 
-    {/* Branding */}
-    <div className="mt-auto px-2 pt-4 border-t border-gray-700/30">
-      <div className="text-[10px] text-gray-600 leading-relaxed">
+    <div className="mt-auto px-2 pt-4 border-t border-gray-700/30 space-y-2">
+      <NavLogoutButton variant="dark-sidebar" />
+      <div className="text-[10px] text-gray-600 leading-relaxed pt-2 border-t border-gray-700/30">
         CS Pulse<br />
         Portfolio Command Center
       </div>

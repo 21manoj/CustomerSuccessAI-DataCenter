@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import NavLogoutButton from '../shared/NavLogoutButton';
 import {
   Settings, ToggleLeft, ToggleRight, Sliders, Database, Bell,
   Users, Key, Download, Upload, Info, ChevronDown, ChevronRight,
@@ -437,6 +438,9 @@ const SettingsPage: React.FC = () => {
                   {item.label}
                 </button>
               ))}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <NavLogoutButton variant="light-sidebar" className="px-3 py-2" />
+              </div>
             </nav>
           </div>
 

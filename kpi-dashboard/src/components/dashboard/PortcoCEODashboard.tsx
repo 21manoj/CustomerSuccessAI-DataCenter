@@ -13,6 +13,7 @@ import {
   type PortfolioConfig, type CompanyResult, type CostInputs, type SynergyOverride,
   type PowerOf1ImpactResult,
 } from '../../utils/portfolioApi';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ────────────────────────────────────────────────────────
 // Helpers
@@ -767,7 +768,7 @@ const PortcoCEODashboard: React.FC = () => {
 
       {/* Tab Bar */}
       <div className="bg-white border-b border-gray-200 px-8">
-        <div className="flex gap-1">
+        <div className="flex gap-1 items-center">
           {tabs.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition ${
@@ -778,6 +779,9 @@ const PortcoCEODashboard: React.FC = () => {
               {t.icon}{t.label}
             </button>
           ))}
+          <div className="ml-auto">
+            <NavLogoutButton variant="inline" />
+          </div>
         </div>
       </div>
 

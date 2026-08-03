@@ -18,6 +18,7 @@ import { useSession } from '../../contexts/SessionContext';
 import { useEntitlements } from '../../hooks/useEntitlement';
 import { getCustomerIdentifier } from '../../utils/api';
 import InfoTooltip from '../shared/InfoTooltip';
+import NavLogoutButton from '../shared/NavLogoutButton';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1233,6 +1234,9 @@ const ExecutiveDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <NavLogoutButton variant="inline" />
+        </div>
         {/* Welcome Banner (Starter, first visit only) */}
         {isStarter && !welcomeDismissed && (
           <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 relative">

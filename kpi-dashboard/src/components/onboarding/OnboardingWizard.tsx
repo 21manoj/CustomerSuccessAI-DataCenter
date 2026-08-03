@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useSession } from '../../contexts/SessionContext';
 import { getCustomerIdentifier } from '../../utils/api';
+import NavLogoutButton from '../shared/NavLogoutButton';
 
 // ── File definitions ──
 
@@ -312,7 +313,10 @@ export const OnboardingWizard: React.FC = () => {
             <h1 className="text-2xl font-bold">CS Pulse Onboarding</h1>
             <p className="text-gray-500 text-sm mt-0.5">Upload your data to generate health scores and insights</p>
           </div>
-          <button onClick={() => navigate('/')} className="text-gray-500 hover:text-gray-300"><X className="h-5 w-5" /></button>
+          <div className="flex items-center gap-2">
+            <NavLogoutButton variant="inline" className="text-gray-400 hover:text-white hover:bg-gray-800" />
+            <button onClick={() => navigate('/')} className="text-gray-500 hover:text-gray-300"><X className="h-5 w-5" /></button>
+          </div>
         </div>
 
         {/* Step indicator */}
