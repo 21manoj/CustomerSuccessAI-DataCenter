@@ -675,21 +675,35 @@ def record_wizard_run(
     scores_written: int,
     changed_accounts: int,
     timings: dict,
+    pipeline_status: str = 'success',
 ) -> None:
-    """Write WizardRun row for audit trail."""
+    """Write WizardRun row for audit trail.
+
+    Called after the pipeline has already finished, so the row is created
+    and marked complete in one step (unlike trigger_wizard()'s two-phase
+    queued->completed update, which applies when the caller needs to poll
+    a still-running job).
+    """
+    from datetime import datetime
+
     try:
         from models import WizardRun
         from extensions import db
 
         run = WizardRun(
             customer_id=customer_id,
+            status='completed' if pipeline_status in ('success', 'partial') else 'failed',
+            completed_at=datetime.utcnow(),
             config={
                 'wizard': 'process_data',
                 'mode': mode,
+            },
+            results={
                 'duration_s': duration_s,
                 'scores_written': scores_written,
                 'changed_accounts': changed_accounts,
                 'timings': timings,
+                'pipeline_status': pipeline_status,
             },
         )
         db.session.add(run)

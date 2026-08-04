@@ -2158,6 +2158,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             scores_written=_scores_written,
             changed_accounts=len(_changed_account_ids),
             timings=_step_timings,
+            pipeline_status=status,
         )
 
         import logging as _log_pd
