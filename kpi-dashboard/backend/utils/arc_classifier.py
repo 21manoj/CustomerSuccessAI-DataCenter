@@ -360,13 +360,25 @@ def extract_features(account_id: int, db_session) -> dict:
         .all()
     )
 
-    _TITLE_CHAMPION_KW = ('champion', 'executive left', 'executive depart',
+    # NOTE: bare 'champion' was removed — it false-positives on any node that
+    # merely mentions a champion in a positive context (e.g. properties like
+    # decision_maker_role='champion', or content like "Champion actively
+    # advocating for platform"). Only match when 'champion' co-occurs with an
+    # actual departure verb.
+    _TITLE_CHAMPION_KW = ('champion left', 'champion depart', 'champion resign',
+                          'champion disengag', 'champion no longer', 'champion stepped down',
+                          'executive left', 'executive depart',
                           'sponsor left', 'sponsor depart', 'key contact left',
                           'disengag', 'no longer', 'resigned')
-    _TITLE_BUDGET_KW = ('budget', 'cost cut', 'cost reduction', 'freeze',
-                        'financial constraint', 'headcount', 'procurement hold')
-    _TITLE_COMPETITOR_KW = ('competitor', 'competing vendor', 'rfp', 'evaluation',
-                             'bake-off', 'competitive', 'vendor review')
+    # Same fix as champion above — bare 'budget'/'evaluation'/'competitive' false-
+    # positive on generic renewal/business-review language (e.g. a routine
+    # "Renewal Strategy Review" decision). Require an actual pressure/threat phrase.
+    _TITLE_BUDGET_KW = ('budget cut', 'budget freeze', 'budget concern',
+                        'cost cut', 'hiring freeze',
+                        'financial constraint', 'headcount freeze', 'procurement hold')
+    _TITLE_COMPETITOR_KW = ('competitor evaluation', 'competing vendor', 'rfp',
+                             'competitive threat', 'competitive evaluation',
+                             'bake-off', 'vendor review')
     _TITLE_DEPLOY_KW = ('deployment blocked', 'deploy stuck', 'integration fail',
                         'blocker', 'technical issue', 'implementation stall')
     _TITLE_EXPANSION_KW = ('expansion', 'upsell', 'growth opportunity', 'new use case',

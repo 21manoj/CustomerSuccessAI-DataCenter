@@ -1,0 +1,90 @@
+{
+  "manifest_version": "2.0",
+  "customer": {
+    "name": "Silent Churn Observation Co v3",
+    "domain": "cspulse-silent-churn-obs-v3.io",
+    "vertical": "saas_premium",
+    "admin_email": "admin@cspulse-silent-churn-obs-v3.io",
+    "admin_name": "Silent Churn Obs Admin",
+    "total_arr": 40000000,
+    "description": "TEST TENANT — created to observe the silent_churn arc after fixing NarrativeTimelinePlanner.ARC_TEMPLATES (which previously had no 'silent_churn' key and silently fell back to crisis_recovery). Two silent_churn accounts, one crisis_recovery control, one healthy control."
+  },
+  "time_range": {
+    "start": "2024-10-01",
+    "end": "2026-03-31",
+    "frequency": "monthly",
+    "data_points_per_kpi": 18
+  },
+  "kpis": {
+    "selection": "starter_9",
+    "count": 9,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI4",
+      "P2-KPI1",
+      "P2-KPI3",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P5-KPI1",
+      "P5-KPI5"
+    ]
+  },
+  "accounts": [
+    {
+      "name": "Silent Corp Alpha",
+      "arr": 5200000,
+      "target_health": 42,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "No exec contact 90 days; usage flat-lining quietly, no escalation raised",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 10,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Silent Corp Beta",
+      "arr": 3800000,
+      "target_health": 45,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-30",
+      "narrative": "Engagement quietly eroding for two quarters; no support tickets, no complaints",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 8,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Crisis Control Co",
+      "arr": 4500000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-31",
+      "narrative": "Control account — genuine critical incident + stakeholder escalation, should classify as crisis_recovery not silent_churn",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 6,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Healthy Anchor Inc",
+      "arr": 6000000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2027-01-31",
+      "narrative": "Control account — healthy, expanding, should not classify as silent_churn",
+      "kpi_trajectory": "stable",
+      "industry": "SaaS",
+      "region": "US"
+    }
+  ]
+}
