@@ -444,6 +444,44 @@ class NarrativeTimelinePlanner:
                 {'phase': 'resolution',    'from': 'decision:1', 'to': 'outcome:renewal_secured', 'type': 'LED_TO',  'confidence': 0.95, 'lag_days': 14, 'label': 'Renewal confirmed and secured'},
             ],
         },
+        # 'Silent Churn' — deliberately has NO critical_incident / stakeholder_escalation /
+        # champion-departure / budget / competitor signals. Those keyword sets are what
+        # arc_classifier.py's higher-priority rules (exec_sponsor_change, crisis_recovery,
+        # competitive_displacement) key off; including any of them here would make this
+        # arc reclassify as one of those instead of ever hitting the silent_churn rule
+        # (utils/arc_classifier.py rules 5/5a — declining slope, no crisis signal, no
+        # stakeholder departure). Before this entry existed, ARC_TEMPLATES had no
+        # 'silent_churn' key at all, so any manifest account with story_arc='silent_churn'
+        # silently fell through CLASSIFICATION_TO_ARC to 'crisis_recovery' instead — which
+        # is why classify_arc() never actually produced 'silent_churn' for any account.
+        'silent_churn': {
+            'classification': 'critical',
+            'baseline': [
+                {'type': 'signal',   'subtype': 'kpi_decline',           'month': 1, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'usage_decline',         'month': 2, 'offset_days': 10},
+                {'type': 'signal',   'subtype': 'usage_decline',         'month': 3, 'offset_days': 5},
+                {'type': 'decision', 'subtype': 'renewal_strategy',      'month': 4, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'renewal_uncertainty',   'month': 5, 'offset_days': 0},
+                {'type': 'outcome',  'subtype': 'engagement_decline',    'month': 5, 'offset_days': 7},
+            ],
+            'intervention': [
+                {'type': 'signal',   'subtype': 'csm_intervention',  'month': 0, 'offset_days': 0},
+                {'type': 'signal',   'subtype': 'kpi_recovery',      'month': 1, 'offset_days': 7},
+                {'type': 'decision', 'subtype': 'recovery_plan',     'month': 0, 'offset_days': 14},
+                {'type': 'outcome',  'subtype': 'churn_averted',     'month': 1, 'offset_days': 21},
+                {'type': 'outcome',  'subtype': 'revenue_protected', 'month': 2, 'offset_days': 0},
+            ],
+            'edge_topology': [
+                {'phase': 'baseline',     'from': 'signal:1',   'to': 'signal:2',                    'type': 'LED_TO',    'confidence': 0.7,  'lag_days': 20, 'label': 'Early KPI decline preceded usage drop-off'},
+                {'phase': 'baseline',     'from': 'signal:2',   'to': 'signal:3',                    'type': 'LED_TO',    'confidence': 0.65, 'lag_days': 25, 'label': 'Usage drop-off deepened without escalation'},
+                {'phase': 'baseline',     'from': 'signal:3',   'to': 'decision:1',                  'type': 'TRIGGERED', 'confidence': 0.7,  'lag_days': 30, 'label': 'Sustained quiet decline prompted renewal review'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:renewal_uncertainty', 'type': 'LED_TO',    'confidence': 0.75, 'lag_days': 14, 'label': 'Renewal review surfaced uncertainty'},
+                {'phase': 'baseline',     'from': 'decision:1', 'to': 'outcome:engagement_decline',  'type': 'LED_TO',    'confidence': 0.7,  'lag_days': 21, 'label': 'Review confirmed engagement decline'},
+                {'phase': 'intervention', 'from': 'signal:1',   'to': 'decision:1',                  'type': 'TRIGGERED', 'confidence': 0.85, 'lag_days': 7,  'label': 'CSM intervention triggered recovery plan'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:churn_averted',       'type': 'LED_TO',    'confidence': 0.85, 'lag_days': 21, 'label': 'Recovery plan averted churn'},
+                {'phase': 'intervention', 'from': 'decision:1', 'to': 'outcome:revenue_protected',   'type': 'LED_TO',    'confidence': 0.8,  'lag_days': 28, 'label': 'Recovery secured revenue'},
+            ],
+        },
     }
 
     # Fallback: maps classification to a default arc when story_arc is unset/unrecognised
@@ -796,6 +834,7 @@ class ManifestCSVGenerator:
         )
         return {
             'kpi_decline':            'KPI metrics declining below threshold',
+            'usage_decline':          'Usage quietly trending down with no explicit escalation',
             'support_escalation':     'Support ticket escalated to management',
             'expansion_signal':       'Account showing expansion readiness',
             'critical_incident':      'Critical service incident reported',
@@ -879,6 +918,17 @@ class ManifestCSVGenerator:
             {"type": "expansion_signal", "content": "Account expanding GPU cluster capacity by 40%. New PO in procurement.", "sentiment": "very_positive"},
             {"type": "advocacy", "content": "Customer agreed to co-present at annual user conference.", "sentiment": "positive"},
         ],
+        # Arc-specific override (keyed by story_arc, not classification) — quiet
+        # save story, deliberately omitting executive_engagement / champion_*
+        # signals so accounts stay classifiable as silent_churn (see
+        # ARC_TEMPLATES['silent_churn'] above for why those signal types
+        # pre-empt the silent_churn rule in utils/arc_classifier.py).
+        'silent_churn': [
+            {"type": "csm_intervention", "content": "New CSM {csm_name} assigned. Proactive check-in scheduled after quiet engagement drop noticed.", "sentiment": "positive"},
+            {"type": "kpi_recovery", "content": "GPU utilization stabilizing after renewed onboarding touchpoints.", "sentiment": "positive"},
+            {"type": "kpi_stabilized", "content": "Usage metrics holding steady for three consecutive weeks.", "sentiment": "positive"},
+            {"type": "churn_averted", "content": "Renewal secured after proactive outreach reconnected the account team.", "sentiment": "very_positive"},
+        ],
     }
 
     SAAS_RECOVERY_SIGNAL_TEMPLATES = {
@@ -896,6 +946,14 @@ class ManifestCSVGenerator:
         'healthy': [
             {"type": "expansion_signal", "content": "Account adding 120 seats across 3 departments. Expansion PO in procurement.", "sentiment": "very_positive"},
             {"type": "advocacy", "content": "Customer agreed to co-present at annual user conference.", "sentiment": "positive"},
+        ],
+        # Arc-specific override — see DC_RECOVERY_SIGNAL_TEMPLATES['silent_churn']
+        # for why this exists as its own entry rather than reusing 'critical'.
+        'silent_churn': [
+            {"type": "csm_intervention", "content": "New CSM {csm_name} assigned. Proactive check-in scheduled after quiet engagement drop noticed.", "sentiment": "positive"},
+            {"type": "kpi_recovery", "content": "Product adoption stabilizing: DAU back to baseline after renewed onboarding touchpoints.", "sentiment": "positive"},
+            {"type": "kpi_stabilized", "content": "Engagement metrics holding steady for three consecutive weeks.", "sentiment": "positive"},
+            {"type": "churn_averted", "content": "Renewal secured after proactive outreach reconnected the account team.", "sentiment": "very_positive"},
         ],
     }
 
@@ -2115,7 +2173,14 @@ class ManifestCSVGenerator:
 
             # V3.1: Auto-generated recovery signals for intervention phase
             if _emit_intervention:
-                recovery_templates = self._recovery_signal_templates.get(cls, [])
+                # Arc-specific override takes priority over the classification
+                # default — e.g. 'silent_churn' needs a quiet recovery story,
+                # not the generic 'critical' one (which includes
+                # executive_engagement and would misclassify the account).
+                recovery_templates = (
+                    self._recovery_signal_templates.get(arc)
+                    or self._recovery_signal_templates.get(cls, [])
+                )
                 acct_rng = random.Random(self.seed + aid + 7000)
                 # Determine how many recovery signals
                 if cls == 'critical':

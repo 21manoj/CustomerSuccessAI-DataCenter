@@ -115,7 +115,7 @@ def register_customer():
             customer_id=customer_id,
             user_name=admin_name,
             email=email,
-            password_hash=generate_password_hash(password)
+            password_hash=generate_password_hash(password, method='pbkdf2:sha256')
         )
         if hasattr(User, 'uuid'):
             user.uuid = user_uuid
@@ -299,7 +299,7 @@ def add_user_to_customer():
             customer_id=customer.customer_id,
             user_name=user_name,
             email=email,
-            password_hash=generate_password_hash(password)
+            password_hash=generate_password_hash(password, method='pbkdf2:sha256')
         )
         if hasattr(User, 'uuid'):
             user.uuid = user_uuid
