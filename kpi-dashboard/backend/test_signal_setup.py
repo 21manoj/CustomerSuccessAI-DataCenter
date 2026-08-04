@@ -22,7 +22,7 @@ try:
     
     # Simple test call with CORRECT model name
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",  # ← UPDATED
+        model="claude-sonnet-4-6",  # ← UPDATED
         max_tokens=50,
         messages=[{"role": "user", "content": "Say 'API working!'"}]
     )

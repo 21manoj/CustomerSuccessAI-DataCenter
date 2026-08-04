@@ -10,7 +10,7 @@ Usage:
 
     if can_call(customer_id, 'signal_analyst'):
         # ... make LLM call ...
-        record_usage(customer_id, 'signal_analyst', tokens_in=500, tokens_out=200, model='claude-sonnet-4-20250514')
+        record_usage(customer_id, 'signal_analyst', tokens_in=500, tokens_out=200, model='claude-sonnet-4-6')
 
 Design:
     - Thread-safe: all state in PostgreSQL (no in-memory counters)
@@ -33,6 +33,8 @@ DEFAULT_MAX_PROACTIVE_CALLS_PER_RUN = 50
 
 # ── Cost rates (approximate, per million tokens) ───────────────────
 COST_RATES = {
+    'claude-sonnet-4-6': {'input_per_mtok': 3.0, 'output_per_mtok': 15.0},
+    # Retired Sonnet-4 snapshot — kept for cost recompute over historical llm_usage_log rows.
     'claude-sonnet-4-20250514': {'input_per_mtok': 3.0, 'output_per_mtok': 15.0},
     'claude-3-5-sonnet-20241022': {'input_per_mtok': 3.0, 'output_per_mtok': 15.0},
     'gpt-4o-mini': {'input_per_mtok': 0.15, 'output_per_mtok': 0.60},
@@ -210,7 +212,7 @@ def record_usage(
     module: str,
     tokens_in: int = 0,
     tokens_out: int = 0,
-    model: str = 'claude-sonnet-4-20250514',
+    model: str = 'claude-sonnet-4-6',
     cost_estimate: Optional[float] = None,
     success: bool = True,
     error_message: Optional[str] = None,
@@ -444,7 +446,7 @@ def llm_call(
         client:       anthropic.Anthropic or OpenAI client instance
         customer_id:  tenant ID — passed to record_usage
         module:       caller name (e.g. 'signal_analyst', 'tier1_enrichment')
-        model:        model identifier (e.g. 'claude-sonnet-4-20250514')
+        model:        model identifier (e.g. 'claude-sonnet-4-6')
         **api_kwargs: passed through to the underlying SDK method
                       (messages, system, max_tokens, temperature, etc.)
 

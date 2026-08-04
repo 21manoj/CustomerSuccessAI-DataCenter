@@ -79,7 +79,7 @@ def analyze_root_cause(customer_id: int, account_id: int) -> Dict:
     result['status'] = 'completed'
     result['duration_s'] = round(time.time() - t0, 2)
     result['tokens'] = usage
-    result['model'] = 'claude-sonnet-4-20250514'
+    result['model'] = 'claude-sonnet-4-6'
 
     logger.info(
         'Root cause analysis: customer=%d account=%d (%s) '

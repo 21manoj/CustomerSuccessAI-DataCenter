@@ -21,7 +21,7 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 # Model: Sonnet for reasoning quality (action plans need judgment, not just structure)
-LLM_MODEL = 'claude-sonnet-4-20250514'
+LLM_MODEL = 'claude-sonnet-4-6'
 MAX_TOKENS = 4096
 
 

@@ -842,7 +842,7 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
             import anthropic
             client = anthropic.Anthropic(api_key=anthropic_key)
             response = client.messages.create(
-                model='claude-sonnet-4-20250514',
+                model='claude-sonnet-4-6',
                 max_tokens=400,
                 system=(
                     'You are an expert Customer Success analyst. '
@@ -860,7 +860,7 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
                     tokens_out = getattr(response.usage, 'output_tokens', 0) or 0
                     from utils.llm_budget_controller import record_usage as _record
                     _record(customer_id, 'signal_analyst', tokens_in, tokens_out,
-                            model='claude-sonnet-4-20250514')
+                            model='claude-sonnet-4-6')
                 except Exception as rec_err:
                     logger.debug(f"signal_analyst: usage recording failed: {rec_err}")
                 return text
@@ -870,7 +870,7 @@ def _call_llm(customer_id: int, prompt: str) -> Optional[str]:
         try:
             from utils.llm_budget_controller import record_usage as _record
             _record(customer_id, 'signal_analyst', 0, 0,
-                    model='claude-sonnet-4-20250514', success=False, error_message=str(e)[:200])
+                    model='claude-sonnet-4-6', success=False, error_message=str(e)[:200])
         except Exception:
             pass
 

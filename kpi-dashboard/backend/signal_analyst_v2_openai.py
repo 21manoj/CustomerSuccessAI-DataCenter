@@ -247,7 +247,7 @@ def analyze_account(ACCOUNT_ID, account):
         pass
 
     response = claude_client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -261,7 +261,7 @@ def analyze_account(ACCOUNT_ID, account):
         if _budget_record:
             _budget_record(0, 'signal_analyst',
                            tokens_in=input_tokens, tokens_out=output_tokens,
-                           model='claude-sonnet-4-20250514')
+                           model='claude-sonnet-4-6')
     except Exception:
         pass
     claude_cost = (input_tokens * 0.000003) + (output_tokens * 0.000015)

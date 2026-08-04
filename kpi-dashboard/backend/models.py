@@ -2091,7 +2091,7 @@ class LLMUsageLog(db.Model):
     log_id           = db.Column(db.Integer, primary_key=True)
     customer_id      = db.Column(db.Integer, nullable=False, index=True)
     module           = db.Column(db.String(50), nullable=False, index=True)  # signal_analyst, ask_ai_v2, rag_query, wizard_b
-    model            = db.Column(db.String(50))                               # claude-sonnet-4-20250514, gpt-4o-mini
+    model            = db.Column(db.String(50))                               # claude-sonnet-4-6, gpt-4o-mini
     tokens_in        = db.Column(db.Integer, default=0)
     tokens_out       = db.Column(db.Integer, default=0)
     cost_estimate_usd = db.Column(db.Numeric(10, 6), default=0)

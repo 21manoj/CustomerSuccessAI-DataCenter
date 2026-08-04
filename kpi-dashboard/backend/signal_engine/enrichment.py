@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ============================================================
 
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
+DEFAULT_MODEL = "claude-sonnet-4-6"
 MAX_CALLS_PER_CUSTOMER_PER_DAY = 200
 MAX_CALLS_PER_ACCOUNT_PER_DAY = 50
 CONFIDENCE_THRESHOLD = 0.6  # Below this → requires_review=True
