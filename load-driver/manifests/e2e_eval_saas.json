@@ -1,0 +1,545 @@
+{
+  "manifest_version": "2.0",
+  "customer": {
+    "name": "CS Pulse E2E Eval Co",
+    "domain": "cspulse-e2e-eval.io",
+    "vertical": "saas_premium",
+    "admin_email": "admin@cspulse-e2e-eval.io",
+    "admin_name": "E2E Eval Admin",
+    "total_arr": 200000000,
+    "description": "E2E EVAL TENANT \u2014 created to evaluate process_data pipeline, functional checks, mathematical correctness, and persona grading across all 5 personas (cfo/cro/ceo/vpcs/csm). Cloned from predictor_v3_demo_saas.json."
+  },
+  "time_range": {
+    "start": "2024-10-01",
+    "end": "2026-03-31",
+    "frequency": "monthly",
+    "data_points_per_kpi": 18
+  },
+  "kpis": {
+    "selection": "starter_9",
+    "count": 9,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI4",
+      "P2-KPI1",
+      "P2-KPI3",
+      "P3-KPI1",
+      "P3-KPI3",
+      "P5-KPI1",
+      "P5-KPI5"
+    ]
+  },
+  "accounts": [
+    {
+      "name": "Polaris Cloud",
+      "arr": 18000000,
+      "target_health": 82,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Expanded 18mo, top-decile NPS, multi-year deal",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 6,
+        "delta_pct": 12
+      }
+    },
+    {
+      "name": "Vega Software",
+      "arr": 12500000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Steady expansion across 4 BUs",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 13,
+        "delta_pct": 8
+      }
+    },
+    {
+      "name": "Altair Systems",
+      "arr": 9800000,
+      "target_health": 76,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Recent product expansion",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Capella Networks",
+      "arr": 7200000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Stable; +5% expansion mid-year",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 9,
+        "delta_pct": 10
+      }
+    },
+    {
+      "name": "Sirius Data",
+      "arr": 6400000,
+      "target_health": 72,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Plateau but renewing",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Procyon Inc",
+      "arr": 5800000,
+      "target_health": 70,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Modest growth; renewed flat",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Arcturus Holdings",
+      "arr": 4900000,
+      "target_health": 73,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Cross-sell win in Q3",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 14,
+        "delta_pct": 15
+      }
+    },
+    {
+      "name": "Rigel Industries",
+      "arr": 4200000,
+      "target_health": 71,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Net new module adoption",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Betelgeuse Co",
+      "arr": 3500000,
+      "target_health": 68,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Mid-market steady-state",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Aldebaran Tech",
+      "arr": 2900000,
+      "target_health": 69,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Renewing, modest expansion",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Fomalhaut Group",
+      "arr": 2400000,
+      "target_health": 67,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Stable engagement",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Spica Labs",
+      "arr": 1800000,
+      "target_health": 65,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Mid-market",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Antares Holdings",
+      "arr": 16500000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Top-quartile expansion track",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 9,
+        "delta_pct": 25
+      }
+    },
+    {
+      "name": "Pollux Corp",
+      "arr": 10800000,
+      "target_health": 83,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Multi-product land&expand champion",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 12,
+        "delta_pct": 18
+      }
+    },
+    {
+      "name": "Castor Systems",
+      "arr": 8400000,
+      "target_health": 81,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Land & expand reference account",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 7,
+        "delta_pct": 15
+      }
+    },
+    {
+      "name": "Algol Co",
+      "arr": 6900000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "High adoption, expanding",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 10,
+        "delta_pct": 20
+      }
+    },
+    {
+      "name": "Mizar Tech",
+      "arr": 5500000,
+      "target_health": 79,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Recent +30% expansion",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 8,
+        "delta_pct": 30
+      }
+    },
+    {
+      "name": "Alphard Networks",
+      "arr": 4300000,
+      "target_health": 77,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Strategic expansion lever",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "expand",
+        "event_month": 11,
+        "delta_pct": 12
+      }
+    },
+    {
+      "name": "Deneb Pharma",
+      "arr": 8900000,
+      "target_health": 62,
+      "classification": "at_risk",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Recovering from Q2 dip; CSM intervention worked",
+      "kpi_trajectory": "recovering",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Albireo Industries",
+      "arr": 5200000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Mid-recovery; renewal in 4mo",
+      "kpi_trajectory": "recovering",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "Mira Logistics",
+      "arr": 3400000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "crisis_recovery",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Late-stage recovery",
+      "kpi_trajectory": "recovering",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "contract",
+        "event_month": 8,
+        "delta_pct": -15
+      }
+    },
+    {
+      "name": "Cassiopeia Insurance",
+      "arr": 11200000,
+      "target_health": 48,
+      "classification": "critical",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Champion left for competitor; renewal at risk",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 12,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "churn",
+        "event_month": 17,
+        "delta_pct": -100
+      }
+    },
+    {
+      "name": "Andromeda Corp",
+      "arr": 7800000,
+      "target_health": 44,
+      "classification": "critical",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Active competitive eval; declining usage",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 12,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "churn",
+        "event_month": 15,
+        "delta_pct": -100
+      }
+    },
+    {
+      "name": "Pegasus Group",
+      "arr": 3900000,
+      "target_health": 42,
+      "classification": "critical",
+      "story_arc": "competitive_displacement",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Bake-off lost; renewal won't happen",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 12,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "churn",
+        "event_month": 13,
+        "delta_pct": -100
+      }
+    },
+    {
+      "name": "Lyra Media",
+      "arr": 6100000,
+      "target_health": 40,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "No exec contact 90 days; usage flat-line",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 12,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "churn",
+        "event_month": 14,
+        "delta_pct": -100
+      }
+    },
+    {
+      "name": "Cygnus Holdings",
+      "arr": 4400000,
+      "target_health": 38,
+      "classification": "critical",
+      "story_arc": "silent_churn",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Tickets only, no engagement",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 12,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "churn",
+        "event_month": 16,
+        "delta_pct": -100
+      }
+    },
+    {
+      "name": "Hercules Tech",
+      "arr": 5600000,
+      "target_health": 56,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Implementation stalled at phase 2",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "contract",
+        "event_month": 10,
+        "delta_pct": -25
+      }
+    },
+    {
+      "name": "Draco Software",
+      "arr": 3700000,
+      "target_health": 54,
+      "classification": "at_risk",
+      "story_arc": "stalled_deployment",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Slow rollout; possible seat reduction",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US",
+      "lifecycle": {
+        "event": "contract",
+        "event_month": 11,
+        "delta_pct": -30
+      }
+    },
+    {
+      "name": "NewCo Alpha",
+      "arr": 2500000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "expansion_champion",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Net new logo Q3 2025",
+      "kpi_trajectory": "improving",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    },
+    {
+      "name": "NewCo Beta",
+      "arr": 1800000,
+      "target_health": 70,
+      "classification": "healthy",
+      "story_arc": "land_and_expand",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "narrative": "Net new logo Q4 2025",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "industry": "SaaS",
+      "region": "US"
+    }
+  ]
+}
