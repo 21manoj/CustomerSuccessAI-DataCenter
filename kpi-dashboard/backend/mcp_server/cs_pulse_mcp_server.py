@@ -384,6 +384,8 @@ def get_platform_instructions() -> dict:
 
     This tool requires no parameters. Call it once at the start of each conversation.
     """
+    from mcp_server.auth import require_read_key
+    require_read_key('get_platform_instructions')
     content = _load_system_prompt()
 
     # Tenant isolation: if a customer-scoped key is used, tell the LLM which customer to use
@@ -429,6 +431,8 @@ def list_customers() -> dict:
     No parameters required.
     """
     _check_mcp_enabled()
+    from mcp_server.auth import require_read_key
+    require_read_key('list_customers')
     app = _get_flask_app()
 
     with app.app_context():
@@ -523,6 +527,8 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
     No authentication required.
     """
     _check_mcp_enabled()
+    from mcp_server.auth import require_read_key
+    require_read_key('get_kpi_catalog')
     app = _get_flask_app()
 
     with app.app_context():

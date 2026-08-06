@@ -369,6 +369,75 @@ def require_auth(customer_id: int, required_scope: str = 'read',
     _resolve_key(customer_id, required_scope, _api_key)
 
 
+def require_read_key(tool_name: str, _api_key: str = None):
+    """Enforce that *some* valid API key (customer-scoped or server-level) is
+    present for a non-onboarding tool that has no customer_id parameter
+    (discovery/list tools: get_platform_instructions, list_customers,
+    get_kpi_catalog).
+
+    These tools apply their own tenant filtering via get_scoped_customer_id();
+    this check only closes the gap where an HTTP caller with NO key at all
+    could enumerate cross-tenant metadata. stdio transport: no-op.
+
+    Added Aug 4 2026 (audit C-10 remediation).
+    """
+    from fastmcp.exceptions import ToolError
+
+    if not MCP_AUTH_REQUIRED:
+        return
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    if transport != "http":
+        return
+
+    raw_key = _api_key if _api_key is not None else extract_api_key()
+    if not raw_key:
+        raise ToolError(
+            f"API key required for '{tool_name}'. Pass via "
+            "Authorization: Bearer <key> header."
+        )
+    if validate_customer_key(raw_key) or validate_server_key(raw_key):
+        return
+    raise ToolError(
+        "Invalid or expired API key. Check your key and try again."
+    )
+
+
+def require_cross_customer_auth(tool_name: str, _api_key: str = None):
+    """Enforce SERVER-LEVEL key auth for tools that read across customers
+    (portfolio tools: list_portfolio_customers,
+    get_portfolio_cross_customer_comparison).
+
+    Customer-scoped keys are explicitly rejected — a tenant key must never
+    enumerate other tenants, regardless of scope. stdio transport: no-op.
+
+    Added Aug 4 2026 (audit C-10 remediation).
+    """
+    from fastmcp.exceptions import ToolError
+
+    if not MCP_AUTH_REQUIRED:
+        return
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    if transport != "http":
+        return
+
+    raw_key = _api_key if _api_key is not None else extract_api_key()
+    if not raw_key:
+        raise ToolError(
+            f"'{tool_name}' is a cross-customer tool and requires a "
+            "server-level API key over HTTP."
+        )
+    if validate_server_key(raw_key):
+        return
+    if validate_customer_key(raw_key):
+        raise ToolError(
+            f"'{tool_name}' reads across customers and cannot be called "
+            "with a customer-scoped key. A server-level key is required."
+        )
+    raise ToolError(
+        "Invalid or expired API key. Check your key and try again."
+    )
+
+
 def require_account_auth(customer_id: int, account_id: int,
                          required_scope: str = 'read',
                          _api_key: str = None):

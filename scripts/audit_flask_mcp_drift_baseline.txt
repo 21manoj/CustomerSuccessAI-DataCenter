@@ -24,3 +24,75 @@ helper_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_acco
 # scorer. Fix path: utils.vertical_health.get_health_calculator(...)
 # (already exists; just isn't wired into v1_health_score).
 helper_drift | kpi-dashboard/backend/mcp_server/process_data_pipeline.py:calculate_health_scores | kpi-dashboard/backend/api_v1_routes.py:v1_health_score
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_integrations.py:get_integration_health | kpi-dashboard/backend/predictor_api.py:health
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_intelligence.py:get_health_score_history | kpi-dashboard/backend/dc2s_scores_api.py:get_score_history
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:get_account_health | kpi-dashboard/backend/time_series_api.py:get_account_health_trends
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:get_kpi_catalog | kpi-dashboard/backend/verticals/saas_premium/api_routes.py:saas_kpi_catalog
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts | kpi-dashboard/backend/contractor_access_api.py:list_customer_accounts
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts | kpi-dashboard/backend/journey_api_dynamic.py:list_journey_accounts
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts | kpi-dashboard/backend/journey_intelligence_api.py:list_accounts_for_journey
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts | kpi-dashboard/backend/kpi_api.py:get_accounts
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_customers | kpi-dashboard/backend/admin_ui_api.py:get_customer
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_customers | kpi-dashboard/backend/admin_ui_api.py:list_customers
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_customers | kpi-dashboard/backend/test_runner_api.py:list_customers_for_dropdown
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:complete_onboarding | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:complete_onboarding
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:create_customer | kpi-dashboard/backend/admin_ui_api.py:create_customer
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:get_csv_templates | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:list_templates
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:get_onboarding_status | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:onboarding_status
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:get_vertical_config | kpi-dashboard/backend/dc2s_config_api.py:get_config
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:calculate_power_of_1 | kpi-dashboard/backend/revenue_intelligence_api.py:get_power_of_1_metric
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:calculate_power_of_1 | kpi-dashboard/backend/revenue_intelligence_api.py:get_power_of_1_table
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:calculate_power_of_1 | kpi-dashboard/backend/test_runner_api.py:calculate_power_of_1
+
+response_key_drift | kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:get_nrr_forecast | kpi-dashboard/backend/revenue_intelligence_api.py:get_nrr_forecast_endpoint
+
+signature_drift | kpi-dashboard/backend/mcp_server/common.py:get_precalculated_scores | kpi-dashboard/backend/dc2s_scores_api.py:calculate_scores
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_intelligence.py:get_graph_summary | kpi-dashboard/backend/context_graph_api.py:graph_summary
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:get_account_health | kpi-dashboard/backend/time_series_api.py:get_account_health_trends
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_accounts | kpi-dashboard/backend/contractor_access_api.py:list_customer_accounts
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_customers | kpi-dashboard/backend/admin_ui_api.py:get_customer
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_mcp_server.py:list_customers | kpi-dashboard/backend/admin_ui_api.py:list_customers
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:complete_onboarding | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:complete_onboarding
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:configure_customer_kpis | kpi-dashboard/backend/kpi_api.py:get_kpis
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:create_customer | kpi-dashboard/backend/admin_ui_api.py:create_customer
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:get_csv_templates | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:list_templates
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:get_vertical_config | kpi-dashboard/backend/dc2s_config_api.py:get_config
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:process_data | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:process_data
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:upload_csv | kpi-dashboard/backend/upload_api_v3_improved_duplicates.py:upload_csv
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_onboarding.py:validate_csv | kpi-dashboard/backend/onboarding_api_v2_config_aware.py:validate_csv_endpoint
+
+signature_drift | kpi-dashboard/backend/mcp_server/cs_pulse_revenue.py:calculate_power_of_1 | kpi-dashboard/backend/revenue_intelligence_api.py:get_power_of_1_table
+
+signature_drift | kpi-dashboard/backend/mcp_server/process_data_pipeline.py:calculate_health_scores | kpi-dashboard/backend/playbook_execution_api.py:get_health_scores
