@@ -43,6 +43,7 @@ from cs_pulse_mcp_server import (
     ToolError,
 )
 from onboarding_tool_registry import ONBOARDING_TOOLS
+from mcp_server.auth import require_auth_if_key_present as _require_auth_if_key_present
 
 
 def _is_onboarding_tool(name: str) -> bool:
@@ -87,6 +88,7 @@ def list_verticals() -> dict:
     Returns each vertical with its description, total KPI count,
     and the number of config type templates available.
     """
+    _require_auth_if_key_present('list_verticals', None)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -189,6 +191,7 @@ def get_csv_templates(vertical: str, file_type: str = None) -> dict:
         file_type: Optional specific file type (e.g. 'accounts.csv', 'kpi_measurements.csv').
                    If omitted, returns all file types for the vertical.
     """
+    _require_auth_if_key_present('get_csv_templates', None)
     _check_mcp_enabled()
 
     import json as _json
@@ -257,6 +260,7 @@ def get_reference_customer(vertical: str) -> dict:
     Args:
         vertical: Vertical slug (e.g. 'saas_premium', 'dc2_s')
     """
+    _require_auth_if_key_present('get_reference_customer', None)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -291,6 +295,7 @@ def get_vertical_config(vertical: str) -> dict:
     Args:
         vertical: Vertical slug (e.g. 'saas_premium', 'dc2_s')
     """
+    _require_auth_if_key_present('get_vertical_config', None)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -378,6 +383,7 @@ def validate_csv(customer_id: int, file_type: str, csv_content: str) -> dict:
         file_type: CSV file type (e.g. 'kpi_measurements.csv', 'accounts.csv')
         csv_content: Raw CSV string
     """
+    _require_auth_if_key_present('validate_csv', customer_id)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -411,6 +417,7 @@ def get_onboarding_status(customer_id: int) -> dict:
     Args:
         customer_id: The customer ID to inspect
     """
+    _require_auth_if_key_present('get_onboarding_status', customer_id)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -568,6 +575,7 @@ def create_customer(
             'saas_full_43' — all KPIs, enterprise deployment
             If omitted, SaaS defaults to 'saas_starter_9'. DC2_S uses full catalog.
     """
+    _require_auth_if_key_present('create_customer', None)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -799,6 +807,7 @@ def configure_customer_kpis(
             'saas_starter_9', 'saas_predictive_11', 'saas_full_43'.
             Sets enabled_kpis from tier definition. Overrides enabled_kpis/enabled_pillars.
     """
+    _require_auth_if_key_present('configure_customer_kpis', customer_id)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -963,6 +972,7 @@ def enable_features(customer_id: int, features: list = None) -> dict:
         customer_id: The customer ID
         features: List of feature names to enable. If None, returns current state.
     """
+    _require_auth_if_key_present('enable_features', customer_id)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -1046,6 +1056,7 @@ def upload_csv(customer_id: int, file_type: str, csv_content: str, dry_run: bool
         csv_content: The raw CSV content as a string
         dry_run: If True, validate only — do not persist. Returns validation result.
     """
+    _require_auth_if_key_present('upload_csv', customer_id)
     _check_mcp_enabled()
 
     app = _get_flask_app()
@@ -2233,6 +2244,7 @@ def process_data(customer_id: int, mode: str = 'auto') -> dict:
         customer_id: The customer ID
         mode: 'auto' (default, immutable scores) or 'full_recalc' (admin rewrite)
     """
+    _require_auth_if_key_present('process_data', customer_id)
     if mode not in ('auto', 'full_recalc'):
         mode = 'auto'
     return _process_data_impl(customer_id, mode=mode)
@@ -2255,6 +2267,7 @@ def trigger_wizard(customer_id: int, wizard: str) -> dict:
         customer_id: The customer ID
         wizard: Which wizard to trigger: 'a', 'b', or 'c'
     """
+    _require_auth_if_key_present('trigger_wizard', customer_id)
     _check_mcp_enabled()
     app = _get_flask_app()
 
@@ -2406,6 +2419,7 @@ def complete_onboarding(customer_id: int, check_only: bool = False) -> dict:
         customer_id: The customer ID
         check_only: If True, return onboarding status checklist without finalizing.
     """
+    _require_auth_if_key_present('complete_onboarding', customer_id)
     _check_mcp_enabled()
     app = _get_flask_app()
 

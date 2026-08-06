@@ -265,6 +265,7 @@ def execute_playbook(
         triggered_by: Who triggered it — 'csm_manual', 'health_drop', 'signal_analyst', 'mcp_agent'
     """
     _check_mcp_enabled()
+    _require_account_auth(customer_id, account_id, required_scope='write')
     app = _get_flask_app()
 
     with app.app_context():
@@ -359,6 +360,7 @@ def close_playbook(
         csm_hours_actual: Actual CSM hours spent (if different from planned)
     """
     _check_mcp_enabled()
+    _require_auth(customer_id, required_scope='write')
     app = _get_flask_app()
 
     with app.app_context():
@@ -701,6 +703,7 @@ def generate_playbook_from_description(
         description: Natural language description of the playbook
     """
     _check_mcp_enabled()
+    _require_auth(customer_id, required_scope='write')
     app = _get_flask_app()
 
     with app.app_context():
@@ -938,6 +941,8 @@ def list_portfolio_customers(portfolio_id: int) -> dict:
         portfolio_id: The portfolio (PE fund / holding company) ID
     """
     _check_mcp_enabled()
+    from mcp_server.auth import require_cross_customer_auth
+    require_cross_customer_auth('list_portfolio_customers')
     app = _get_flask_app()
 
     with app.app_context():
@@ -1053,6 +1058,8 @@ def get_portfolio_cross_customer_comparison(portfolio_id: int) -> dict:
         portfolio_id: The portfolio (PE fund / holding company) ID
     """
     _check_mcp_enabled()
+    from mcp_server.auth import require_cross_customer_auth
+    require_cross_customer_auth('get_portfolio_cross_customer_comparison')
     app = _get_flask_app()
 
     with app.app_context():

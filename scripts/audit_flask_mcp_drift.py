@@ -107,18 +107,64 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 BACKEND_ROOT = REPO_ROOT / "kpi-dashboard" / "backend"
 MCP_ROOT = BACKEND_ROOT / "mcp_server"
 
-# Files we treat as Flask "route layer". Anything not in this list is ignored
-# even if it imports flask — we want to be focused, not encyclopaedic.
-FLASK_FILES: tuple[str, ...] = (
+# Flask "route layer" discovery. Historically this was a curated 9-file
+# include-list — which made entire route files (integration_api.py,
+# revenue_intelligence_api.py, signal_engine/ingest_api.py, admin_api.py,
+# data_management_api.py, ...) structurally invisible to the audit; the
+# Aug 3 2026 E2E audit found real Flask↔MCP drift in exactly those files
+# while this script reported "clean". Discovery is now glob-based with an
+# explicit SKIP-list (each entry carries a reason), so a new route file is
+# audited by default rather than silently ignored.
+#
+# Skip reasons reference AUDIT_REPORT_E2E_2026-08-03.md sections.
+FLASK_SKIP_FILES: dict[str, str] = {
+    # Orphaned modules — never registered as blueprints (audit §5 P2-1/P2-3).
+    # Remove from this list if/when they are deleted or revived.
+    "learning_api.py":            "orphaned — never registered (audit §5 P2-3)",
+    "journey_viz_api.py":         "orphaned — never registered (audit §5 P2-3)",
+    "customer_management_api.py": "orphaned — never registered (audit §5 P2-3)",
+    "simple_customer_api.py":     "orphaned — never registered (audit §5 P2-3)",
+    "hot_reload_api.py":          "orphaned — never registered (audit §5 P2-3)",
+    "rag_api.py":                 "orphaned RAG generation (audit §5 P2-1)",
+    "simple_rag_api.py":          "orphaned RAG generation (audit §5 P2-1)",
+    "simple_working_rag_api.py":  "orphaned RAG generation (audit §5 P2-1)",
+    "working_rag_api.py":         "orphaned RAG generation (audit §5 P2-1)",
+    "api_manager.py":             "orphaned module, not a route file (audit §5 P2-3)",
+    "api_key_service.py":         "service layer, no routes",
+    "wizard_models.py":           "dead duplicate models module (audit §4.7)",
+}
+
+# Subpackage route files to include beyond the backend-root glob.
+FLASK_EXTRA_FILES: tuple[str, ...] = (
     "api_v1_routes.py",
-    "executive_dashboard_api.py",
-    "outcome_roi_api.py",
-    "playbook_recommendations_api.py",
-    "playbook_triggers_api.py",
-    "account_snapshot_api.py",
+    "signal_engine/ingest_api.py",
     "verticals/dc2_s/api_routes.py",
     "verticals/saas_premium/api_routes.py",
 )
+
+
+def _discover_flask_files() -> tuple[str, ...]:
+    """Glob-based route-file discovery (backend root + curated subpackage
+    files), minus the explicit skip-list. Per-tenant vertical clones
+    (``verticals/customer*``) and ``verticals/_template`` are never scanned —
+    only the real vertical route files listed in FLASK_EXTRA_FILES."""
+    rels: list[str] = []
+    if BACKEND_ROOT.exists():
+        for path in sorted(BACKEND_ROOT.glob("*.py")):
+            name = path.name
+            if name in FLASK_SKIP_FILES:
+                continue
+            # Route-bearing modules at backend root follow *api* naming
+            # (xxx_api.py, api_v1_routes.py, onboarding_api_v2_*.py, ...).
+            if "api" in name:
+                rels.append(name)
+        for extra in FLASK_EXTRA_FILES:
+            if extra not in rels and (BACKEND_ROOT / extra).exists():
+                rels.append(extra)
+    return tuple(rels)
+
+
+FLASK_FILES: tuple[str, ...] = _discover_flask_files()
 
 ALLOWLIST_FILE = Path(__file__).resolve().parent.parent / ".audit_flask_mcp_drift_allowlist.yaml"
 BASELINE_FILE = Path(__file__).resolve().parent / "audit_flask_mcp_drift_baseline.txt"
@@ -263,29 +309,37 @@ def _decorator_is_route(d: ast.expr) -> tuple[bool, str | None]:
     return (False, None)
 
 
-def _collect_dict_keys(node: ast.expr) -> tuple[set[str], bool]:
+def _collect_dict_keys(node: ast.expr, env: dict[str, tuple[set[str], bool]] | None = None) -> tuple[set[str], bool]:
     """For a return-value AST expression, harvest the top-level dict keys (if
-    it's a Dict literal) or jsonify({...}) call. Returns (keys, is_unknown)
-    where is_unknown is True if we couldn't statically resolve it.
+    it's a Dict literal), a jsonify({...}) call, or — via ``env`` — a variable
+    that was assigned a dict literal earlier in the same function scope.
+    Returns (keys, is_unknown) where is_unknown is True if we couldn't fully
+    statically resolve it.
 
     Handles:
       return {'a': 1, 'b': 2}
       return jsonify({'a': 1, 'b': 2})
       return jsonify({**other, 'a': 1})         -> includes 'a', marks unknown
       return jsonify({'a': 1, 'b': 2}), 200     -> unwraps tuple
+      result = {'a': 1}; ...; return jsonify(result)   -> resolves via env
     """
     # Unwrap a (response, status_code) tuple.
     if isinstance(node, ast.Tuple) and node.elts:
-        return _collect_dict_keys(node.elts[0])
+        return _collect_dict_keys(node.elts[0], env)
 
     # jsonify(...) / make_response(jsonify(...))
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name) and node.func.id in ("jsonify", "make_response"):
             if node.args:
-                return _collect_dict_keys(node.args[0])
+                return _collect_dict_keys(node.args[0], env)
         # jsonify(...) chained: e.g. _inject_vertical_context(data, customer_id)
         # — we can't introspect that, mark unknown
         return (set(), True)
+
+    # Bare variable: resolve through the function-scope assignment env.
+    if isinstance(node, ast.Name) and env is not None and node.id in env:
+        keys, unknown = env[node.id]
+        return (set(keys), unknown)
 
     if isinstance(node, ast.Dict):
         keys: set[str] = set()
@@ -301,6 +355,52 @@ def _collect_dict_keys(node: ast.expr) -> tuple[set[str], bool]:
         return (keys, any_unknown)
 
     return (set(), True)
+
+
+def _build_dict_var_env(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, tuple[set[str], bool]]:
+    """Best-effort map of ``varname -> (dict_keys, is_unknown)`` for variables
+    assigned dict literals within the function scope, so that the very common
+    Flask pattern ``result = {...}; result['k'] = v; return jsonify(result)``
+    resolves instead of going opaque (the pre-Aug-2026 blind spot that made
+    every jsonify-of-a-variable handler skip response-key comparison).
+
+    Tracked mutations: plain assignment of a Dict literal, ``var['key'] = ...``
+    subscript writes, ``var.update({...literal...})``. Any opaque reassignment
+    or non-literal update flips the var's unknown flag rather than guessing.
+    """
+    env: dict[str, tuple[set[str], bool]] = {}
+    for sub in _iter_function_scope(node):
+        # var = {...}  /  var = <opaque>
+        if isinstance(sub, ast.Assign) and len(sub.targets) == 1:
+            tgt = sub.targets[0]
+            if isinstance(tgt, ast.Name):
+                if isinstance(sub.value, ast.Dict):
+                    keys, unknown = _collect_dict_keys(sub.value)
+                    if tgt.id in env:
+                        prior_keys, _ = env[tgt.id]
+                        keys = keys | prior_keys  # merged across branches, best-effort
+                    env[tgt.id] = (keys, unknown)
+                elif tgt.id in env:
+                    keys, _ = env[tgt.id]
+                    env[tgt.id] = (keys, True)   # opaque reassignment
+            # var['key'] = ...
+            elif isinstance(tgt, ast.Subscript) and isinstance(tgt.value, ast.Name):
+                vname = tgt.value.id
+                sl = tgt.slice
+                if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                    keys, unknown = env.get(vname, (set(), False))
+                    keys.add(sl.value)
+                    env[vname] = (keys, unknown)
+        # var.update({...})
+        elif isinstance(sub, ast.Expr) and isinstance(sub.value, ast.Call):
+            call = sub.value
+            fn = call.func
+            if (isinstance(fn, ast.Attribute) and fn.attr == "update"
+                    and isinstance(fn.value, ast.Name) and fn.value.id in env and call.args):
+                keys, unknown = env[fn.value.id]
+                new_keys, new_unknown = _collect_dict_keys(call.args[0])
+                env[fn.value.id] = (keys | new_keys, unknown or new_unknown)
+    return env
 
 
 def _collect_callees(node: ast.AST) -> set[str]:
@@ -420,6 +520,7 @@ def _func_return_info(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[set
     keys: set[str] = set()
     any_unknown = False
     saw_return = False
+    env = _build_dict_var_env(node)
 
     def walk(n: ast.AST) -> None:
         nonlocal any_unknown, saw_return
@@ -427,7 +528,7 @@ def _func_return_info(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[set
             return
         if isinstance(n, ast.Return) and n.value is not None:
             saw_return = True
-            k, u = _collect_dict_keys(n.value)
+            k, u = _collect_dict_keys(n.value, env)
             keys.update(k)
             if u:
                 any_unknown = True
@@ -1492,6 +1593,45 @@ def _run_self_test() -> int:
                         "(get_outcome_story <-> get_outcome_roi_story)")
     else:
         print("  PASS: Case 6 (URL-stem/manual-alias pairing)")
+
+    # ── Case 8: jsonify(variable) resolves via assignment env ───────────────
+    # Regression case for the pre-Aug-2026 blind spot: handlers building a
+    # dict in a variable then `return jsonify(result)` went opaque, so
+    # response-key drift was never compared for them.
+    mcp_src = textwrap.dedent("""
+        @mcp.tool
+        def get_sync_logs(customer_id: int) -> dict:
+            return {'logs': [], 'total': 0, 'connector_summary': {}}
+    """)
+    flask_src = textwrap.dedent("""
+        @integration_api.route('/sync-logs')
+        def get_sync_logs_api():
+            result = {'logs': []}
+            result['total'] = 0
+            result['errors_24h'] = 0
+            result['connector_details'] = []
+            return jsonify(result)
+    """)
+    mcp_funcs = _parse_funcs_from_source(mcp_src, Path("<mcp>"), "mcp")
+    fla_funcs = _parse_funcs_from_source(flask_src, Path("<flask>"), "flask")
+    mcp_by_name = {f.name: [f] for f in mcp_funcs}
+    pairs = pair_functions(mcp_by_name, fla_funcs)
+    if not pairs:
+        failures.append("Case 8 jsonify(var): pair NOT found")
+    else:
+        fla = pairs[0][1]
+        if fla.return_unknown or fla.return_keys != {"logs", "total", "errors_24h", "connector_details"}:
+            failures.append(
+                "Case 8 jsonify(var): variable-assigned dict keys not resolved; "
+                f"got keys={sorted(fla.return_keys)} unknown={fla.return_unknown}")
+        else:
+            vs = diff_pair(*pairs[0])
+            if not any(v.kind == "response_key_drift" for v in vs):
+                failures.append("Case 8 jsonify(var): response_key_drift NOT detected; "
+                                f"got {[v.kind for v in vs]}")
+            else:
+                print("  PASS: Case 8 (jsonify-of-variable) — keys resolved via "
+                      "assignment env, drift detected")
 
     # ── Case 7: real repo audit completes and runs under 5s (perf gate) ─────
     if BACKEND_ROOT.exists():
