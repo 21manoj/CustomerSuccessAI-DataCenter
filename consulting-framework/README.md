@@ -33,8 +33,8 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 6 of 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and all six runs caught real defects in
+**Status:** 7 of 11 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and all seven runs caught real defects in
 the spec that got fixed as a result — see each module's Validation Note). The rest
 are placeholders — do not treat their one-liners below as validated specs.
 
@@ -61,7 +61,7 @@ are placeholders — do not treat their one-liners below as validated specs.
 ### Ops
 | # | Module | Status | One-liner |
 |---|---|---|---|
-| 09 | Ingestion & Onboarding Pipeline | Planned | CSV/API upload, process-data orchestration, shift-left validation. |
+| 09 | [Ingestion & Onboarding Pipeline](modules/09-ops-ingestion-pipeline.md) | **✅ Validated** | Shift-left validation, UTC-safe freshness detection, idempotent upsert, stage orchestration with isolation. |
 | 10 | Governance & Audit Layer | Planned | Drift auditor, invariant checks, tool-auth gates. |
 | 11 | Load-Driver Synthetic Data & Testing | Planned | Manifest-driven scenario generation, multi-phase intervention testing, acceptance/parity suites. |
 
