@@ -40,14 +40,41 @@ from utils.context_graph_invariants import (
 # ═════════════════════════════════════════════════════════════════════
 
 
+def _assert_isolated_test_db(uri: str) -> None:
+    """Guard against running this suite's `db.drop_all()` teardown against a
+    real database. DATABASE_URL is always set in deployed environments
+    (pointing at the live app DB) and this fixture used to trust it blindly
+    — running this file against a live customer database wiped the entire
+    schema on teardown (Aug 2026 incident: two real data-loss events on the
+    EC2 demo instance, both self-inflicted by this exact fixture). The
+    target database name must contain 'test' (case-insensitive), or the
+    caller must explicitly opt in via ALLOW_DESTRUCTIVE_TEST_DB=1.
+    """
+    if os.environ.get('ALLOW_DESTRUCTIVE_TEST_DB') == '1':
+        return
+    # Extract the database name (path component) from the URI.
+    db_name = uri.rsplit('/', 1)[-1].split('?', 1)[0]
+    if 'test' not in db_name.lower():
+        raise RuntimeError(
+            f"test_context_graph_invariants.py refuses to run db.drop_all() "
+            f"against database {db_name!r} — its name doesn't contain 'test'. "
+            f"This fixture drops the ENTIRE schema on teardown. Point "
+            f"DATABASE_URL at a dedicated test database (e.g. cs_pulse_test), "
+            f"or set ALLOW_DESTRUCTIVE_TEST_DB=1 if you are certain this is "
+            f"safe to wipe."
+        )
+
+
 @pytest.fixture(scope='module')
 def ctx():
     """One-time customer + DB setup. Each test clears and reseeds context graph data."""
     import uuid
     app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    db_uri = os.environ.get(
         'DATABASE_URL', 'postgresql://manojgupta@localhost:5432/cs_pulse_test'
     )
+    _assert_isolated_test_db(db_uri)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     with app.app_context():
         db.create_all()
         unique_email = f'inv_{uuid.uuid4().hex[:8]}@test.com'
