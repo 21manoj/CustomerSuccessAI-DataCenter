@@ -1169,7 +1169,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 
                 for f in data_dir.iterdir():
                     if f.suffix == '.csv':
-                        csv_mtime = _dt.fromtimestamp(os.path.getmtime(str(f)))
+                        # last_kpi_ts (created_at) is stored via datetime.utcnow() — the
+                        # mtime must be converted to UTC too, or this comparison is wrong
+                        # by the host's UTC offset on any non-UTC machine (silently skips
+                        # every same-day incremental reload).
+                        csv_mtime = _dt.utcfromtimestamp(os.path.getmtime(str(f)))
                         # CSV file modified after last process_data run
                         if last_kpi_ts is None or csv_mtime > last_kpi_ts:
                             has_new_csvs = True
