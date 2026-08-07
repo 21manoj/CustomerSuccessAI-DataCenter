@@ -1,0 +1,43 @@
+{
+  "vertical": "bad_l1_sum_v1",
+  "version": "1.0",
+  "pillars": {
+    "P1": {"name": "Guest Experience", "weight_l2": 0.5},
+    "P2": {"name": "Revenue Management", "weight_l2": 0.5}
+  },
+  "kpis": {
+    "P1-KPI1": {
+      "name": "Guest Satisfaction Score",
+      "pillar": "P1",
+      "weight_l1": 0.5,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 85, "max": 100},
+        "risk": {"min": 70, "max": 84.99},
+        "critical": {"min": 0, "max": 69.99}
+      }
+    },
+    "P1-KPI2": {
+      "name": "Repeat Booking Rate",
+      "pillar": "P1",
+      "weight_l1": 0.3,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 40, "max": 100},
+        "risk": {"min": 25, "max": 39.99},
+        "critical": {"min": 0, "max": 24.99}
+      }
+    },
+    "P2-KPI1": {
+      "name": "RevPAR (Revenue per Available Room, USD)",
+      "pillar": "P2",
+      "weight_l1": 1.0,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 150, "max": 100000},
+        "risk": {"min": 90, "max": 149.99},
+        "critical": {"min": 0, "max": 89.99}
+      }
+    }
+  }
+}
