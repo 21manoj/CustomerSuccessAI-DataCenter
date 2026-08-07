@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "polarity_ambiguous_outcome_subtypes": [
+    "contract_renewed_with_reduced_scope",
+    "usage_plateau"
+  ],
+  "polarity_ambiguous_signal_subtypes": [
+    "stakeholder_reorg",
+    "budget_review_announced"
+  ],
+  "revenue_buckets": {
+    "lost": ["contract_terminated", "non_renewal"],
+    "expansion": ["upsell_closed", "contract_expanded"],
+    "pipeline": ["expansion_opportunity_identified"],
+    "at_risk": ["renewal_at_risk", "downgrade_requested"],
+    "protected": ["contract_renewed_full_scope"]
+  },
+  "auto_recovery_outcome_subtypes": ["issue_resolved", "sla_restored"]
+}

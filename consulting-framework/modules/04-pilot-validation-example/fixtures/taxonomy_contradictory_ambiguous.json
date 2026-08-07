@@ -1,0 +1,6 @@
+{
+  "extends": "base",
+  "vertical": "contradictory_ambiguous",
+  "version": "1.0",
+  "polarity_ambiguous_outcome_subtypes": ["contract_renewed_full_scope"]
+}

@@ -33,8 +33,8 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 3 of 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and all three runs caught real defects in
+**Status:** 4 of 11 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and all four runs caught real defects in
 the spec that got fixed as a result — see each module's Validation Note). The rest
 are placeholders — do not treat their one-liners below as validated specs.
 
@@ -48,7 +48,7 @@ are placeholders — do not treat their one-liners below as validated specs.
 | # | Module | Status | One-liner |
 |---|---|---|---|
 | 03 | [Health Scoring Engine](modules/03-intelligence-health-scoring-engine.md) | **✅ Validated pilot** | L1→L3 KPI→Pillar→Account rollup, canonical read service, weight-hierarchy resolution, threshold classification. |
-| 04 | Context Graph & Causal Layer | Planned | ContextNode/Edge, story-arc classification, causal-graph invariants. |
+| 04 | [Context Graph & Causal Layer](modules/04-intelligence-context-graph.md) | **✅ Validated** | Typed causal graph (SIGNAL/DECISION/OUTCOME nodes), base+overlay taxonomy, invariant checks, arc classification. |
 | 05 | Prediction Wizards (A–D) | Planned | Arc/trajectory detection, early-warning patterns, weight calibration from outcomes, NRR/renewal prediction. |
 | 06 | Signal Processing Layer | Planned | Qualitative signal ingestion, LLM classification, sentiment. |
 
@@ -68,14 +68,21 @@ are placeholders — do not treat their one-liners below as validated specs.
 ## Extending this library
 
 Before writing module N+1, re-read the validated modules' Validation Notes
-(`modules/01-...md`, `modules/02-...md`, `modules/03-...md`) — all three
-independently caught the same failure class in one of two shapes: a Build
-Prompt that, followed literally, textually contradicts a Gotcha/Acceptance
-Criterion/Data Shapes entry (01, 03 — including one confirmed real
-access-control bypass), or a Build Prompt that leaves pseudocode
-underspecified in a way whose one natural implementation reproduces a Gotcha
-by construction (02). Cross-check every new Build Prompt against every other
-section before considering a module done, and fully specify any pseudocode
-gap rather than leaving an ellipsis — don't rely on inspection alone; run the
-adversarial fresh-agent rebuild (see `MODULE_TEMPLATE.md`) for every module,
-not just the first three.
+(`modules/01-...md` through `04-...md`) — all four independently caught real
+defects, in three overlapping shapes: a Build Prompt that, followed
+literally, textually contradicts a Gotcha/Acceptance Criterion/Data Shapes
+entry elsewhere in the same doc (01, 03 — including one confirmed real
+access-control bypass); a Build Prompt that leaves pseudocode underspecified
+in a way whose one natural implementation reproduces a documented anti-
+pattern by construction (02); and a whole deliverable promised in Boundary/
+Engine that silently never appears in Build Prompt/AC/Test Harness at all
+(04). Module 04 also reproduced, VERBATIM, a defect (prose instead of
+pseudocode for a scoring function) that Module 03 had already found and
+fixed one module earlier — do not assume a lesson learned in one module
+automatically holds for the next one written by the same process. Cross-
+check every new Build Prompt against every other section before considering
+a module done, fully specify any pseudocode gap rather than leaving an
+ellipsis, and confirm every "Owns"/Engine commitment has a matching Build
+Prompt piece — don't rely on inspection alone or on "we already learned this
+lesson"; run the adversarial fresh-agent rebuild (see `MODULE_TEMPLATE.md`)
+for every module, no exceptions.
