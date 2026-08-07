@@ -204,36 +204,15 @@ def _resolve_customer_vertical(customer_id: int) -> str:
 
 
 def _get_precalculated_scores(account_id: int):
-    """Vertical-agnostic: read pre-calculated scores from HealthScore/PillarScore tables.
+    """Vertical-agnostic: read pre-calculated scores via the canonical service.
 
     Returns (health_score, health_status, pillar_dict) or (None, None, None).
-    This is the single source of truth — no vertical module import needed.
+    Wave 1 Workstream A (Aug 4 2026): delegates to utils/account_health.py —
+    was one of four independent copies of this read.
     """
     try:
-        from models import HealthScore, PillarScore
-        import utils.health_thresholds as ht
-
-        hs = HealthScore.query.filter_by(account_id=account_id) \
-            .order_by(HealthScore.measurement_month.desc()).first()
-        if not hs or hs.health_score is None:
-            return None, None, None
-
-        health = float(hs.health_score)
-        status = hs.health_status or ht.classify(health)
-
-        pillars = {}
-        if hs.contributing_pillars:
-            pillars = {k: float(v) for k, v in hs.contributing_pillars.items()}
-        else:
-            ps_rows = PillarScore.query.filter_by(
-                account_id=account_id,
-                measurement_month=hs.measurement_month,
-            ).all()
-            for ps in ps_rows:
-                if ps.pillar_score is not None:
-                    pillars[ps.pillar_code] = float(ps.pillar_score)
-
-        return health, status, pillars
+        from utils.account_health import get_precalculated_scores_tuple
+        return get_precalculated_scores_tuple(account_id)
     except Exception:
         return None, None, None
 

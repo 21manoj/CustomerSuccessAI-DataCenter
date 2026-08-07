@@ -1286,6 +1286,12 @@ def cfo_dashboard():
         total_churn_exposure = 0
         total_expansion_missed = 0
         for acct in accounts:
+            # Wave 1 Workstream A (Aug 4 2026): exclude churned accounts —
+            # this tile previously double-counted already-churned ARR as
+            # "at risk," violating the invariant MCP's get_at_risk_accounts
+            # already enforces (tests/test_context_graph_invariants.py:631).
+            if (acct.account_status or '').lower() == 'churned':
+                continue
             hs_obj = latest_scores.get(acct.account_id)
             h = _safe_float(hs_obj.health_score if hs_obj else 0)
             arr = _safe_float(acct.revenue)

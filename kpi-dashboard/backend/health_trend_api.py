@@ -265,18 +265,11 @@ def get_latest_health_score(account_id, customer_id):
     Returns:
         float: Latest health score, or None if not found
     """
-    latest_trend = HealthTrend.query.filter_by(
-        account_id=account_id,
-        customer_id=customer_id
-    ).order_by(
-        HealthTrend.year.desc(),
-        HealthTrend.month.desc()
-    ).first()
-    
-    if latest_trend and latest_trend.overall_health_score:
-        return float(latest_trend.overall_health_score)
-    
-    return None
+    # Wave 1 Workstream A (Aug 4 2026): canonical HealthScore-backed service
+    # (was a direct HealthTrend read — legacy store being drained).
+    from utils.account_health import get_account_health
+    ah = get_account_health(account_id, customer_id=customer_id)
+    return ah.health_score if ah.ok else None
 
 
 def evaluate_voc_triggers(customer_id, triggers):
@@ -299,17 +292,14 @@ def evaluate_voc_triggers(customer_id, triggers):
     for account in accounts:
         account_triggers = []
         
-        # ✅ FIXED: Get health score from HealthTrend table (not account.health_score)
-        latest_trend = HealthTrend.query.filter_by(
-            account_id=account.account_id,
-            customer_id=customer_id
-        ).order_by(
-            HealthTrend.year.desc(),
-            HealthTrend.month.desc()
-        ).first()
-        
-        # Use 50.0 as default if no health trend exists yet
-        health_score = float(latest_trend.overall_health_score) if latest_trend else 50.0
+        # Wave 1 Workstream A (Aug 4 2026): canonical service; accounts with
+        # no health data are SKIPPED rather than assigned a fabricated 50.0
+        # (a made-up score must not fire or suppress triggers).
+        from utils.account_health import get_account_health
+        ah = get_account_health(account.account_id, customer_id=customer_id)
+        if not ah.ok:
+            continue
+        health_score = ah.health_score
         
         # Check NPS (simulated - using health_score as proxy)
         if health_score < nps_threshold * 10:  # Scale to 0-100

@@ -124,50 +124,43 @@ def get_accounts():
         accounts = query.all()
         logger.info(f"[DEBUG /api/accounts] Query returned {len(accounts)} accounts")
         
-        # Import models needed for health score calculation
-        from models import HealthTrend
-        from playbook_recommendations_api import calculate_health_score_proxy
-        
+        # Wave 1 Workstream A (Aug 4 2026): health comes from the canonical
+        # HealthScore-backed service — NOT the legacy HealthTrend table, and
+        # never a fabricated default. The old path here read HealthTrend,
+        # fell back to a proxy that returned a magic 50.0 for missing data,
+        # then used `== 50.0` as a "no data" sentinel (audit C-19) — so an
+        # account genuinely scoring 50 was treated as missing, and missing
+        # accounts rendered as a real-looking 50. Missing is now explicit
+        # (health_score: null + health_data_missing: true).
+        from utils.account_health import get_account_health
+
         result = []
         for a in accounts:
-            logger.info(f"[DEBUG /api/accounts] Processing account: {a.account_id} (customer_id: {a.customer_id})")
-            # First try to get health score from health_trends table
-            latest_trend = HealthTrend.query.filter_by(
-                account_id=a.account_id,
-                customer_id=customer_id
-            ).order_by(
-                HealthTrend.year.desc(),
-                HealthTrend.month.desc()
-            ).first()
-            
-            health_score = None
-            if latest_trend and latest_trend.overall_health_score:
-                health_score = float(latest_trend.overall_health_score)
-            else:
-                # Calculate health score on-the-fly from KPIs (kpis table)
-                health_score = calculate_health_score_proxy(a.account_id)
-                # DC2_S: If no data in kpis/health_trends, use onboarding data in dc2s_kpis
-                if health_score is None or health_score == 50.0:
-                    try:
-                        from models import DC2SKPI
-                        from utils.vertical_health import get_health_calculator
-                        calculate_kpi_health = get_health_calculator(customer_id)
-                        dc2s_kpis = DC2SKPI.query.filter_by(account_id=a.account_id).order_by(
-                            DC2SKPI.measured_at.desc()
-                        ).all()
-                        if dc2s_kpis:
-                            latest_time = dc2s_kpis[0].measured_at
-                            latest_kpis = {
-                                k.kpi_code: float(k.value)
-                                for k in dc2s_kpis
-                                if k.measured_at == latest_time
-                            }
-                            if latest_kpis:
-                                overall_health, _ = calculate_kpi_health(latest_kpis, customer_id=customer_id)
-                                health_score = round(overall_health, 1)
-                                logger.info(f"[DEBUG /api/accounts] Using vertical-aware health for account {a.account_id}: {health_score}")
-                    except Exception as e:
-                        logger.debug(f"DC2_S health fallback skipped for account {a.account_id}: {e}")
+            ah = get_account_health(a.account_id)
+            health_score = round(ah.health_score, 1) if ah.ok else None
+            if not ah.ok:
+                # On-the-fly compute from onboarding DC2SKPI rows — a real
+                # calculation for fresh tenants pre-score-pipeline, not a
+                # placeholder.
+                try:
+                    from models import DC2SKPI
+                    from utils.vertical_health import get_health_calculator
+                    calculate_kpi_health = get_health_calculator(customer_id)
+                    dc2s_kpis = DC2SKPI.query.filter_by(account_id=a.account_id).order_by(
+                        DC2SKPI.measured_at.desc()
+                    ).all()
+                    if dc2s_kpis:
+                        latest_time = dc2s_kpis[0].measured_at
+                        latest_kpis = {
+                            k.kpi_code: float(k.value)
+                            for k in dc2s_kpis
+                            if k.measured_at == latest_time
+                        }
+                        if latest_kpis:
+                            overall_health, _ = calculate_kpi_health(latest_kpis, customer_id=customer_id)
+                            health_score = round(overall_health, 1)
+                except Exception as e:
+                    logger.debug(f"On-the-fly health compute skipped for account {a.account_id}: {e}")
             
             # Get products for this account
             products = Product.query.filter_by(account_id=a.account_id).all()
@@ -194,6 +187,7 @@ def get_accounts():
                 'industry': a.industry,
                 'region': a.region,
                 'health_score': health_score,
+                'health_data_missing': health_score is None,
                 'account_status': a.account_status,
                 'created_at': a.created_at.isoformat() if a.created_at else None,
                 'profile_metadata': a.profile_metadata if hasattr(a, 'profile_metadata') and a.profile_metadata else None,
