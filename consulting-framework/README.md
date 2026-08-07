@@ -33,8 +33,8 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 4 of 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and all four runs caught real defects in
+**Status:** 5 of 11 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and all five runs caught real defects in
 the spec that got fixed as a result — see each module's Validation Note). The rest
 are placeholders — do not treat their one-liners below as validated specs.
 
@@ -49,7 +49,7 @@ are placeholders — do not treat their one-liners below as validated specs.
 |---|---|---|---|
 | 03 | [Health Scoring Engine](modules/03-intelligence-health-scoring-engine.md) | **✅ Validated pilot** | L1→L3 KPI→Pillar→Account rollup, canonical read service, weight-hierarchy resolution, threshold classification. |
 | 04 | [Context Graph & Causal Layer](modules/04-intelligence-context-graph.md) | **✅ Validated** | Typed causal graph (SIGNAL/DECISION/OUTCOME nodes), base+overlay taxonomy, invariant checks, arc classification. |
-| 05 | Prediction Wizards (A–D) | Planned | Arc/trajectory detection, early-warning patterns, weight calibration from outcomes, NRR/renewal prediction. |
+| 05 | [Prediction Wizards (Orchestration)](modules/05-intelligence-wizards.md) | **✅ Validated** | Run tracking, exactly-one-active versioned artifacts, trigger governance (explicit vs lazy). Framework only — analysis algorithms stay client-specific. |
 | 06 | Signal Processing Layer | Planned | Qualitative signal ingestion, LLM classification, sentiment. |
 
 ### Interface

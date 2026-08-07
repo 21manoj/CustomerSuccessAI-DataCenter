@@ -100,11 +100,34 @@ module's Validation Note as protection against the same author making the
 same mistake in a later one; the adversarial rebuild is what actually
 catches it, not memory of having caught it before.
 
-Four-for-four validated modules have each surfaced at least one real
+Five-for-five validated modules have each surfaced at least one real
 instance of one of these failure shapes — treat this as the default outcome
 to expect, not an edge case, and always run the adversarial rebuild rather
 than trusting inspection alone, prior lessons, or author care to catch any
 of them.
+
+**The trend is the opposite of reassuring.** Module 05 — the most complex
+spec written so far, and written immediately after Module 04's note warned
+that lessons don't transfer between modules — reproduced ALL FOUR shapes at
+once, including shape (d) three separate times (two of them recurrences of
+Module 01's own findings). Defect count per module is not going down as the
+library matures; if anything it tracks spec complexity. Do not taper off the
+adversarial rebuild for later modules on the theory that the process is
+now well-understood.
+
+**Two habits that came out of Module 05, worth applying to every spec:**
+- **Ask a validation agent to PROVE defects, not report them.** Module 05's
+  agent wrote tests that execute the spec's own literal pseudocode and
+  demonstrate the failure (two active rows, a real `IntegrityError`, a blank
+  trigger source accepted), then the corrected version alongside. A proof is
+  unarguable and self-documents the fix; a report is a claim you then have to
+  evaluate. Ask for this explicitly in the validation prompt.
+- **Any nullable column mentioned in Data Shapes needs its NULL case
+  explicitly tested.** Module 05's platform-level (`customer_id IS NULL`)
+  path silently broke the module's core invariant while every
+  customer-scoped test passed. If a column is nullable, the spec must say so
+  AND an Acceptance Criterion must exercise the NULL case — passing tests on
+  the non-NULL path prove nothing about it.
 
 ### Acceptance Criteria
 Concrete, testable statements. Prefer "given X, the system does Y" over vague
