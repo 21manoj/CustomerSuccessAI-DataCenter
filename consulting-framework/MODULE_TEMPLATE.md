@@ -37,15 +37,30 @@ pseudocode over prose for any formula, normalization, or edge-case-heavy logic �
 prose reads as unambiguous to the author and ambiguous to everyone else; pseudocode
 forces the ambiguity into the open while writing it.
 
-**The Build Prompt and Known Gotchas are one unit, not two.** A Gotcha that exists
-specifically to correct something the Build Prompt itself says wrong is a bug in
-the spec, not a valid gotcha — fix the Build Prompt directly instead. (Found during
-the Module 03 pilot validation: the Build Prompt told an agent to gate a check on
-a condition that Gotcha 4, two sections later, named as the exact anti-pattern to
-avoid. An agent that only reads the Build Prompt — which is the whole point of a
-Build Prompt being self-contained — would reproduce the bug.) When authoring or
-reviewing a module, re-read the Build Prompt against every Gotcha and ask: if an
-agent followed this prompt literally, would it walk straight into this Gotcha?
+**Every section pair must be cross-checked against the Build Prompt, not just
+Gotchas.** A Gotcha, an Acceptance Criterion, or a Data Shapes entry that exists
+specifically to correct or add something the Build Prompt itself omits or says
+wrong is a bug in the spec — fix the Build Prompt directly instead of leaving the
+correction to live only in the other section. Two confirmed instances so far:
+- Module 03 pilot: the Build Prompt told an agent to gate a weight-override check
+  on a condition that Gotcha 4, two sections later, named as the exact
+  anti-pattern to avoid.
+- Module 01: the Build Prompt's literal access-control code omitted an expiry
+  check required by both Acceptance Criteria and a Gotcha's own "Fix" text —
+  proven to be a real access-control bypass, not a theoretical gap. Separately,
+  the same module's Build Prompt required a `uuid` column on an entity that Data
+  Shapes didn't list, while also instructing the reader to "match Data Shapes
+  exactly" — a second, independent contradiction in the same document.
+
+An agent that only reads the Build Prompt — which is the whole point of a Build
+Prompt being self-contained — will reproduce whatever bug or gap the other
+sections were trying to prevent. When authoring or reviewing a module, re-read
+the Build Prompt against every other section (Gotchas, Acceptance Criteria, Data
+Shapes) and ask: if an agent followed this prompt literally and nothing else,
+would it walk straight into a problem a later section warns about, or contradict
+a requirement a later section states? Two-for-two validated modules have each
+surfaced at least one real instance of this — treat it as the default failure
+mode to look for, not an edge case.
 
 ### Acceptance Criteria
 Concrete, testable statements. Prefer "given X, the system does Y" over vague
