@@ -1,0 +1,100 @@
+{
+  "vertical": "boutique_hotel_v1",
+  "version": "1.0",
+  "pillars": {
+    "P1": {"name": "Guest Experience", "weight_l2": 0.35},
+    "P2": {"name": "Revenue Management", "weight_l2": 0.30},
+    "P3": {"name": "Operations Efficiency", "weight_l2": 0.20},
+    "P4": {"name": "Staff & Service Quality", "weight_l2": 0.15}
+  },
+  "kpis": {
+    "P1-KPI1": {
+      "name": "Guest Satisfaction Score",
+      "pillar": "P1",
+      "weight_l1": 0.5,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 85, "max": 100},
+        "risk": {"min": 70, "max": 84.99},
+        "critical": {"min": 0, "max": 69.99}
+      }
+    },
+    "P1-KPI2": {
+      "name": "Repeat Booking Rate",
+      "pillar": "P1",
+      "weight_l1": 0.3,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 40, "max": 100},
+        "risk": {"min": 25, "max": 39.99},
+        "critical": {"min": 0, "max": 24.99}
+      }
+    },
+    "P1-KPI3": {
+      "name": "Complaint Resolution Time (hours)",
+      "pillar": "P1",
+      "weight_l1": 0.2,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": {"min": 0, "max": 4},
+        "risk": {"min": 4.01, "max": 12},
+        "critical": {"min": 12.01, "max": 999}
+      }
+    },
+    "P2-KPI1": {
+      "name": "RevPAR (Revenue per Available Room, USD)",
+      "pillar": "P2",
+      "weight_l1": 0.6,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 150, "max": 100000},
+        "risk": {"min": 90, "max": 149.99},
+        "critical": {"min": 0, "max": 89.99}
+      }
+    },
+    "P2-KPI2": {
+      "name": "Average Daily Rate (USD)",
+      "pillar": "P2",
+      "weight_l1": 0.4,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 200, "max": 100000},
+        "risk": {"min": 120, "max": 199.99},
+        "critical": {"min": 0, "max": 119.99}
+      }
+    },
+    "P3-KPI1": {
+      "name": "Occupancy Rate (%)",
+      "pillar": "P3",
+      "weight_l1": 0.5,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": {"min": 70, "max": 100},
+        "risk": {"min": 50, "max": 69.99},
+        "critical": {"min": 0, "max": 49.99}
+      }
+    },
+    "P3-KPI2": {
+      "name": "Housekeeping Turnaround Time (minutes)",
+      "pillar": "P3",
+      "weight_l1": 0.5,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": {"min": 0, "max": 30},
+        "risk": {"min": 30.01, "max": 60},
+        "critical": {"min": 60.01, "max": 999}
+      }
+    },
+    "P4-KPI1": {
+      "name": "Staff Turnover Rate (annualized %)",
+      "pillar": "P4",
+      "weight_l1": 1.0,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": {"min": 0, "max": 15},
+        "risk": {"min": 15.01, "max": 30},
+        "critical": {"min": 30.01, "max": 100}
+      }
+    }
+  }
+}

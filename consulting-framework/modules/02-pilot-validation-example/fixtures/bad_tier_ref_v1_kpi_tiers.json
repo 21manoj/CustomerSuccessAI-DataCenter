@@ -1,0 +1,8 @@
+{
+  "default_tier": "starter",
+  "tiers": {
+    "starter": {
+      "kpi_codes": ["P1-KPI1", "P9-KPI7"]
+    }
+  }
+}

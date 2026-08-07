@@ -33,16 +33,16 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 2 of 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and both runs caught real defects in the
-spec that got fixed as a result — see each module's Validation Note). The rest are
-placeholders — do not treat their one-liners below as validated specs.
+**Status:** 3 of 11 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and all three runs caught real defects in
+the spec that got fixed as a result — see each module's Validation Note). The rest
+are placeholders — do not treat their one-liners below as validated specs.
 
 ### Foundation
 | # | Module | Status | One-liner |
 |---|---|---|---|
 | 01 | [Data Model & Schema](modules/01-foundation-data-model.md) | **✅ Validated** | Tenant/identity bedrock: Customer, Account, User, CustomerConfig, CustomerApiKey, multi-tenancy + access-control contract. |
-| 02 | Vertical & KPI Taxonomy Config | Planned | Per-vertical KPI catalog (codes, pillars, weights, ranges) as versioned JSON + overlay pattern — the main lever an FDE pulls per client. |
+| 02 | [Vertical & KPI Taxonomy Config](modules/02-foundation-vertical-taxonomy.md) | **✅ Validated** | Per-vertical KPI catalog (pillars, weights, ranges) as a JSON file an FDE drops in — no code change — plus validated tiers for phased onboarding. |
 
 ### Intelligence
 | # | Module | Status | One-liner |
@@ -68,10 +68,14 @@ placeholders — do not treat their one-liners below as validated specs.
 ## Extending this library
 
 Before writing module N+1, re-read the validated modules' Validation Notes
-(`modules/01-...md`, `modules/03-...md`) — both independently caught the same
-failure class (a Build Prompt that, followed literally, contradicts or omits
-something a Gotcha/Acceptance Criterion/Data Shapes entry requires, including
-one confirmed real access-control bypass). Cross-check every new Build Prompt
-against every other section before considering a module done — don't rely on
-inspection alone; run the adversarial fresh-agent rebuild (see
-`MODULE_TEMPLATE.md`) for every module, not just the first two.
+(`modules/01-...md`, `modules/02-...md`, `modules/03-...md`) — all three
+independently caught the same failure class in one of two shapes: a Build
+Prompt that, followed literally, textually contradicts a Gotcha/Acceptance
+Criterion/Data Shapes entry (01, 03 — including one confirmed real
+access-control bypass), or a Build Prompt that leaves pseudocode
+underspecified in a way whose one natural implementation reproduces a Gotcha
+by construction (02). Cross-check every new Build Prompt against every other
+section before considering a module done, and fully specify any pseudocode
+gap rather than leaving an ellipsis — don't rely on inspection alone; run the
+adversarial fresh-agent rebuild (see `MODULE_TEMPLATE.md`) for every module,
+not just the first three.

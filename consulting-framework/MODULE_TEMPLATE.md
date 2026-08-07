@@ -58,9 +58,28 @@ sections were trying to prevent. When authoring or reviewing a module, re-read
 the Build Prompt against every other section (Gotchas, Acceptance Criteria, Data
 Shapes) and ask: if an agent followed this prompt literally and nothing else,
 would it walk straight into a problem a later section warns about, or contradict
-a requirement a later section states? Two-for-two validated modules have each
-surfaced at least one real instance of this — treat it as the default failure
-mode to look for, not an edge case.
+a requirement a later section states?
+
+**A second, subtler shape of the same failure: unspecified pseudocode, not
+just contradictory pseudocode.** Module 02 rewrote its Build Prompt carefully
+enough to avoid textually contradicting its own Gotchas (the Module 01/03
+shape) — and a Gotcha still reappeared anyway, because a piece of the Build
+Prompt's pseudocode was left as `if module_exists(x): ...`, and the one
+natural way to implement that ellipsis in Python (a bare `try/except
+ImportError`) happens to BE the anti-pattern a different Gotcha in the same
+document warns against. No amount of re-reading two finished sections side by
+side would have caught this — it only surfaces once someone actually fills in
+the gap, which is exactly what the adversarial fresh-agent rebuild forces to
+happen. Treat any ellipsis, "your choice," or unresolved branch in a Build
+Prompt as a specific risk, not a harmless simplification: either fully
+specify it, or explicitly flag in-line which Gotcha the implementer must
+re-check before filling it in themselves.
+
+Three-for-three validated modules have each surfaced at least one real
+instance of this failure class (in one of its two shapes) — treat it as the
+default failure mode to look for, not an edge case, and always run the
+adversarial rebuild rather than trusting inspection alone to catch either
+shape.
 
 ### Acceptance Criteria
 Concrete, testable statements. Prefer "given X, the system does Y" over vague

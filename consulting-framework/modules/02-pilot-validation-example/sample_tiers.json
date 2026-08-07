@@ -1,0 +1,16 @@
+{
+  "default_tier": "starter",
+  "tiers": {
+    "starter": {
+      "kpi_codes": ["P1-KPI1", "P2-KPI1", "P3-KPI1"]
+    },
+    "full": {
+      "kpi_codes": [
+        "P1-KPI1", "P1-KPI2", "P1-KPI3",
+        "P2-KPI1", "P2-KPI2",
+        "P3-KPI1", "P3-KPI2",
+        "P4-KPI1"
+      ]
+    }
+  }
+}
