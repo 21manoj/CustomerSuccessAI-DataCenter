@@ -1,0 +1,19 @@
+{
+  "extends": "base",
+  "vertical": "regional_utility_v1",
+  "version": "1.0",
+  "polarity_ambiguous_outcome_subtypes": [
+    "outage_response_recognized"
+  ],
+  "polarity_ambiguous_signal_subtypes": [
+    "regulatory_filing_submitted",
+    "rate_case_opened"
+  ],
+  "revenue_buckets": {
+    "lost": ["co_op_board_terminated_contract"],
+    "expansion": ["grid_modernization_upsell"],
+    "at_risk": ["outage_sla_breach_escalation"],
+    "protected": ["multi_year_renewal_signed"]
+  },
+  "auto_recovery_outcome_subtypes": ["outage_root_cause_resolved"]
+}

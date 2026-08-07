@@ -75,11 +75,36 @@ Prompt as a specific risk, not a harmless simplification: either fully
 specify it, or explicitly flag in-line which Gotcha the implementer must
 re-check before filling it in themselves.
 
-Three-for-three validated modules have each surfaced at least one real
-instance of this failure class (in one of its two shapes) — treat it as the
-default failure mode to look for, not an edge case, and always run the
-adversarial rebuild rather than trusting inspection alone to catch either
-shape.
+**A third shape: a whole deliverable promised in Boundary/Engine that never
+appears in the Build Prompt at all.** Module 04's spec committed to "tiered
+decay" as owned, built-once Engine logic in two separate sections — and the
+Build Prompt's own enumerated task list simply never mentioned it. An agent
+following the Build Prompt literally (again, the entire point of it being
+self-contained) would never build a piece the spec elsewhere promises exists.
+Unlike shapes (a) and (b), this isn't a contradiction or an ellipsis to spot
+— it's an absence, which is much easier to miss on a read-through because
+there's nothing wrong on the page you're looking at, only something missing
+from a different page. Checklist for this shape specifically: enumerate
+every bullet in Boundary's "Owns" and every bullet in Engine, and confirm
+each one has a corresponding numbered piece in the Build Prompt — not just a
+mention somewhere in prose.
+
+**Also worth naming directly: a lesson learned in one module does not
+reliably carry over to the next one, even for the same failure sub-type.**
+Module 03's Validation Note documented, in detail, "rollup math was prose,
+not pseudocode... forcing the agent to invent defensible-but-arbitrary
+answers," and fixed it. Module 04's Build Prompt — written after that
+lesson was recorded — left arc classification as equally pure prose with
+the same consequence, verbatim. Do not treat a lesson recorded in an earlier
+module's Validation Note as protection against the same author making the
+same mistake in a later one; the adversarial rebuild is what actually
+catches it, not memory of having caught it before.
+
+Four-for-four validated modules have each surfaced at least one real
+instance of one of these failure shapes — treat this as the default outcome
+to expect, not an edge case, and always run the adversarial rebuild rather
+than trusting inspection alone, prior lessons, or author care to catch any
+of them.
 
 ### Acceptance Criteria
 Concrete, testable statements. Prefer "given X, the system does Y" over vague

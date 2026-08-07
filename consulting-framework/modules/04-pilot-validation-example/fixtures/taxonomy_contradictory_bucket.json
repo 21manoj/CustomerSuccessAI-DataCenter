@@ -1,0 +1,8 @@
+{
+  "extends": "base",
+  "vertical": "contradictory_bucket",
+  "version": "1.0",
+  "revenue_buckets": {
+    "expansion": ["contract_terminated"]
+  }
+}
