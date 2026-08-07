@@ -179,39 +179,19 @@ def _record_action_economics(
 
 def get_precalculated_scores(account_id):
     """
-    Fetch the latest pre-calculated health score and pillar scores from the
-    HealthScore / PillarScore tables (populated by the score calculator).
+    Fetch the latest pre-calculated health score and pillar scores.
 
-    Returns (health_score, health_status, pillar_dict) or (None, None, None)
-    if no pre-calculated scores exist.
+    Returns (health_score, health_status, pillar_dict, measurement_month) or
+    (None, None, None, None) if no pre-calculated scores exist.
 
-    This is the single source of truth — use it in preference to on-the-fly
-    calculation wherever possible.
+    Wave 1 Workstream A (Aug 4 2026): delegates to the canonical service in
+    utils/account_health.py — this was the 4-tuple member of a four-copy
+    fan-out (the others return 3-tuples; that arity fork is why the shim
+    keeps with_month=True here). New code: use get_account_health() directly.
     """
     try:
-        hs = HealthScore.query.filter_by(account_id=account_id) \
-            .order_by(HealthScore.measurement_month.desc()).first()
-        if not hs or hs.health_score is None:
-            return None, None, None, None
-
-        health = float(hs.health_score)
-        status = hs.health_status or ht.classify(health)
-
-        # Pillar scores — prefer contributing_pillars JSON on HealthScore,
-        # fall back to latest PillarScore rows
-        pillars = {}
-        if hs.contributing_pillars:
-            pillars = {k: float(v) for k, v in hs.contributing_pillars.items()}
-        else:
-            ps_rows = PillarScore.query.filter_by(
-                account_id=account_id,
-                measurement_month=hs.measurement_month,
-            ).all()
-            for ps in ps_rows:
-                if ps.pillar_score is not None:
-                    pillars[ps.pillar_code] = float(ps.pillar_score)
-
-        return health, status, pillars, hs.measurement_month
+        from utils.account_health import get_precalculated_scores_tuple
+        return get_precalculated_scores_tuple(account_id, with_month=True)
     except Exception as e:
         logger.debug(f"Could not fetch pre-calculated scores for account {account_id}: {e}")
         return None, None, None, None

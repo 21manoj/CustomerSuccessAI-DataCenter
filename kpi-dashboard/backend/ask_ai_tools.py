@@ -577,45 +577,44 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
     from models import Account, HealthScore, PillarScore, ContextNode, ContextEdge, db
     import utils.health_thresholds as ht
 
+    # Wave 1 Workstream A (Aug 4 2026): health reads go through the canonical
+    # service. The old fallback code here defaulted missing scores to 0
+    # (while Flask defaulted them to 50.0 and MCP computed them — three
+    # different answers per surface, audit §4.7/F3), took pillar rows
+    # without month-pinning, and did not exclude churned accounts from
+    # at-risk lists (invariant violation).
+    from utils.account_health import get_account_health as _canonical_health
+
     if tool_name == 'list_accounts':
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         result = []
         for a in accounts:
-            hs = HealthScore.query.filter_by(account_id=a.account_id).order_by(HealthScore.measurement_month.desc()).first()
-            score = float(hs.health_score) if hs else 0
+            ah = _canonical_health(a.account_id)
             result.append({
                 'account_id': a.account_id,
                 'account_name': a.account_name,
-                'health_score': round(score, 1),
-                'health_status': ht.classify(score),
+                'health_score': round(ah.health_score, 1) if ah.ok else None,
+                'health_status': ah.health_status if ah.ok else 'no_data',
                 'arr': float(a.revenue or 0),
                 'industry': a.industry or '',
             })
-        return {'accounts': sorted(result, key=lambda x: x['health_score']), 'count': len(result)}
+        return {'accounts': sorted(result, key=lambda x: (x['health_score'] is None, x['health_score'] or 0)),
+                'count': len(result)}
 
     elif tool_name == 'get_account_health':
         account_id = tool_input['account_id']
-        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
-        if not acct:
+        ah = _canonical_health(account_id, customer_id=customer_id)
+        if ah.missing and ah.missing_reason == 'not_found_or_wrong_tenant':
             return {"error": f"Account {account_id} not found"}
-        hs = HealthScore.query.filter_by(account_id=account_id).order_by(HealthScore.measurement_month.desc()).first()
-        score = float(hs.health_score) if hs else 0
-        # Get pillar scores: try PillarScore table, fallback to HealthScore.contributing_pillars
-        pillars = PillarScore.query.filter_by(account_id=account_id).order_by(PillarScore.measurement_month.desc()).all()
-        seen = {}
-        for p in pillars:
-            if p.pillar_code not in seen:
-                seen[p.pillar_code] = round(float(p.pillar_score), 1)
-        # Fallback: HealthScore.contributing_pillars JSON field
-        if not seen and hs and hs.contributing_pillars:
-            seen = {k: round(float(v), 1) for k, v in hs.contributing_pillars.items()}
+        acct = Account.query.filter_by(account_id=account_id, customer_id=customer_id).first()
         return {
             'account_id': account_id,
-            'account_name': acct.account_name,
-            'health_score': round(score, 1),
-            'health_status': ht.classify(score),
-            'arr': float(acct.revenue or 0),
-            'pillar_scores': seen,
+            'account_name': acct.account_name if acct else '',
+            'health_score': round(ah.health_score, 1) if ah.ok else None,
+            'health_status': ah.health_status if ah.ok else 'no_data',
+            'health_data_missing': not ah.ok,
+            'arr': float(acct.revenue or 0) if acct else 0,
+            'pillar_scores': {k: round(v, 1) for k, v in ah.pillars.items()},
         }
 
     elif tool_name == 'get_at_risk_accounts':
@@ -623,14 +622,17 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         result = []
         for a in accounts:
-            hs = HealthScore.query.filter_by(account_id=a.account_id).order_by(HealthScore.measurement_month.desc()).first()
-            score = float(hs.health_score) if hs else 0
-            if score < threshold:
+            # Churned accounts are surfaced separately, never in at-risk
+            # (matches MCP get_at_risk_accounts + invariant suite).
+            if (a.account_status or '').lower() == 'churned':
+                continue
+            ah = _canonical_health(a.account_id)
+            if ah.ok and ah.health_score < threshold:
                 result.append({
                     'account_id': a.account_id,
                     'account_name': a.account_name,
-                    'health_score': round(score, 1),
-                    'health_status': ht.classify(score),
+                    'health_score': round(ah.health_score, 1),
+                    'health_status': ah.health_status,
                     'arr': float(a.revenue or 0),
                 })
         return {'accounts': sorted(result, key=lambda x: x['health_score']), 'count': len(result), 'threshold': threshold}

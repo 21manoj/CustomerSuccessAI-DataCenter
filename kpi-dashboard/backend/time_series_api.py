@@ -53,9 +53,17 @@ def get_account_health_trends():
         if not account_id:
             return jsonify({'error': 'Missing account_id parameter'}), 400
         
-        storage_service = HealthScoreStorageService()
-        trends = storage_service.get_account_health_trends(account_id, months)
-        
+        # Wave 1 Workstream A (Aug 4 2026): canonical HealthScore-backed
+        # history with a MANDATORY tenant check — the old path read the
+        # legacy HealthTrend table via a raw account_id with no customer
+        # filter (cross-tenant read, audit C-18).
+        from utils.account_health import get_account_health_history
+        trends = get_account_health_history(account_id, customer_id, months)
+        if not trends:
+            from models import Account
+            if not Account.query.filter_by(account_id=account_id, customer_id=customer_id).first():
+                return jsonify({'error': 'Account not found'}), 404
+
         return jsonify({
             'account_id': account_id,
             'health_trends': trends,
