@@ -129,6 +129,16 @@ now well-understood.
   AND an Acceptance Criterion must exercise the NULL case — passing tests on
   the non-NULL path prove nothing about it.
 
+**HARD RULE — normative comments are spec bugs.** If a comment inside a Build
+Prompt contains MUST, never, or always, it is a defect until it becomes an
+executable line of code or a schema constraint. A comment may explain WHY a
+line exists; it may never be the only place a requirement lives. Four
+consecutive modules (01, 05, 06, 09) shipped a required check living only in
+a comment, and in every case the validation agent proved the rule was
+violated in practice. This is the single most reliable defect predictor in
+the library — grep every new Build Prompt for those three words before
+considering it done.
+
 ### Acceptance Criteria
 Concrete, testable statements. Prefer "given X, the system does Y" over vague
 adjectives like "works correctly."
