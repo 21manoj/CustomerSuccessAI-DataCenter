@@ -1,0 +1,100 @@
+{
+  "_comment": "Hypothetical vertical: 'freightops_v1' -- a fleet-management SaaS. Accounts are individual depots/fleets; customers are logistics companies that may operate multiple depots. This is NOT the dc2_s vertical in this repo; invented from scratch for pilot-validation purposes per the Health Scoring Engine module spec's Build Prompt JSON shape.",
+  "vertical": "freightops_v1",
+  "pillars": {
+    "P1": { "name": "Vehicle Health", "weight_l2": 0.30 },
+    "P2": { "name": "Driver Safety", "weight_l2": 0.25 },
+    "P3": { "name": "Delivery Performance", "weight_l2": 0.25 },
+    "P4": { "name": "Fuel & Cost Efficiency", "weight_l2": 0.20 }
+  },
+  "kpis": {
+    "VH-UPTIME": {
+      "name": "Fleet Uptime %",
+      "pillar": "P1",
+      "weight_l1": 0.6,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": { "min": 95, "max": 100 },
+        "risk": { "min": 85, "max": 95 },
+        "critical": { "min": 0, "max": 85 }
+      }
+    },
+    "VH-MAINT": {
+      "name": "Overdue Maintenance Count",
+      "pillar": "P1",
+      "weight_l1": 0.4,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": { "min": 0.2, "max": 2 },
+        "risk": { "min": 2, "max": 5 },
+        "critical": { "min": 5, "max": 999 }
+      }
+    },
+    "DS-INCIDENT": {
+      "name": "Safety Incidents per 100k Miles",
+      "pillar": "P2",
+      "weight_l1": 0.5,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": { "min": 0.2, "max": 1.0 },
+        "risk": { "min": 1.0, "max": 3.0 },
+        "critical": { "min": 3.0, "max": 999 }
+      }
+    },
+    "DS-COMPLIANCE": {
+      "name": "Hours-of-Service Compliance %",
+      "pillar": "P2",
+      "weight_l1": 0.5,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": { "min": 98, "max": 100 },
+        "risk": { "min": 90, "max": 98 },
+        "critical": { "min": 0, "max": 90 }
+      }
+    },
+    "DP-ONTIME": {
+      "name": "On-Time Delivery %",
+      "pillar": "P3",
+      "weight_l1": 0.7,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": { "min": 95, "max": 100 },
+        "risk": { "min": 85, "max": 95 },
+        "critical": { "min": 0, "max": 85 }
+      }
+    },
+    "DP-DAMAGE": {
+      "name": "Damaged Shipment Rate %",
+      "pillar": "P3",
+      "weight_l1": 0.3,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": { "min": 0.1, "max": 1.0 },
+        "risk": { "min": 1.0, "max": 3.0 },
+        "critical": { "min": 3.0, "max": 100 }
+      }
+    },
+    "FE-MPG": {
+      "name": "Miles per Gallon (vs. fleet target)",
+      "pillar": "P4",
+      "weight_l1": 0.5,
+      "higher_is_better": true,
+      "ranges": {
+        "healthy": { "min": 7, "max": 9 },
+        "risk": { "min": 5.5, "max": 7 },
+        "critical": { "min": 0, "max": 5.5 }
+      }
+    },
+    "FE-COSTMILE": {
+      "name": "Operating Cost per Mile ($)",
+      "pillar": "P4",
+      "weight_l1": 0.5,
+      "higher_is_better": false,
+      "ranges": {
+        "healthy": { "min": 1.2, "max": 1.6 },
+        "risk": { "min": 1.6, "max": 2.0 },
+        "critical": { "min": 2.0, "max": 99 }
+      }
+    }
+  }
+}
