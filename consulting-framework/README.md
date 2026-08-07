@@ -33,14 +33,15 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 1 of 11 modules is fully written and validated (a fresh agent rebuilt it
-from the spec alone, in isolation, and matched the reference implementation). The
-rest are placeholders — do not treat their one-liners below as validated specs.
+**Status:** 2 of 11 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and both runs caught real defects in the
+spec that got fixed as a result — see each module's Validation Note). The rest are
+placeholders — do not treat their one-liners below as validated specs.
 
 ### Foundation
 | # | Module | Status | One-liner |
 |---|---|---|---|
-| 01 | Data Model & Schema | Planned | Core entities: Customer, Account, User, KPI storage, HealthScore/PillarScore, ContextNode/Edge, CustomerConfig. |
+| 01 | [Data Model & Schema](modules/01-foundation-data-model.md) | **✅ Validated** | Tenant/identity bedrock: Customer, Account, User, CustomerConfig, CustomerApiKey, multi-tenancy + access-control contract. |
 | 02 | Vertical & KPI Taxonomy Config | Planned | Per-vertical KPI catalog (codes, pillars, weights, ranges) as versioned JSON + overlay pattern — the main lever an FDE pulls per client. |
 
 ### Intelligence
@@ -66,6 +67,11 @@ rest are placeholders — do not treat their one-liners below as validated specs
 
 ## Extending this library
 
-Before writing module N+1, re-read the pilot (`modules/03-...md`) and its validation
-note at the bottom — it records what the spec format got wrong the first time and
-what changed. Don't re-derive the format from scratch per module.
+Before writing module N+1, re-read the validated modules' Validation Notes
+(`modules/01-...md`, `modules/03-...md`) — both independently caught the same
+failure class (a Build Prompt that, followed literally, contradicts or omits
+something a Gotcha/Acceptance Criterion/Data Shapes entry requires, including
+one confirmed real access-control bypass). Cross-check every new Build Prompt
+against every other section before considering a module done — don't rely on
+inspection alone; run the adversarial fresh-agent rebuild (see
+`MODULE_TEMPLATE.md`) for every module, not just the first two.
