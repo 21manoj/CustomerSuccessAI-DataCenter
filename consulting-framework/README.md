@@ -33,12 +33,12 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** all 12 numbered modules (00–11) are fully written and validated (a
-fresh agent rebuilt each from its spec alone, in isolation, and every run caught
-real defects in the spec that got fixed as a result — see each module's
-Validation Note). One companion module remains planned: **08-UI** (Component
-Kit — the contract-bound React tokens/primitives/patterns that render Module
-08's payloads).
+**Status:** all 12 numbered modules (00–11) **plus the 08-UI companion** are fully
+written and validated (a fresh agent rebuilt each from its spec alone, in
+isolation, and every run caught real defects in the spec that got fixed as a
+result — see each module's Validation Note). The roadmap is complete. Note 08-UI's
+validation is scoped to its pure-logic contracts (React rendering fidelity is out
+of scope by design — see its Validation Note).
 
 ### Foundation
 | # | Module | Status | One-liner |
@@ -60,6 +60,7 @@ Kit — the contract-bound React tokens/primitives/patterns that render Module
 |---|---|---|---|
 | 07 | [Agent / MCP Tool Layer](modules/07-interface-mcp-tool-layer.md) | **✅ Validated** | Standalone MCP server exposing the platform to LLM agents; two-tier tool-level auth, tenant isolation, impl/tool separation, registry-as-source-of-truth. |
 | 08 | [Persona Dashboards](modules/08-interface-persona-dashboards.md) | **✅ Validated** | CRO/CFO/VPCS/CSM views; the two-layer leading (signals) vs trailing (KPI rollup) indicator model; L4 revenue-weighted portfolio rollup; single-source metrics + cross-persona/surface parity. |
+| 08-UI | [Component Kit & UX Patterns](modules/08-ui-component-kit.md) | **✅ Validated** (pure-logic) | Contract-bound React tokens + primitives + domain patterns + shell that render Module 08's payloads: one wired health-band classifier, labeled data-states (no mock-as-real), a fail-closed entitlement guard, an anti-drift meta-check. |
 
 ### Ops
 | # | Module | Status | One-liner |
