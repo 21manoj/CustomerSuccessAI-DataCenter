@@ -69,6 +69,23 @@ of scope by design — see its Validation Note).
 | 10 | [Governance & Audit Layer](modules/10-ops-governance-audit.md) | **✅ Validated** | The meta-layer that keeps a running/regenerated instance honest: code-parity drift auditor, invariant enforcement + paired-test meta-test, tool-auth coverage sweep, LLM call-site gate, model-governance register — every check with an anti-vacuous floor. |
 | 11 | [Load-Driver Synthetic Data & Testing](modules/11-ops-loaddriver-testing.md) | **✅ Validated** | Manifest-driven synthetic tenants, deterministic generation, story-arc round-trip guard, multi-phase/`--extend` intervention testing, the generate→onboard→process→validate acceptance harness (pairs with Module 00's golden E2E). |
 
+## Operational deliverables (the FDE glue around the modules)
+
+The modules regenerate the *engine*; these two deliverables are the operational
+glue an FDE needs to actually stand an instance up. They are runbooks/manifests
+grounded in the real codebase (every cited path verified to exist), not validated
+code modules.
+
+| Deliverable | What it is |
+|-------------|------------|
+| [Config Pack](config-pack/README.md) | The per-client **Config layer** manifest: every config artifact (KPI catalogs, weights, thresholds, taxonomy, story arcs, tiers, nomenclature), its canonical path, its consuming module, and the exact Config-vs-Engine split — plus the two authoring flows (existing vertical vs brand-new vertical). |
+| [Deployment & Ops Runbook](DEPLOYMENT_RUNBOOK.md) | The ordered deploy procedure over the existing tooling: the two deploy paths (git-pull-build / ECR rehydrate), prereqs, secrets + the `.env` cardinal rule, boot sequence, verify (health + magic-link), and rollback/troubleshooting. |
+
+**Still open** (flagged in the framework, not yet built): a single stitched
+**Onboarding Runbook**, and — the real proof — one **end-to-end assembly dry-run**
+that regenerates → configures → deploys → onboards → verifies against the golden
+path (the integration test the isolation-based validation never performed).
+
 ## Extending this library
 
 Before writing module N+1, re-read the validated modules' Validation Notes
