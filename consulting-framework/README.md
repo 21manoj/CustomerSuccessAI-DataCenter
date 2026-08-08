@@ -33,12 +33,12 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and every run caught real defects in
-the spec that got fixed as a result — see each module's Validation Note).
-Remaining on the roadmap: 10 (Governance & Audit) and the newer companion 08-UI
-(Component Kit). The placeholders below are not validated specs — do not treat
-their one-liners as such.
+**Status:** all 12 numbered modules (00–11) are fully written and validated (a
+fresh agent rebuilt each from its spec alone, in isolation, and every run caught
+real defects in the spec that got fixed as a result — see each module's
+Validation Note). One companion module remains planned: **08-UI** (Component
+Kit — the contract-bound React tokens/primitives/patterns that render Module
+08's payloads).
 
 ### Foundation
 | # | Module | Status | One-liner |
@@ -65,7 +65,7 @@ their one-liners as such.
 | # | Module | Status | One-liner |
 |---|---|---|---|
 | 09 | [Ingestion & Onboarding Pipeline](modules/09-ops-ingestion-pipeline.md) | **✅ Validated** | Shift-left validation, UTC-safe freshness detection, idempotent upsert, stage orchestration with isolation. |
-| 10 | Governance & Audit Layer | Planned | Drift auditor, invariant checks, tool-auth gates. |
+| 10 | [Governance & Audit Layer](modules/10-ops-governance-audit.md) | **✅ Validated** | The meta-layer that keeps a running/regenerated instance honest: code-parity drift auditor, invariant enforcement + paired-test meta-test, tool-auth coverage sweep, LLM call-site gate, model-governance register — every check with an anti-vacuous floor. |
 | 11 | [Load-Driver Synthetic Data & Testing](modules/11-ops-loaddriver-testing.md) | **✅ Validated** | Manifest-driven synthetic tenants, deterministic generation, story-arc round-trip guard, multi-phase/`--extend` intervention testing, the generate→onboard→process→validate acceptance harness (pairs with Module 00's golden E2E). |
 
 ## Extending this library
