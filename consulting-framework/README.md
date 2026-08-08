@@ -33,8 +33,8 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 7 of 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and all seven runs caught real defects in
+**Status:** 8 of 11 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and all eight runs caught real defects in
 the spec that got fixed as a result — see each module's Validation Note). The rest
 are placeholders — do not treat their one-liners below as validated specs.
 
@@ -55,7 +55,7 @@ are placeholders — do not treat their one-liners below as validated specs.
 ### Interface
 | # | Module | Status | One-liner |
 |---|---|---|---|
-| 07 | Agent / MCP Tool Layer | Planned | Standalone MCP server exposing the platform to LLM agents; tool-level auth. |
+| 07 | [Agent / MCP Tool Layer](modules/07-interface-mcp-tool-layer.md) | **✅ Validated** | Standalone MCP server exposing the platform to LLM agents; two-tier tool-level auth, tenant isolation, impl/tool separation, registry-as-source-of-truth. |
 | 08 | Persona Dashboards | Planned | CRO/CFO/VPCS/CSM views; the two-layer leading (signals) vs trailing (KPI rollup) indicator model; L4 revenue-weighted portfolio rollup. |
 
 ### Ops
