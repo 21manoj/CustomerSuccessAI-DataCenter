@@ -33,12 +33,12 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 10 modules are fully written and validated (a fresh agent rebuilt
+**Status:** 11 modules are fully written and validated (a fresh agent rebuilt
 each from its spec alone, in isolation, and every run caught real defects in
 the spec that got fixed as a result — see each module's Validation Note).
-Remaining on the roadmap: 10 (Governance & Audit), 11 (Load-Driver & Testing),
-and the newer companion 08-UI (Component Kit). The placeholders below are not
-validated specs — do not treat their one-liners as such.
+Remaining on the roadmap: 10 (Governance & Audit) and the newer companion 08-UI
+(Component Kit). The placeholders below are not validated specs — do not treat
+their one-liners as such.
 
 ### Foundation
 | # | Module | Status | One-liner |
@@ -66,7 +66,7 @@ validated specs — do not treat their one-liners as such.
 |---|---|---|---|
 | 09 | [Ingestion & Onboarding Pipeline](modules/09-ops-ingestion-pipeline.md) | **✅ Validated** | Shift-left validation, UTC-safe freshness detection, idempotent upsert, stage orchestration with isolation. |
 | 10 | Governance & Audit Layer | Planned | Drift auditor, invariant checks, tool-auth gates. |
-| 11 | Load-Driver Synthetic Data & Testing | Planned | Manifest-driven scenario generation, multi-phase intervention testing, acceptance/parity suites. |
+| 11 | [Load-Driver Synthetic Data & Testing](modules/11-ops-loaddriver-testing.md) | **✅ Validated** | Manifest-driven synthetic tenants, deterministic generation, story-arc round-trip guard, multi-phase/`--extend` intervention testing, the generate→onboard→process→validate acceptance harness (pairs with Module 00's golden E2E). |
 
 ## Extending this library
 
