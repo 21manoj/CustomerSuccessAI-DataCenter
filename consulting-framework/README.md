@@ -33,14 +33,17 @@ rediscovering it.
 
 ## Module roadmap
 
-**Status:** 9 of 11 modules are fully written and validated (a fresh agent rebuilt
-each from its spec alone, in isolation, and all nine runs caught real defects in
-the spec that got fixed as a result — see each module's Validation Note). The rest
-are placeholders — do not treat their one-liners below as validated specs.
+**Status:** 10 modules are fully written and validated (a fresh agent rebuilt
+each from its spec alone, in isolation, and every run caught real defects in
+the spec that got fixed as a result — see each module's Validation Note).
+Remaining on the roadmap: 10 (Governance & Audit), 11 (Load-Driver & Testing),
+and the newer companion 08-UI (Component Kit). The placeholders below are not
+validated specs — do not treat their one-liners as such.
 
 ### Foundation
 | # | Module | Status | One-liner |
 |---|---|---|---|
+| 00 | [Integration & Bootstrap](modules/00-foundation-integration-bootstrap.md) | **✅ Validated** | The chassis: single app/db, schema-authority + drift check, the `process_data` stage sequencer, single-source config resolvers, feature toggles, new-tenant bootstrap. Acceptance = the 4-CSV×11-KPI golden E2E. |
 | 01 | [Data Model & Schema](modules/01-foundation-data-model.md) | **✅ Validated** | Tenant/identity bedrock: Customer, Account, User, CustomerConfig, CustomerApiKey, multi-tenancy + access-control contract. |
 | 02 | [Vertical & KPI Taxonomy Config](modules/02-foundation-vertical-taxonomy.md) | **✅ Validated** | Per-vertical KPI catalog (pillars, weights, ranges) as a JSON file an FDE drops in — no code change — plus validated tiers for phased onboarding. |
 
