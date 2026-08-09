@@ -80,11 +80,12 @@ code modules.
 |-------------|------------|
 | [Config Pack](config-pack/README.md) | The per-client **Config layer** manifest: every config artifact (KPI catalogs, weights, thresholds, taxonomy, story arcs, tiers, nomenclature), its canonical path, its consuming module, and the exact Config-vs-Engine split — plus the two authoring flows (existing vertical vs brand-new vertical). |
 | [Deployment & Ops Runbook](DEPLOYMENT_RUNBOOK.md) | The ordered deploy procedure over the existing tooling: the two deploy paths (git-pull-build / ECR rehydrate), prereqs, secrets + the `.env` cardinal rule, boot sequence, verify (health + magic-link), and rollback/troubleshooting. |
+| [Onboarding Runbook](ONBOARDING_RUNBOOK.md) | The ordered procedure to onboard a new end-customer into a running instance: the up-front decision tree, then create_customer → config → load (4 CSVs or a synthetic manifest) → process_data → the two post-load steps → verify — with the onboarding-specific gotchas in one place. |
 
-**Still open** (flagged in the framework, not yet built): a single stitched
-**Onboarding Runbook**, and — the real proof — one **end-to-end assembly dry-run**
-that regenerates → configures → deploys → onboards → verifies against the golden
-path (the integration test the isolation-based validation never performed).
+**Still open** (the last one, flagged but not built): one **end-to-end assembly
+dry-run** that regenerates → configures → deploys → onboards → verifies against the
+golden path — the integration test the isolation-based validation never performed,
+and the thing that moves the checklist from "complete on paper" to "proven."
 
 ## Extending this library
 
