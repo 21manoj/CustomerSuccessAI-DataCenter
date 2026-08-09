@@ -18,6 +18,8 @@ interface EmailDraftModalProps {
   accountName: string;
   healthScore: number;
   customerId: string;
+  /** Pre-select a template (e.g. 'qbr_prep' when opened from Schedule QBR). Defaults to health-based auto-select. */
+  initialTemplate?: string;
   onClose: () => void;
 }
 
@@ -39,9 +41,10 @@ const EmailDraftModal: React.FC<EmailDraftModalProps> = ({
   accountName,
   healthScore,
   customerId,
+  initialTemplate,
   onClose,
 }) => {
-  const [template, setTemplate] = useState(autoTemplate(healthScore));
+  const [template, setTemplate] = useState(initialTemplate || autoTemplate(healthScore));
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
