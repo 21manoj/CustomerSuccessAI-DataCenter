@@ -123,30 +123,39 @@ def _build_segment_accounts(rng: random.Random, seg_key: str, seg: Dict[str, Any
     idx_by_arr_asc = sorted(range(n), key=lambda i: arrs[i])  # churn hits small first
     idx_by_arr_desc = list(reversed(idx_by_arr_asc))          # expansion favours large
 
-    # Churn: NRR is revenue-weighted, so prioritise hitting the churn-DOLLAR
-    # target. Take smallest accounts first (real logo churn skews small) and
-    # accumulate until churned $ reaches the revenue-churn target; the logo
-    # count then floats to whatever that requires (realistic: high logo churn
-    # on small accounts). Never churn the whole segment.
-    cum = 0.0
+    # Churn: hit the revenue-churn DOLLAR target (drives NRR) while keeping the
+    # churn COUNT near the logo-churn target (drives the health-band mix). Select
+    # accounts nearest the IDEAL average churned size = churn$ / logo_count, not
+    # smallest-first — smallest-first maximised the logo count and inflated the
+    # critical band. Nearest-to-average satisfies both $ and count at once.
+    logo_count = max(1, round(seg["logo_churn_annual"] * n)) if target_churn > 0 else 0
     churned = []
-    for i in idx_by_arr_asc:
-        if cum >= target_churn and churned:
-            break
-        if len(churned) >= n - 1:
-            break
-        churned.append(i)
-        cum += arrs[i]
+    if logo_count > 0:
+        avg_churn_size = target_churn / logo_count
+        by_closeness = sorted(range(n), key=lambda i: abs(arrs[i] - avg_churn_size))
+        cum = 0.0
+        for i in by_closeness:
+            if cum >= target_churn and churned:
+                break
+            if len(churned) >= n - 1:
+                break
+            churned.append(i)
+            cum += arrs[i]
     for i in churned:
         roles[i] = "churn"
 
-    # Contract: next-smallest available accounts to hit contraction $.
+    # Contract: a handful of mid-sized accounts; _scaled_deltas then sizes each
+    # partial delta so the aggregate hits the contraction $ target. Keep the COUNT
+    # small (bounded to the at-risk band budget) so contractions don't flood the
+    # at-risk classification — the health bands are set from the distribution below.
+    hd = seg["health_distribution"]
+    contract_budget = max(1, round(hd["at_risk"] * n))
     contract = []
     cum = 0.0
     for i in idx_by_arr_asc:
         if roles[i] != "stable":
             continue
-        if cum >= target_contract and contract:
+        if len(contract) >= contract_budget or (cum >= target_contract and contract):
             break
         contract.append(i)
         cum += arrs[i]
@@ -177,27 +186,54 @@ def _build_segment_accounts(rng: random.Random, seg_key: str, seg: Dict[str, Any
     for i, d in zip(contract, con_deltas):
         delta_for[i] = -round(d, 1)
 
-    # --- classification: role-driven, then fill health_distribution with stables ---
+    # --- classification by health_distribution (DECOUPLED from lifecycle events) ---
+    # Health class is a point-in-time snapshot; a lifecycle event is a full-year
+    # outcome. They correlate but are not identical: churn is a SUBSET of critical
+    # (a critical account may not have churned yet — the leading-signal story),
+    # contraction a subset of at-risk, expansion a subset of healthy. Take the band
+    # COUNTS from the benchmark distribution, seat the event accounts in their band,
+    # then fill the remainder so each band hits its target.
     hd = seg["health_distribution"]
-    target_healthy = round(hd["healthy"] * n)
-    classification = [None] * n
-    for i in range(n):
-        if roles[i] == "churn":
-            classification[i] = "critical"
-        elif roles[i] == "contract":
-            classification[i] = "at_risk"
-        elif roles[i] == "expand":
-            classification[i] = "healthy"
-    # stable accounts: keep enough healthy to hit target, rest become at_risk
-    # (leading-signal accounts with no trailing event yet — the two-layer story).
-    healthy_so_far = sum(1 for c in classification if c == "healthy")
-    for i in idx_by_arr_desc:
-        if classification[i] is not None:
-            continue
-        if healthy_so_far < target_healthy:
-            classification[i] = "healthy"
-            healthy_so_far += 1
+    n_healthy = max(len(expand), round(hd["healthy"] * n))
+    n_critical = max(len(churned), round(hd["critical"] * n))
+    n_at_risk = max(len(contract), n - n_healthy - n_critical)
+    # Renormalise if rounding / event-seat minimums pushed the sum off n.
+    while n_healthy + n_at_risk + n_critical > n:
+        if n_at_risk > len(contract):
+            n_at_risk -= 1
+        elif n_healthy > len(expand):
+            n_healthy -= 1
+        elif n_critical > len(churned):
+            n_critical -= 1
         else:
+            break
+    n_healthy += max(0, n - (n_healthy + n_at_risk + n_critical))  # give slack to healthy
+
+    classification = [None] * n
+    for i in churned:
+        classification[i] = "critical"
+    for i in contract:
+        classification[i] = "at_risk"
+    for i in expand:
+        classification[i] = "healthy"
+
+    def _count(cls):
+        return sum(1 for c in classification if c == cls)
+
+    # Fill remaining critical slots with the smallest stable accounts (unresolved
+    # crises with no event yet); healthy with the largest; the rest are at-risk.
+    for i in idx_by_arr_asc:
+        if _count("critical") >= n_critical:
+            break
+        if classification[i] is None:
+            classification[i] = "critical"
+    for i in idx_by_arr_desc:
+        if _count("healthy") >= n_healthy:
+            break
+        if classification[i] is None:
+            classification[i] = "healthy"
+    for i in range(n):
+        if classification[i] is None:
             classification[i] = "at_risk"
 
     accounts = []
@@ -214,10 +250,14 @@ def _build_segment_accounts(rng: random.Random, seg_key: str, seg: Dict[str, Any
         elif role == "expand":
             event, delta, arc = "expand", delta_for[i], rng.choice(arcs["expand"])
             traj, decline = ("improving" if rng.random() < 0.5 else "stable"), None
-        else:  # stable
+        elif cls == "healthy":  # stable + healthy — a flat renewal
             event, delta, arc = "renew", 0, rng.choice(arcs["renew_stable"])
-            traj = "stable" if cls == "healthy" else ("declining" if rng.random() < 0.4 else "stable")
-            decline = rng.randint(max(4, months // 2), months - 1) if traj == "declining" else None
+            traj, decline = "stable", None
+        else:  # stable but critical / at-risk — leading-signal account, no event yet
+            event, delta = "renew", 0
+            arc = rng.choice(arcs["churn"] if cls == "critical" else arcs["contract"])
+            traj = "declining"
+            decline = rng.randint(max(4, months // 2), months - 1)
 
         name = f"{_NAME_A[i % len(_NAME_A)]} {rng.choice(_NAME_B)}"
         accounts.append({
@@ -228,7 +268,7 @@ def _build_segment_accounts(rng: random.Random, seg_key: str, seg: Dict[str, Any
             "story_arc": arc,
             "partner_tier": "direct",
             "renewal_date": rng.choice(["2026-09-30", "2026-12-31", "2027-03-31", "2027-06-30"]),
-            "narrative": _narrative(role, arc),
+            "narrative": _narrative(role, arc, cls),
             "kpi_trajectory": traj,
             "decline_start_month": decline,
             "industry": rng.choice(_INDUSTRIES),
@@ -243,8 +283,12 @@ def _build_segment_accounts(rng: random.Random, seg_key: str, seg: Dict[str, Any
     return accounts
 
 
-def _narrative(role: str, arc: str) -> str:
+def _narrative(role: str, arc: str, cls: str = "healthy") -> str:
     a = arc.replace("_", " ")
+    if role == "stable" and cls == "critical":
+        return f"Critical health, not yet churned ({a}); leading-signal risk, no event this period"
+    if role == "stable" and cls == "at_risk":
+        return f"At-risk drift ({a}); softening signals, no lifecycle event yet"
     return {
         "expand": f"Expansion motion ({a}); healthy adoption, upsell landed",
         "contract": f"Downsell pressure ({a}); partial contraction at renewal",
