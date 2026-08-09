@@ -287,7 +287,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
 
   // Playbook start modal + Email draft modal
   const [playbookModal, setPlaybookModal] = useState<{ playbook: any; account: any } | null>(null);
-  const [emailDraftAccount, setEmailDraftAccount] = useState<{ id: number; name: string; health: number } | null>(null);
+  const [emailDraftAccount, setEmailDraftAccount] = useState<{ id: number; name: string; health: number; template?: string } | null>(null);
 
   // CSM filter
   const [csmFilter, setCsmFilter] = useState<string>('');
@@ -404,7 +404,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
     try {
       const [detailRes, healthRes, recsRes] = await Promise.allSettled([
         fetch(`/api/v1/accounts/${accountId}`, { headers }),
-        fetch(`/api/v1/health-score/${accountId}`, { headers }),
+        fetch(`/api/v1/health-scores/${accountId}`, { headers }),
         fetch(`/api/v1/recommendations/${accountId}`, { headers }),
       ]);
 
@@ -1022,7 +1022,10 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
                       <Mail className="w-3.5 h-3.5 text-gray-400" />
                       Draft Email
                     </button>
-                    <button className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => setEmailDraftAccount({ id: action.account_id, name: action.account_name, health: healthScore, template: 'qbr_prep' })}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
                       <Phone className="w-3.5 h-3.5 text-gray-400" />
                       Schedule QBR
                     </button>
@@ -1424,6 +1427,7 @@ const CSMFocusFlow: React.FC<CSMFocusFlowProps> = ({ notifications = [], unreadC
           accountName={emailDraftAccount.name}
           healthScore={emailDraftAccount.health}
           customerId={customerId}
+          initialTemplate={emailDraftAccount.template}
           onClose={() => setEmailDraftAccount(null)}
         />
       )}

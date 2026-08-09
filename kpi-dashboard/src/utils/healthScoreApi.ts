@@ -84,7 +84,7 @@ export const getAccountHealthScore = async (accountId: number | string): Promise
   const headers: Record<string, string> = customerId ? { 'X-Customer-ID': customerId } : {};
 
   // Fetch pillar breakdown from DC2S health-score endpoint
-  const healthResp = await apiCall(`/api/v1/health-score/${accountId}`, { method: 'GET', headers });
+  const healthResp = await apiCall(`/api/v1/health-scores/${accountId}`, { method: 'GET', headers });
 
   // Fetch trends for trend delta calculation
   const trendsResp = await apiCall(`/api/health-trends?account_id=${accountId}`, { method: 'GET', headers });
