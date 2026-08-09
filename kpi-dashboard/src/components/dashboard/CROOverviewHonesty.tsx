@@ -95,9 +95,11 @@ export const CROMetricGuideBanner: React.FC = () => {
             not the same as confirmed graph $.
           </li>
           <li>
-            <span className="text-gray-300">NRR %</span> — pick the lens: Predictor v3 forward
-            (“Forecast NRR — Next 12mo”, same as CFO), Wizard B counterfactual (“Realized NRR — TTM”),
-            or historical outcomes (Row A on CFO). They are not interchangeable.
+            <span className="text-gray-300">NRR %</span> — two horizons, not interchangeable:
+            <span className="text-gray-300"> Foresight</span> (Predictor v3 forward — “Foresight NRR — Next 12mo”,
+            same as CFO) predicts where live accounts are heading;
+            <span className="text-gray-300"> Hindsight</span> (Wizard B counterfactual — “Hindsight NRR — TTM”)
+            shows what CS Pulse would/did protect on realized outcomes. Plus historical outcomes (Row A on CFO).
           </li>
           <li>
             <span className="text-gray-300">T+30/60/90 trajectory</span> — short-horizon health-trend
@@ -115,7 +117,7 @@ export const CROMetricGuideBanner: React.FC = () => {
       )}
       {collapsed && (
         <p className="text-[9px] text-gray-500 mt-1">
-          Confirmed graph $ ≠ ARR exposure · Forecast NRR = Predictor v3 (matches CFO) · expand for definitions
+          Confirmed graph $ ≠ ARR exposure · Foresight NRR = Predictor v3 forward · Hindsight NRR = Wizard B counterfactual (backward) · expand for definitions
         </p>
       )}
     </div>
