@@ -1,0 +1,51 @@
+# ILLUSTRATIVE SAMPLE — real public companies, ROUNDED public-domain approximate
+# figures (annual revenue USD, headcount). Replace with a licensed Cybersyn /
+# People Data Labs / Crunchbase export using the SAME columns. Verify the source
+# licence permits demo/redistribution use before shipping in a deck.
+# Revenue is written in shorthand (B=billion, M=million); the adapter parses it.
+company_name,industry,region,employee_count,revenue
+Salesforce,SaaS,US,73000,34.9B
+Adobe,MarTech,US,29000,21.5B
+ServiceNow,SaaS,US,26000,9.8B
+Workday,SaaS,US,19000,7.9B
+Atlassian,DevTools,APAC,12000,4.4B
+Datadog,SaaS,US,7000,2.7B
+Snowflake,Data,US,7000,2.8B
+HubSpot,MarTech,US,8000,2.5B
+Zoom,SaaS,US,7400,4.5B
+Twilio,SaaS,US,5900,4.2B
+Okta,Cybersecurity,US,6000,2.3B
+DocuSign,SaaS,US,7300,2.8B
+Cloudflare,Cybersecurity,US,3700,1.7B
+MongoDB,Data,US,4600,1.9B
+GitLab,DevTools,US,2100,580M
+Confluent,Data,US,2900,860M
+Elastic,DevTools,EU,3400,1.3B
+Asana,SaaS,US,1800,650M
+Monday.com,SaaS,EU,1900,730M
+Zendesk,SaaS,US,6400,1.7B
+Dropbox,SaaS,US,2700,2.5B
+Box,SaaS,US,2700,1.0B
+HashiCorp,DevTools,US,2400,580M
+Freshworks,SaaS,APAC,5000,600M
+Smartsheet,SaaS,US,3400,960M
+Braze,MarTech,US,1600,500M
+Amplitude,SaaS,US,800,290M
+Sprout Social,MarTech,US,1300,380M
+PagerDuty,DevTools,US,1200,430M
+DigitalOcean,SaaS,US,1200,700M
+BigCommerce,E-commerce,US,1300,330M
+Squarespace,E-commerce,US,1800,1.0B
+Wix,E-commerce,EU,5500,1.6B
+Fastly,DevTools,US,1100,570M
+Yext,MarTech,US,1000,400M
+Olo,FoodTech,US,850,230M
+JFrog,DevTools,EU,1500,430M
+SentinelOne,Cybersecurity,US,2200,620M
+Toast,FinTech,US,4900,3.9B
+Bill.com,FinTech,US,2500,1.2B
+Paylocity,SaaS,US,5000,1.4B
+Paycom,SaaS,US,6800,1.7B
+Coupa,SaaS,US,3400,970M
+Blackbaud,SaaS,US,3000,1.1B
+Q2 Holdings,FinTech,US,2400,650M

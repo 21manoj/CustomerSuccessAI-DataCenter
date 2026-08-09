@@ -1,0 +1,95 @@
+{
+  "_description": "Published 2026 B2B SaaS retention benchmarks used to CALIBRATE the synthetic load-driver so generated books are statistically defensible ('our SMB cohort runs 97% NRR, matching ChartMogul') even though the rows are generated. This anchors the SYNTHETIC BEHAVIOR layer (health, lifecycle events, NRR/churn) to real-world distributions. It does NOT make any single account's outcome/counterfactual real — that layer (what CS Pulse 'would have saved') is inherently model-generated and is NOT sourced here. See README_real_data.md.",
+  "_version": "1.0",
+  "_created": "2026-08-09",
+  "_honest_claim": "Real-anchored hybrid. Defensible: 'behavior calibrated to 2026 SaaS benchmarks'. NOT defensible: 'real customer outcome data'.",
+  "_nrr_identity": "For each segment: nrr_median == 1 + expansion_rate - contraction_rate - gross_revenue_churn_annual (revenue-weighted, annual). The generator reproduces this in aggregate via discrete per-account lifecycle events.",
+
+  "sources": [
+    {
+      "id": "optifai_2026",
+      "label": "Optifai Pipeline Study 2026 (N=939 B2B SaaS, cross-referenced vs public 10-Ks + ChartMogul N=2,100)",
+      "url": "https://optif.ai/learn/questions/b2b-saas-net-revenue-retention-benchmark/",
+      "used_for": ["nrr_median by segment"]
+    },
+    {
+      "id": "digitalapplied_2026",
+      "label": "Net Revenue Retention Benchmarks 2026 (SaaS expansion data)",
+      "url": "https://www.digitalapplied.com/blog/net-revenue-retention-benchmarks-2026-saas-expansion-data",
+      "used_for": ["nrr_median", "expansion_rate"]
+    },
+    {
+      "id": "artisan_2026",
+      "label": "SaaS Churn Rate Benchmarks 2026 (500+ companies; ~3.5% monthly median blended, higher for SMB)",
+      "url": "https://www.artisangrowthstrategies.com/blog/saas-churn-rate-benchmarks-2026-500-companies",
+      "used_for": ["gross_revenue_churn_annual", "logo_churn_annual"]
+    }
+  ],
+
+  "portfolio_defaults": {
+    "_note": "Default share of ACCOUNTS by segment for a typical B2B book (skews mid-market). The generator re-weights NRR by ARR, so enterprise/mid dominate the blended portfolio NRR.",
+    "segment_account_mix": {
+      "enterprise": 0.20,
+      "mid_market": 0.45,
+      "smb": 0.35
+    },
+    "blended_nrr_expected": 1.09,
+    "blended_nrr_expected_note": "ARR-weighted blended NRR for the default mix + segment ARR bands below; recomputed exactly by the generator per generated book."
+  },
+
+  "segments": {
+    "enterprise": {
+      "label": "Enterprise (ACV >= $100K)",
+      "acv_min": 100000,
+      "acv_max": null,
+      "arr_band": { "min": 1200000, "max": 25000000 },
+      "nrr_median": 1.18,
+      "expansion_rate": 0.27,
+      "contraction_rate": 0.04,
+      "gross_revenue_churn_annual": 0.05,
+      "logo_churn_annual": 0.06,
+      "health_distribution": { "healthy": 0.72, "at_risk": 0.20, "critical": 0.08 },
+      "source_ids": ["optifai_2026", "digitalapplied_2026", "artisan_2026"]
+    },
+    "mid_market": {
+      "label": "Mid-market (ACV $25K-$100K)",
+      "acv_min": 25000,
+      "acv_max": 100000,
+      "arr_band": { "min": 300000, "max": 3000000 },
+      "nrr_median": 1.08,
+      "expansion_rate": 0.22,
+      "contraction_rate": 0.05,
+      "gross_revenue_churn_annual": 0.09,
+      "logo_churn_annual": 0.11,
+      "health_distribution": { "healthy": 0.62, "at_risk": 0.24, "critical": 0.14 },
+      "source_ids": ["optifai_2026", "digitalapplied_2026", "artisan_2026"]
+    },
+    "smb": {
+      "label": "SMB (ACV < $25K)",
+      "acv_min": 0,
+      "acv_max": 25000,
+      "arr_band": { "min": 40000, "max": 400000 },
+      "nrr_median": 0.97,
+      "expansion_rate": 0.17,
+      "contraction_rate": 0.06,
+      "gross_revenue_churn_annual": 0.14,
+      "logo_churn_annual": 0.18,
+      "health_distribution": { "healthy": 0.55, "at_risk": 0.27, "critical": 0.18 },
+      "source_ids": ["optifai_2026", "digitalapplied_2026", "artisan_2026"]
+    }
+  },
+
+  "lifecycle_magnitudes": {
+    "_note": "Per-event delta_pct ranges the generator samples from, then scales so each segment's aggregate expansion/contraction $ hits the rate above.",
+    "expand_delta_pct": { "min": 8, "max": 35 },
+    "contract_delta_pct": { "min": 12, "max": 32 }
+  },
+
+  "story_arc_by_role": {
+    "_note": "Maps a generated account's calibrated ROLE to a real story_arc vocabulary value (verified against existing SaaS manifests). Used for narrative realism; does not affect NRR arithmetic.",
+    "expand": ["expansion_champion", "land_and_expand", "proactive_growth", "seasonal_surge"],
+    "renew_stable": ["steady_performer", "steady_state", "stable"],
+    "contract": ["budget_pressure", "competitive_displacement", "engagement_decline", "stalled_deployment"],
+    "churn": ["silent_churn", "champion_loss", "competitive_displacement", "infrastructure_decay"]
+  }
+}
