@@ -1240,8 +1240,10 @@ const CFOMetricGuideBanner: React.FC = () => {
       {!collapsed && (
         <ul className="mt-2 space-y-1.5 text-[10px] text-gray-400 list-disc list-inside leading-relaxed">
           <li>
-            <span className="text-gray-300">NRR %</span> — pick the lens: historical outcomes (Row A), Wizard B counterfactual
-            (“Realized NRR — TTM”), or Predictor v3 forward (“Forecast NRR — Next 12mo”). They are not interchangeable.
+            <span className="text-gray-300">NRR %</span> — pick the lens: historical outcomes (Row A),
+            <span className="text-gray-300"> Hindsight</span> (Wizard B counterfactual — “Hindsight NRR — TTM”, backward
+            “would-CS-Pulse-have-helped”), or <span className="text-gray-300">Foresight</span> (Predictor v3 forward —
+            “Foresight NRR — Next 12mo”). They are not interchangeable.
           </li>
           <li>
             <span className="text-gray-300">Attributed revenue (playbooks)</span> — bottom-up from closed{' '}
@@ -1808,7 +1810,7 @@ const PastThreeLensesSection: React.FC<{
           subtitle="Audit-traceable proof, populated as playbooks fire on at-risk accounts."
           cards={[]}
           emptyState
-          emptyStateMessage={`CS Pulse hasn't attributed closed-playbook revenue yet. ${expectedProofHint(d.customer_phase)} See Forecast NRR and the context-graph strip for what's protectable today.`}
+          emptyStateMessage={`CS Pulse hasn't attributed closed-playbook revenue yet. ${expectedProofHint(d.customer_phase)} See Foresight NRR and the context-graph strip for what's protectable today.`}
         />
       )}
 
@@ -2013,8 +2015,8 @@ const CFODashboard: React.FC = () => {
             : 'active';
 
           // Build anchor row. Two configurations:
-          //  - With Predictor v3 data: 4 tiles incl. "Forecast NRR — Next 12mo"
-          //    next to the existing "Realized NRR — TTM" / Revenue Protected pair
+          //  - With Predictor v3 data: 4 tiles incl. "Foresight NRR — Next 12mo"
+          //    next to the existing "Hindsight NRR — TTM" / Revenue Protected pair
           //  - Without v3 data: legacy 4 tiles (Total ARR / CS Spend / Protected / ROI)
           // Labels follow the marketing/cfo_dashboard_relabel_mock.html vocabulary:
           // Realized = backward, Forecast = forward.
@@ -2037,11 +2039,11 @@ const CFODashboard: React.FC = () => {
                 source: 'csPulseProof',
               },
               {
-                label: 'Realized NRR — TTM',
+                label: 'Hindsight NRR — TTM (Counterfactual)',
                 value: `${wb.with_cs_pulse_nrr_pct ?? '—'}%`,
-                subtitle: `Counterfactual (Wizard B) · +${wb.delta_pct || 0}pp from CS Pulse`,
+                subtitle: `Hindsight · Counterfactual (Wizard B) · +${wb.delta_pct || 0}pp from CS Pulse`,
                 accent: 'green',
-                tooltip: `Backward-looking counterfactual NRR from Wizard B. With CS Pulse: ${wb.with_cs_pulse_nrr_pct}%. Without: ${wb.without_cs_pulse_nrr_pct}%. Delta = +${wb.delta_pct}pp. Includes all ${json.account_count || '—'} accounts (incl. churned) in denominator. Differs from "Forecast NRR" — that's forward, this is backward.`,
+                tooltip: `Hindsight lens — backward-looking counterfactual NRR from Wizard B ("would-CS-Pulse-have-helped"). With CS Pulse: ${wb.with_cs_pulse_nrr_pct}%. Without: ${wb.without_cs_pulse_nrr_pct}%. Delta = +${wb.delta_pct}pp. Includes all ${json.account_count || '—'} accounts (incl. churned) in denominator. Differs from "Foresight NRR" — that's forward, this is backward.`,
                 source: 'wizardB',
               },
               {
@@ -2055,11 +2057,11 @@ const CFODashboard: React.FC = () => {
                 // this card's value for a <ForecastWithCI> render. Until then
                 // we leave the point-only display and direct curious users to
                 // the per-account view via the tooltip below.
-                label: 'Forecast NRR — Next 12mo',
+                label: 'Foresight NRR — Next 12mo (Predictive)',
                 value: `${v3?.arr_weighted_nrr_pct ?? '—'}%`,
-                subtitle: `Forward point (Predictor v3) · ARR-weighted · ${v3?.active_account_count || 0} active`,
+                subtitle: `Foresight · Forward point (Predictor v3) · ARR-weighted · ${v3?.active_account_count || 0} active`,
                 accent: 'cyan',
-                tooltip: `Forward 12-month point forecast from Predictor v3 (calibrated by Wizard D ${v3?.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3?.active_account_count || 0} currently-active accounts; excludes $0-ARR (typically churned) from the weight. Simple-avg: ${v3?.simple_avg_nrr_pct}%. Portfolio CI is aggregated; see the Per-Account NRR Forecast table below for per-account 90% CI bounds. Differs from "Realized NRR" — that's backward counterfactual.`,
+                tooltip: `Foresight lens — forward 12-month point forecast from Predictor v3 (calibrated by Wizard D ${v3?.last_calibration_at ? new Date(v3.last_calibration_at).toLocaleDateString() : '?'}). ARR-weighted across ${v3?.active_account_count || 0} currently-active accounts; excludes $0-ARR (typically churned) from the weight. Simple-avg: ${v3?.simple_avg_nrr_pct}%. Portfolio CI is aggregated; see the Per-Account NRR Forecast table below for per-account 90% CI bounds. Differs from "Hindsight NRR" — that's backward counterfactual.`,
                 source: 'predictorV3',
               },
             ] : hasProof ? [
@@ -2424,7 +2426,7 @@ const CFODashboard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-amber-400" />
                     <h3 className="text-[10px] font-semibold text-white uppercase tracking-wide">
-                      Realized NRR &middot; TTM
+                      Hindsight NRR &middot; TTM
                       <span className="text-gray-500 normal-case font-normal ml-1">(pending)</span>
                     </h3>
                   </div>
@@ -2432,7 +2434,7 @@ const CFODashboard: React.FC = () => {
                 </div>
                 <div className="flex items-end gap-4 mb-3">
                   <div>
-                    <p className="text-[9px] text-gray-500 mb-0.5">Realized NRR</p>
+                    <p className="text-[9px] text-gray-500 mb-0.5">Hindsight NRR</p>
                     <p className="text-3xl font-bold text-gray-500">—</p>
                   </div>
                   <div className="text-[10px] text-gray-400 pb-1 max-w-xs">
@@ -2458,9 +2460,9 @@ const CFODashboard: React.FC = () => {
                         Without/With dichotomy, different attribution window. */}
                     <h3
                       className="text-[10px] font-semibold text-white uppercase tracking-wide cursor-help"
-                      title="Realized NRR over the trailing 12 months — derived from definitive lifecycle outcomes (churn, contraction, expansion, new logo). For forward 90d projection on at-risk accounts, see CRO Overview · Forward NRR."
+                      title="Hindsight NRR (Wizard B counterfactual) over the trailing 12 months — derived from definitive lifecycle outcomes (churn, contraction, expansion, new logo), backward-looking 'would-CS-Pulse-have-helped'. For forward projection, see the Foresight NRR forecast."
                     >
-                      Realized NRR · TTM
+                      Hindsight NRR · TTM
                       <span className="text-gray-500 normal-case font-normal ml-1">(CS Pulse impact)</span>
                     </h3>
                   </div>

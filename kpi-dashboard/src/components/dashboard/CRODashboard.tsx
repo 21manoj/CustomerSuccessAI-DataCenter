@@ -1827,20 +1827,20 @@ const CRODashboard: React.FC = () => {
             <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-4 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-cyan-500" />
               <div className="flex items-baseline justify-between mb-2">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">NRR Lenses</p>
-                <span className="text-[9px] text-gray-600">matches CFO</span>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">NRR · Dual Horizon</p>
+                <span className="text-[9px] text-gray-600">Foresight + Hindsight · matches CFO</span>
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-[9px] text-gray-500 mb-0.5">Forecast NRR — Next 12mo</p>
+                  <p className="text-[9px] text-gray-500 mb-0.5">Foresight NRR — Next 12mo <span className="text-gray-600">(Predictive)</span></p>
                   <p
                     className={`text-2xl font-bold ${d.forecast_nrr >= 100 ? 'text-cyan-400' : 'text-red-400'}`}
-                    title="Forward 12-month point forecast (Predictor v3, ARR-weighted). Same as CFO tile and metric above."
+                    title="FORESIGHT lens — forward 12-month point forecast (Predictor v3 / Wizard D, ARR-weighted). Leading indicator: where NRR is heading on live accounts. Same as CFO tile."
                   >
                     {d.forecast_nrr.toFixed(1)}%
                   </p>
                   <p className="text-[9px] text-gray-600 mt-0.5">
-                    Predictor v3 · forward · ARR-weighted
+                    Foresight · Predictor v3 (Wizard D) · forward · ARR-weighted
                     {d.predictor_v3_portfolio_nrr?.active_account_count
                       ? ` · ${d.predictor_v3_portfolio_nrr.active_account_count} active accounts`
                       : ''}
@@ -1848,7 +1848,7 @@ const CRODashboard: React.FC = () => {
                 </div>
                 {d.wizard_b_nrr?.with_cs_pulse_nrr_pct != null && (
                   <div className="pt-2 border-t border-gray-700/40">
-                    <p className="text-[9px] text-gray-500 mb-0.5">Realized NRR — TTM</p>
+                    <p className="text-[9px] text-gray-500 mb-0.5">Hindsight NRR — TTM <span className="text-gray-600">(Counterfactual)</span></p>
                     <div className="flex items-end gap-2">
                       <p className={`text-lg font-bold ${(d.wizard_b_nrr.without_cs_pulse_nrr_pct ?? 100) >= 100 ? 'text-gray-400' : 'text-red-400'}`}>
                         {(d.wizard_b_nrr.without_cs_pulse_nrr_pct ?? 100).toFixed(1)}%
@@ -1864,7 +1864,7 @@ const CRODashboard: React.FC = () => {
                       )}
                     </div>
                     <p className="text-[9px] text-gray-600 mt-0.5">
-                      Wizard B counterfactual · backward · without &rarr; with CS Pulse
+                      Hindsight · Wizard B counterfactual · backward · would-CS-Pulse-have-helped (without &rarr; with)
                     </p>
                   </div>
                 )}
