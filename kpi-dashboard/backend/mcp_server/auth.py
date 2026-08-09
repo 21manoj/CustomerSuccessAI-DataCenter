@@ -167,15 +167,15 @@ def extract_api_key() -> Optional[str]:
     key = _current_api_key_var.get('')
     if key:
         return key
-    # Fallback 1: session-scoped cache (for async task propagation)
+    # Fallback 1: session-scoped cache, keyed by THIS request's session id.
+    # Must never fall back to an arbitrary session's key — an identity-blind
+    # lookup would hand a session-less HTTP caller some other tenant's key,
+    # a cross-tenant data exposure. Fail closed instead (return None -> auth
+    # error). See consulting-framework Module 07, Gotcha 5.
     session_id = _current_session_id_var.get('')
     if session_id and session_id in _session_api_keys:
         logger.debug("extract_api_key: found key via session cache (session_id=%s)", session_id[:8])
         return _session_api_keys[session_id]
-    # Fallback 2: check ALL session keys (last resort — only 1 session typically active)
-    if _session_api_keys:
-        logger.debug("extract_api_key: using last session key (sessions=%d)", len(_session_api_keys))
-        return list(_session_api_keys.values())[-1]
     logger.debug("extract_api_key: no key found (contextvar=%r, sessions=%d)", key, len(_session_api_keys))
     # Fallback 3: env vars
     key = os.environ.get("_MCP_CURRENT_API_KEY", "")

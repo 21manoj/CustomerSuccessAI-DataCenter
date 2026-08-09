@@ -175,3 +175,46 @@ def test_require_cross_customer_auth_rejects_customer_keys(http_transport, monke
     # Server key -> allowed
     monkeypatch.setattr(auth, "validate_server_key", lambda k: True)
     auth.require_cross_customer_auth("list_portfolio_customers")  # no raise
+
+
+def test_extract_api_key_no_cross_session_inheritance(http_transport, monkeypatch):
+    """A session-less HTTP caller must NEVER inherit another session's key.
+
+    Regression for the cross-tenant leak found while validating Module 07:
+    extract_api_key() had an identity-blind "last resort" fallback that
+    returned `list(_session_api_keys.values())[-1]` whenever the contextvar
+    and session-id lookups both missed. Once tenant B had authenticated over
+    HTTP, an anonymous/session-less request (no Authorization header, empty
+    session-id contextvar) received tenant B's key — auth passed as B.
+
+    The fix removes that fallback: with no request identity, extract_api_key()
+    must fall through to env vars only, then return None (fail closed).
+    """
+    auth = http_transport
+
+    # Tenant B is authenticated and cached under its own session id.
+    monkeypatch.setattr(auth, "_session_api_keys", {"session-B": "csp_tenant_B"})
+    # This request has NO contextvar key and NO session id (anonymous caller).
+    auth._current_api_key_var.set("")
+    auth._current_session_id_var.set("")
+    # No env-var keys either.
+    monkeypatch.delenv("_MCP_CURRENT_API_KEY", raising=False)
+    monkeypatch.delenv("CS_PULSE_API_KEY", raising=False)
+
+    # Must resolve to no key, NOT tenant B's cached key.
+    assert auth.extract_api_key() is None
+
+    # And get_scoped_customer_id() must not scope this caller to tenant B.
+    # With no key present it returns None (stdio/no-key semantics) rather
+    # than the other tenant's customer_id.
+    monkeypatch.setattr(
+        auth, "validate_customer_key",
+        lambda k: (_ for _ in ()).throw(
+            AssertionError("validate_customer_key called with leaked key: %r" % k)
+        ),
+    )
+    assert auth.get_scoped_customer_id() is None
+
+    # Sanity: the request's OWN session id still resolves correctly.
+    auth._current_session_id_var.set("session-B")
+    assert auth.extract_api_key() == "csp_tenant_B"
