@@ -195,6 +195,14 @@ def _build_system_prompt(persona: str, portfolio_summary: str) -> str:
             "recommendations — rank historical $ impact when executions exist."
             "\n- CRO CAUSAL CHAIN: For causal-chain questions, call get_context_graph_mermaid "
             "or get_account_journey_timeline plus analyze_root_cause; cite signal→outcome order."
+            "\n- CRO WHAT-IF DISCIPLINE: A 'what if we intervene / act on these accounts' answer is a "
+            "FORESIGHT (predictive) estimate — present it as a RANGE with stated confidence, never a bare "
+            "point estimate. Cap upside at the INTERVENTION CEILING in the portfolio summary "
+            "(revenue at risk + expansion pipeline); a projection above it is wrong. Compute ROI against the "
+            "actual intervention cost; if the implied return exceeds 10x, call it an unvalidated upper bound, "
+            "not a forecast. When you cite a with-vs-without-intervention NRR delta, reconcile it to the "
+            "dashboard lens you are using (Foresight = Predictor v3, or Hindsight = Wizard B counterfactual) "
+            "and name that lens — do not produce a third, unlabeled NRR path."
         )
 
     return f"""You are the AI assistant for CS Pulse, a Customer Success Revenue Intelligence platform.
@@ -348,7 +356,11 @@ def _build_portfolio_summary(customer_id: int) -> str:
             for a in top_accounts
         )
 
-        # Derive NRR from health (same formula as CRO dashboard)
+        # Rough health-derived NRR PROXY. This is a fallback only — the
+        # authoritative NRR comes from the two dashboard lenses (Foresight =
+        # Predictor v3 forward; Hindsight = Wizard B counterfactual). Presenting
+        # this proxy as "the" NRR is what made Ask AI's number diverge from the
+        # dashboard, so it is explicitly labeled a proxy below.
         if avg_health >= 70:
             nrr = round(100 + (avg_health - 70) * 0.33)
         elif avg_health >= 40:
@@ -376,9 +388,15 @@ def _build_portfolio_summary(customer_id: int) -> str:
             if health_map.get(aid, 100) < ht.at_risk_min()
         )
 
+        # Deterministic ceiling for any what-if / intervention projection.
+        # You cannot protect more than what is at risk, nor capture more than
+        # the identified expansion pipeline — so upside is hard-bounded by these.
+        max_protectable = rev_at_risk
+        max_upside = rev_at_risk + rev_expansion
+
         return f"""Accounts: {len(accounts)} | Total ARR: ${total_arr:,.0f}
 Health: {healthy} healthy, {at_risk} at-risk, {critical} critical | Avg: {avg_health}
-NRR Projection: {nrr}% (derived from portfolio health score — this is the authoritative NRR number)
+NRR (health proxy): {nrr}% — ROUGH PROXY ONLY, not authoritative. For the real NRR cite the two dashboard lenses and NAME the lens: Foresight (Predictor v3, forward 12mo) or Hindsight (Wizard B counterfactual, TTM). Never present this proxy as the NRR or blend it with the lenses.
 Top accounts by ARR: {top_str}
 Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()})
 
@@ -388,8 +406,18 @@ REVENUE INTELLIGENCE (from Context Graph — same source as CRO dashboard):
   Expansion Pipeline: ${rev_expansion:,.0f} (identified opportunities)
   Critical Accounts ARR: ${critical_arr:,.0f} (total ARR of critical accounts — NOT the same as revenue at risk)
 
+INTERVENTION CEILING (hard bounds for any "what if we intervene / act on these accounts" projection):
+  Max revenue protectable = ${max_protectable:,.0f} (cannot protect more than what is at risk)
+  Max total upside incl. expansion = ${max_upside:,.0f}
+  Any projected recovered/protected $ MUST be <= these ceilings. Compute ROI against the ACTUAL
+  intervention cost and present it as a RANGE labeled Foresight (predictive, not realized). If the
+  implied return exceeds 10x, present it as an unvalidated upper bound and say so — never as a forecast.
+  Never imply a hundreds-of-x return from a small spend.
+
 CRITICAL RULES:
-- NRR baseline is {nrr}% (health-derived), NOT 105% (benchmark). Always use {nrr}% when discussing current NRR.
+- NRR: {nrr}% is a HEALTH PROXY, not authoritative and NOT a benchmark (never invent 105%). When asked
+  the NRR, cite the Foresight and/or Hindsight lens by name; use the proxy only if no lens is available, labeled as such.
+- What-if upside is bounded by the INTERVENTION CEILING above — a projection exceeding ${max_upside:,.0f} is wrong by construction.
 - "Revenue at risk" means ${rev_at_risk:,.0f} from context graph, NOT ${critical_arr:,.0f} (total ARR of critical accounts).
   Revenue at risk is the ASSESSED risk based on causal evidence chains, not the full ARR of unhealthy accounts.
 - NEVER equate "critical account ARR" with "revenue at risk" — they are fundamentally different metrics."""
