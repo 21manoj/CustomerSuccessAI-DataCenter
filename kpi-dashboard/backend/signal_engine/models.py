@@ -131,6 +131,31 @@ def ensure_enrichment_columns(engine):
         conn.commit()
 
 
+# Leading-vs-trailing early-warning columns on health_scores. The qual (leading)
+# score and its divergence from the KPI (trailing) score are surfaced as their own
+# fields — a leading indicator's value is the GAP, not a blended composite.
+DIVERGENCE_COLUMNS = {
+    'qual_score': "NUMERIC(5,2)",       # leading — qual signal score (0-100)
+    'divergence': "NUMERIC(5,2)",       # leading - trailing (signed)
+    'early_warning': "VARCHAR(24)",     # early_warning | recovery_watch | aligned
+}
+
+
+def ensure_divergence_columns(engine):
+    """Add leading/divergence/early_warning columns to health_scores (idempotent)."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        for col_name, col_type in DIVERGENCE_COLUMNS.items():
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE health_scores "
+                    f"ADD COLUMN IF NOT EXISTS {col_name} {col_type}"
+                ))
+            except Exception:
+                pass  # Column may already exist
+        conn.commit()
+
+
 def ensure_alert_records_table(engine):
     """Create alert_records table if it doesn't exist (idempotent)."""
     from sqlalchemy import text

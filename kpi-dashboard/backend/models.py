@@ -1339,6 +1339,14 @@ class HealthScore(db.Model):
     # composite_score populated only when FEATURE_UNIFIED_SCORING is enabled (future)
     composite_score = db.Column(db.Numeric(5, 2))   # signal-blended composite (future Signal-DNA)
 
+    # Leading (qualitative) score + the divergence from trailing (kpi_only). These
+    # are the surfaced early-warning artifacts — a leading indicator's value is in
+    # its GAP from the KPIs, not in a blend that averages the gap away. Populated by
+    # the QSIM fusion step (signal_engine worker) when FEATURE_SIGNAL_ENGINE=true.
+    qual_score = db.Column(db.Numeric(5, 2))        # LEADING — qual signal score (0-100)
+    divergence = db.Column(db.Numeric(5, 2))        # leading - trailing (signed)
+    early_warning = db.Column(db.String(24))        # 'early_warning' | 'recovery_watch' | 'aligned'
+
     # Contributing Pillars (for transparency)
     contributing_pillars = db.Column(db.JSON)  # {"P1": 80, "P2": 92, "P3": 85, "P4": 90, "P5": 88}
     pillar_weights = db.Column(db.JSON)        # {"P1": 0.15, "P2": 0.20, "P3": 0.25, "P4": 0.15, "P5": 0.25}
@@ -1363,6 +1371,10 @@ class HealthScore(db.Model):
                 float(self.health_score) if self.health_score else None
             ),
             'composite_score': float(self.composite_score) if self.composite_score else None,
+            # Leading-vs-trailing early-warning artifacts (surfaced, not blended away).
+            'qual_score': float(self.qual_score) if self.qual_score is not None else None,
+            'divergence': float(self.divergence) if self.divergence is not None else None,
+            'early_warning': self.early_warning,
             'health_status': self.health_status,
             'trend': self.trend,
             'change_from_last_month': float(self.change_from_last_month) if self.change_from_last_month else None,

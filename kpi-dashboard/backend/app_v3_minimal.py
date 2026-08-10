@@ -1449,10 +1449,14 @@ try:
 
         # Run idempotent schema migration for enrichment columns
         try:
-            from signal_engine.models import ensure_enrichment_columns, ensure_alert_records_table
+            from signal_engine.models import (
+                ensure_enrichment_columns, ensure_alert_records_table,
+                ensure_divergence_columns,
+            )
             with app.app_context():
                 ensure_enrichment_columns(db.engine)
                 ensure_alert_records_table(db.engine)
+                ensure_divergence_columns(db.engine)
             print("   Signal Engine DB schema ensured")
         except Exception as _e:
             print(f"   ⚠️  Signal Engine DB migration skipped: {_e}")

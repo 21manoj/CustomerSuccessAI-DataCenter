@@ -31,6 +31,9 @@ logger = logging.getLogger(__name__)
 POLL_INTERVAL_SECONDS = 30
 BATCH_SIZE = 10
 MAX_CONSECUTIVE_ERRORS = 5
+# Leading-vs-trailing divergence (points) at which we flag an early warning /
+# recovery-watch rather than "aligned". Leading below trailing by this much = warning.
+EARLY_WARNING_THRESHOLD = 8.0
 
 
 # Module-level event for immediate wake from ingest_api
@@ -253,16 +256,34 @@ class SignalEnrichmentWorker:
             pass
 
         fr = fuse_scores(quant, components, account_id, vertical)
-        hs.kpi_only_score = round(quant, 2)
-        hs.composite_score = fr.composite_score
+
+        # Surface the GAP, don't blend it away. A leading indicator's value is its
+        # divergence from the trailing KPIs — leading-below-trailing is an early
+        # warning; leading-above is possible recovery (watch for false dawns). The
+        # blended composite is kept only as an optional convenience, never the
+        # headline (it averages the divergence to near-zero and hides the signal).
+        leading = fr.qual_score
+        divergence = round(leading - quant, 2)
+        if divergence <= -EARLY_WARNING_THRESHOLD:
+            verdict = 'early_warning'
+        elif divergence >= EARLY_WARNING_THRESHOLD:
+            verdict = 'recovery_watch'
+        else:
+            verdict = 'aligned'
+
+        hs.kpi_only_score = round(quant, 2)     # trailing
+        hs.qual_score = round(leading, 2)       # leading
+        hs.divergence = divergence              # leading - trailing (the signal)
+        hs.early_warning = verdict
+        hs.composite_score = fr.composite_score  # optional convenience only
         db.session.add(hs)
         db.session.commit()
 
         logger.info(
-            "QSIM fusion: account=%s quant=%.1f qual=%.1f ramp=%.2f qual_weight=%.3f "
-            "composite=%.1f (from %d signals)",
-            account_id, quant, fr.qual_score, fr.cold_start_ramp, fr.qual_weight,
-            fr.composite_score, len(sigs),
+            "QSIM divergence: account=%s trailing=%.1f leading=%.1f divergence=%+.1f "
+            "verdict=%s (blend=%.1f, ramp=%.2f, %d signals)",
+            account_id, quant, leading, divergence, verdict,
+            fr.composite_score, fr.cold_start_ramp, len(sigs),
         )
 
     def _enrich_one(self, sig, db) -> int:
