@@ -159,9 +159,13 @@ class SignalEnrichmentWorker:
         logger.info("Signal enrichment worker: processing %d un-enriched signals", len(signals))
 
         enriched_count = 0
+        enriched_accounts = set()
         for i, sig in enumerate(signals):
             try:
-                enriched_count += self._enrich_one(sig, db)
+                did = self._enrich_one(sig, db)
+                enriched_count += did
+                if did:
+                    enriched_accounts.add(sig.account_id)
             except Exception as e:
                 logger.warning(
                     "Signal enrichment failed for %s: %s",
@@ -178,7 +182,88 @@ class SignalEnrichmentWorker:
         if enriched_count:
             logger.info("Signal enrichment worker: enriched %d/%d signals", enriched_count, len(signals))
 
+        # Step 6: Fusion — fold the qualitative signals into the composite health
+        # score for each account that received new signals. This is the sense->score
+        # coupling: without it, enriched signals sit in the graph but never move the
+        # number (the LEADING layer stays decorative). Cold-start ramp inside
+        # fuse_scores keeps this safe on newly-QSIM-enabled accounts.
+        for aid in enriched_accounts:
+            try:
+                self._apply_fusion(aid, db)
+            except Exception as e:
+                logger.warning("QSIM fusion failed for account %s: %s", aid, e)
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+
         return enriched_count
+
+    def _apply_fusion(self, account_id: int, db) -> None:
+        """Fold enriched qualitative signals into the account's composite_score.
+
+        Reads the latest quantitative health, aggregates the qual components across
+        the account's enriched QSIM signals, calls fuse_scores() (which applies the
+        cold-start ramp), and writes composite_score + kpi_only_score back onto the
+        latest health_scores row. Idempotent — safe to re-run.
+        """
+        from signal_engine.fusion import fuse_scores, QualScoreComponents
+        from models import HealthScore, QualitativeSignal, Account
+
+        hs = (
+            HealthScore.query
+            .filter_by(account_id=account_id)
+            .order_by(HealthScore.measurement_month.desc())
+            .first()
+        )
+        if not hs or hs.health_score is None:
+            return
+        quant = float(hs.health_score)
+
+        sigs = (
+            QualitativeSignal.query
+            .filter(
+                QualitativeSignal.account_id == account_id,
+                QualitativeSignal.source_type.isnot(None),
+                QualitativeSignal.intent_signals.isnot(None),
+            )
+            .all()
+        )
+        if not sigs:
+            return
+
+        def _avg(attr, default):
+            vals = [getattr(s, attr) for s in sigs if getattr(s, attr) is not None]
+            return sum(float(v) for v in vals) / len(vals) if vals else default
+
+        components = QualScoreComponents(
+            relationship_sentiment=_avg('relationship_sentiment', 0.0),
+            product_sentiment=_avg('product_sentiment', 0.0),
+            urgency_score=_avg('urgency_score', 0.5),
+            escalation_probability=_avg('escalation_probability', 0.0),
+        )
+
+        vertical = 'dc2_s'
+        try:
+            from utils.vertical_registry import get_vertical_for_customer
+            acct = db.session.get(Account, account_id)
+            if acct:
+                vertical = get_vertical_for_customer(acct.customer_id)
+        except Exception:
+            pass
+
+        fr = fuse_scores(quant, components, account_id, vertical)
+        hs.kpi_only_score = round(quant, 2)
+        hs.composite_score = fr.composite_score
+        db.session.add(hs)
+        db.session.commit()
+
+        logger.info(
+            "QSIM fusion: account=%s quant=%.1f qual=%.1f ramp=%.2f qual_weight=%.3f "
+            "composite=%.1f (from %d signals)",
+            account_id, quant, fr.qual_score, fr.cold_start_ramp, fr.qual_weight,
+            fr.composite_score, len(sigs),
+        )
 
     def _enrich_one(self, sig, db) -> int:
         """Enrich a single signal. Returns 1 if enriched, 0 if skipped."""
