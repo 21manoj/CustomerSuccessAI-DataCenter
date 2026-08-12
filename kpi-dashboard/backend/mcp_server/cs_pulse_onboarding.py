@@ -2146,6 +2146,19 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             steps_completed.append(_roi_step)
         _step_timings['roi_engine'] = round(_time.time() - _t_stage, 2)
 
+        # Stage 6a: Seed approval queue from vertical-aware playbook recommendations
+        # (config-playbook verticals only: dc2_s, datacenter_v1). Non-fatal, idempotent.
+        _t_stage = _time.time()
+        try:
+            from playbook_recommendations_api import seed_approval_queue_from_recommendations
+            _seed = seed_approval_queue_from_recommendations(customer_id)
+            if _seed.get('seeded'):
+                steps_completed.append(f"approval_seed_{_seed['seeded']}")
+            logger.info(f"Approval-queue seed for customer {customer_id}: {_seed}")
+        except Exception as _e:
+            logger.warning(f"Approval-queue seed failed (non-fatal): {_e}")
+        _step_timings['approval_seed'] = round(_time.time() - _t_stage, 2)
+
         # Stage 7: QDRANT indexing
         _t_stage = _time.time()
         _qdrant_step = run_qdrant_indexing(customer_id)

@@ -1919,6 +1919,7 @@ const CFODashboard: React.FC = () => {
           // Vertical-aware pillar short names
           const _PILLAR_SHORT: Record<string, Record<string, string>> = {
             dc2_s: { P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand' },
+            datacenter_v1: { P1: 'Revenue', P2: 'Util', P3: 'Reliab', P4: 'Power', P5: 'Commercial', P6: 'Provision' },
             saas_premium: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
             saas: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
           };

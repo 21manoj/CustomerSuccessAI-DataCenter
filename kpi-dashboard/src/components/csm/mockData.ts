@@ -63,7 +63,7 @@ export const MOCK_APPROVALS = [
 export const MOCK_ACCOUNT_DETAIL = {
   1001: {
     account_id: 1001, account_name: 'Matterhorn AI Labs', health_score: 38, trend: -5,
-    pillar_scores: { P1: 52, P2: 35, P3: 28, P4: 45, P5: 30 },
+    pillar_scores: { P1: 52, P2: 35, P3: 28, P4: 45, P5: 30, P6: 30 },
     champion: { name: 'Position Vacant', title: 'VP Engineering (departed)', last_contact_days: 35 },
     contract: { arr: 4200000, renewal_date: '2026-06-15' },
     signals: [
@@ -75,7 +75,7 @@ export const MOCK_ACCOUNT_DETAIL = {
   },
   1002: {
     account_id: 1002, account_name: 'K2 Computing', health_score: 44, trend: -8,
-    pillar_scores: { P1: 60, P2: 42, P3: 38, P4: 50, P5: 35 },
+    pillar_scores: { P1: 60, P2: 42, P3: 38, P4: 50, P5: 35, P6: 35 },
     champion: { name: 'Sarah Chen', title: 'CTO', last_contact_days: 14 },
     contract: { arr: 6800000, renewal_date: '2026-04-22' },
     signals: [
@@ -86,7 +86,7 @@ export const MOCK_ACCOUNT_DETAIL = {
   },
   1004: {
     account_id: 1004, account_name: 'Everest Cloud Systems', health_score: 62, trend: -2,
-    pillar_scores: { P1: 72, P2: 65, P3: 55, P4: 58, P5: 60 },
+    pillar_scores: { P1: 72, P2: 65, P3: 55, P4: 58, P5: 60, P6: 60 },
     champion: { name: 'James Park', title: 'Director of AI Infrastructure', last_contact_days: 21 },
     contract: { arr: 8500000, renewal_date: '2026-05-30' },
     signals: [
@@ -96,7 +96,7 @@ export const MOCK_ACCOUNT_DETAIL = {
   },
   1008: {
     account_id: 1008, account_name: 'Elbrus Training Co', health_score: 91, trend: 6,
-    pillar_scores: { P1: 88, P2: 92, P3: 95, P4: 85, P5: 90 },
+    pillar_scores: { P1: 88, P2: 92, P3: 95, P4: 85, P5: 90, P6: 90 },
     champion: { name: 'Maria Volkov', title: 'Head of ML Platform', last_contact_days: 3 },
     contract: { arr: 4800000, renewal_date: '2026-12-20' },
     signals: [

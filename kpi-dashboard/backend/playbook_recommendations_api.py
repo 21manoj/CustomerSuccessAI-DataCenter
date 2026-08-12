@@ -969,3 +969,79 @@ def get_playbook_recommendations(playbook_id):
             'message': 'Failed to get playbook recommendations. Please try again or contact support.'
         }), 500
 
+
+
+def seed_approval_queue_from_recommendations(customer_id, confidence=0.70,
+                                             limit_per_account=2):
+    """Populate the approval queue with the human-approval-required playbook
+    recommendations for a customer's accounts (vertical-aware, idempotent).
+
+    Called at the end of process-data so a config-playbook tenant (dc2_s,
+    datacenter_v1) gets a populated approvals queue with vertical-correct
+    playbook_ids. Only submits playbooks whose vertical_config marks
+    human_approval_required=True; skips accounts that already have a pending
+    approval for the same playbook. Non-config verticals (saas_premium, …) are
+    left to their own agent pipeline.
+    """
+    import importlib
+    from sqlalchemy import func
+    from models import Account, DC2SKPI, HealthScore
+    try:
+        from approval_queue import ApprovalQueueService, ApprovalRequest
+    except Exception:
+        return {'seeded': 0, 'reason': 'approval_queue unavailable'}
+
+    vertical = _resolve_vertical_for_customer(customer_id)
+    if vertical not in _CONFIG_PLAYBOOK_VERTICALS:
+        return {'seeded': 0, 'reason': f'{vertical} not a config-playbook vertical'}
+    try:
+        _vc = importlib.import_module(f'verticals.{vertical}.vertical_config')
+        pconf = getattr(_vc, 'PLAYBOOK_CONFIG', {})
+    except Exception:
+        return {'seeded': 0}
+    approval_needed = {pid for pid, c in pconf.items() if c.get('human_approval_required')}
+    if not approval_needed:
+        return {'seeded': 0, 'reason': 'no human-approval playbooks'}
+
+    svc = ApprovalQueueService()
+    seeded = 0
+    for a in Account.query.filter_by(customer_id=customer_id).all():
+        kv = {c: float(v) for c, v in db.session.query(
+            DC2SKPI.kpi_code, func.avg(DC2SKPI.value)
+        ).filter(DC2SKPI.account_id == a.account_id).group_by(DC2SKPI.kpi_code).all()}
+        if not kv:
+            continue
+        hs = HealthScore.query.filter_by(account_id=a.account_id) \
+            .order_by(HealthScore.calculated_at.desc()).first()
+        rec = get_recommendations_for_account(
+            a.account_id, customer_id,
+            health_score=(hs.health_score if hs else None), kpi_values=kv)
+        n = 0
+        for r in rec.get('recommendations', []):
+            pid = r.get('playbook_id')
+            if pid not in approval_needed:
+                continue
+            exists = ApprovalRequest.query.filter_by(
+                account_id=str(a.account_id), playbook_id=pid, status='pending').first()
+            if exists:
+                continue
+            try:
+                svc.submit(
+                    customer_id=customer_id, account_id=str(a.account_id),
+                    action_type='playbook_trigger', confidence=confidence,
+                    predicted_outcome=r.get('estimated_impact'),
+                    reasoning=('; '.join(r.get('reasons', []) or [])[:500]
+                               or f"{pid} recommended"),
+                    dollar_impact=(float(a.revenue) if getattr(a, 'revenue', None) else None),
+                    playbook_id=pid,
+                    action_payload={'playbook_name': r.get('playbook_name'),
+                                    'source': 'recommendation_seed'},
+                    agent_id='playbook_recommender',
+                )
+                seeded += 1
+                n += 1
+            except Exception as e:
+                logger.warning(f"seed approval failed for acct {a.account_id} {pid}: {e}")
+            if n >= limit_per_account:
+                break
+    return {'seeded': seeded, 'vertical': vertical}

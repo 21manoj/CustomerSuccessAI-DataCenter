@@ -82,6 +82,7 @@ const DEFAULT_LABELS: VerticalNomenclature = {
     P3: { display_name: 'Pillar 3', short_code: 'P3', description: '', icon: 'circle' },
     P4: { display_name: 'Pillar 4', short_code: 'P4', description: '', icon: 'circle' },
     P5: { display_name: 'Pillar 5', short_code: 'P5', description: '', icon: 'circle' },
+    P6: { display_name: 'Pillar 6', short_code: 'P6', description: '', icon: 'circle' },
   },
   playbooks: { section_title: 'Playbooks', pb_prefix: 'PB', labels: {} },
   metrics: {
