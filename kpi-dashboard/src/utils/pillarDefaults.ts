@@ -38,6 +38,17 @@ const VERTICAL_PILLAR_META: Record<string, Record<string, { name: string; code: 
     P4: { name: 'Channel & Partner Health', code: 'CH' },
     P5: { name: 'Expansion Readiness', code: 'EX' },
   },
+  // GPU-rental neocloud — 6 pillars (see config/datacenter_v1_kpi_catalog.json).
+  // Exact-match on 'datacenter_v1' resolves here BEFORE the 'datacenter' alias
+  // (which maps bare 'datacenter' → dc2_s).
+  datacenter_v1: {
+    P1: { name: 'Revenue & Unit Economics', code: 'RU' },
+    P2: { name: 'Fleet Utilization & Goodput', code: 'FU' },
+    P3: { name: 'Reliability & SLA Delivery', code: 'RL' },
+    P4: { name: 'Power & Facility', code: 'PW' },
+    P5: { name: 'Commercial & Expansion', code: 'CX' },
+    P6: { name: 'Provisioning Velocity', code: 'PV' },
+  },
   saas_premium: {
     P1: { name: 'Product Adoption & Usage', code: 'PA' },
     P2: { name: 'Customer Engagement', code: 'CE' },

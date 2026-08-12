@@ -1,0 +1,60 @@
+{
+  "_description": "UI nomenclature for the GPU-rental neocloud (DataCenterV1) vertical. Served by /api/dc2s/config/nomenclature and consumed by the frontend useVerticalLabels() hook + getPillarMeta(). 6 pillars.",
+  "_version": "1.0.0",
+  "_curated": true,
+  "_last_updated": "2026-Q3",
+  "vertical_id": "datacenter_v1",
+  "vertical_display_name": "GPU Cloud (Neocloud)",
+  "vertical_short_name": "GPU",
+  "industry": "GPU-Rental Cloud / AI Infrastructure",
+  "entities": {
+    "customer": "Customer",
+    "customers": "Customers",
+    "account": "Tenant",
+    "accounts": "Tenants",
+    "user": "Operator",
+    "users": "Operators",
+    "product": "Cluster",
+    "products": "Clusters",
+    "contract": "Reservation",
+    "contracts": "Reservations",
+    "renewal": "Reservation Renewal",
+    "expansion": "Capacity Expansion",
+    "churn": "Churn / Non-Renewal",
+    "onboarding": "Tenant Provisioning"
+  },
+  "navigation": {
+    "main_dashboard": "GPU Cloud Operations Console",
+    "executive_dashboard": "Fleet Portfolio Overview",
+    "account_list": "Tenant Hub",
+    "account_details": "Tenant Details",
+    "account_health": "Tenant Health",
+    "product_health": "Cluster Health",
+    "data_integration": "Data Integration",
+    "analytics": "Fleet Performance Analytics",
+    "ai_insights": "AI Insights",
+    "signal_analyst": "Signal Analyst",
+    "playbooks": "Playbooks & Reports",
+    "settings": "Settings",
+    "roi_analysis": "ROI Analysis"
+  },
+  "health_status": {
+    "healthy": "Healthy",
+    "at_risk": "At Risk",
+    "critical": "Critical"
+  },
+  "pillars": {
+    "P1": { "display_name": "Revenue & Unit Economics", "short_code": "RU", "icon": "dollar-sign", "description": "Realized $/GPU-hour, reserved-vs-on-demand mix, and gross margin per cluster." },
+    "P2": { "display_name": "Fleet Utilization & Goodput", "short_code": "FU", "icon": "activity", "description": "Allocated vs effective (goodput) GPU utilization, idle hours, reserved-cluster utilization." },
+    "P3": { "display_name": "Reliability & SLA Delivery", "short_code": "RL", "icon": "shield", "description": "Job-interruption rate, GPU/fabric failures, SLA attainment — goodput delivered, not just uptime." },
+    "P4": { "display_name": "Power & Facility", "short_code": "PW", "icon": "zap", "description": "Sellable MW / power-capacity utilization, stranded power, PUE, cooling headroom." },
+    "P5": { "display_name": "Commercial & Expansion", "short_code": "CX", "icon": "trending-up", "description": "Reserved-commitment coverage, ramp-to-commit, silicon-refresh, customer runway." },
+    "P6": { "display_name": "Provisioning Velocity", "short_code": "PV", "icon": "rocket", "description": "Time-to-first-job and provisioning/quota-grant speed for new tenants." }
+  },
+  "search_placeholders": {
+    "account_search": "Search tenants or clusters..."
+  },
+  "empty_states": {
+    "no_accounts": "No tenants yet — provision your first GPU-cloud tenant."
+  }
+}

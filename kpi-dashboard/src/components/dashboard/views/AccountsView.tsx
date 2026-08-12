@@ -40,6 +40,7 @@ interface PillarScores {
   P3: number;
   P4: number;
   P5: number;
+  P6: number; // datacenter_v1 (GPU-rental neocloud) 6th pillar; 0 for 5-pillar verticals (never rendered — not in their PILLAR_KEYS)
 }
 
 type PillarKey = keyof PillarScores;
@@ -62,20 +63,26 @@ const STATUS_LABELS: Record<string, string> = {
   critical: 'Critical',
 };
 
-const PILLAR_KEYS: PillarKey[] = ['P1', 'P2', 'P3', 'P4', 'P5'];
+const _vert = () => (localStorage.getItem('vertical') || 'dc2_s').toLowerCase().replace(/-/g, '_');
+// Pillar columns are vertical-aware: datacenter_v1 has 6, others have 5.
+// (Computed at module load; the page reloads on customer switch.)
+const PILLAR_KEYS: PillarKey[] = (_vert() === 'datacenter_v1'
+  ? ['P1', 'P2', 'P3', 'P4', 'P5', 'P6']
+  : ['P1', 'P2', 'P3', 'P4', 'P5']) as PillarKey[];
 
 // Vertical-aware pillar names (resolved at render time from localStorage)
-const _PILLAR_NAMES_MAP: Record<string, Record<PillarKey, string>> = {
+const _PILLAR_NAMES_MAP: Record<string, Record<string, string>> = {
   dc2_s: { P1: 'Deployment Velocity', P2: 'Operational Stability', P3: 'AI Workload Perf', P4: 'Channel & Partner', P5: 'Expansion Readiness' },
+  datacenter_v1: { P1: 'Revenue & Economics', P2: 'Utilization & Goodput', P3: 'Reliability & SLA', P4: 'Power & Facility', P5: 'Commercial & Expansion', P6: 'Provisioning' },
   saas_premium: { P1: 'Product Adoption', P2: 'Customer Engagement', P3: 'Sentiment & Support', P4: 'Partner Health', P5: 'Revenue & Growth' },
   saas: { P1: 'Product Adoption', P2: 'Customer Engagement', P3: 'Sentiment & Support', P4: 'Partner Health', P5: 'Revenue & Growth' },
 };
-const _PILLAR_SHORT_MAP: Record<string, Record<PillarKey, string>> = {
+const _PILLAR_SHORT_MAP: Record<string, Record<string, string>> = {
   dc2_s: { P1: 'Deploy', P2: 'Ops', P3: 'AI Perf', P4: 'Channel', P5: 'Expand' },
+  datacenter_v1: { P1: 'Revenue', P2: 'Util', P3: 'Reliab', P4: 'Power', P5: 'Commercial', P6: 'Provision' },
   saas_premium: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
   saas: { P1: 'Adoption', P2: 'Engage', P3: 'Sentiment', P4: 'Partner', P5: 'Revenue' },
 };
-const _vert = () => (localStorage.getItem('vertical') || 'dc2_s').toLowerCase().replace(/-/g, '_');
 const PILLAR_NAMES: Record<PillarKey, string> = new Proxy({} as Record<PillarKey, string>, {
   get: (_, key: string) => (_PILLAR_NAMES_MAP[_vert()] || _PILLAR_NAMES_MAP['dc2_s'])[key as PillarKey] || key,
 });
@@ -83,8 +90,8 @@ const PILLAR_SHORT: Record<PillarKey, string> = new Proxy({} as Record<PillarKey
   get: (_, key: string) => (_PILLAR_SHORT_MAP[_vert()] || _PILLAR_SHORT_MAP['dc2_s'])[key as PillarKey] || key,
 });
 
-const PILLAR_PLAYBOOK: Record<PillarKey, string> = {
-  P1: 'PB-01', P2: 'PB-02', P3: 'PB-03', P4: 'PB-06', P5: 'PB-04',
+const PILLAR_PLAYBOOK: Record<string, string> = {
+  P1: 'PB-01', P2: 'PB-02', P3: 'PB-03', P4: 'PB-06', P5: 'PB-04', P6: 'PB-01',
 };
 
 // ---------------------------------------------------------------------------
@@ -328,6 +335,7 @@ export default function AccountsView() {
               P3: cp.P3 ?? cp.p3 ?? 0,
               P4: cp.P4 ?? cp.p4 ?? 0,
               P5: cp.P5 ?? cp.p5 ?? 0,
+              P6: cp.P6 ?? cp.p6 ?? 0, // present only for datacenter_v1; unused by 5-pillar verticals
             };
             return [String(acct.account_id), scores] as const;
           }),
@@ -425,8 +433,8 @@ export default function AccountsView() {
 
   // Portfolio pillar averages (right panel)
   const pillarAverages = useMemo(() => {
-    const sums: Record<PillarKey, number> = { P1: 0, P2: 0, P3: 0, P4: 0, P5: 0 };
-    const counts: Record<PillarKey, number> = { P1: 0, P2: 0, P3: 0, P4: 0, P5: 0 };
+    const sums: Record<PillarKey, number> = { P1: 0, P2: 0, P3: 0, P4: 0, P5: 0, P6: 0 };
+    const counts: Record<PillarKey, number> = { P1: 0, P2: 0, P3: 0, P4: 0, P5: 0, P6: 0 };
     for (const acct of accounts) {
       const ps = pillarMap[String(acct.account_id)];
       if (!ps) continue;

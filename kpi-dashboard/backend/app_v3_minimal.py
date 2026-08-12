@@ -753,8 +753,18 @@ def login():
         # Resolve vertical from DB — data-driven, no hardcoded whitelist.
         # Returns raw vertical (e.g. 'dc2_s', 'saas_premium', 'msp') + dashboard_family ('datacenter' or 'saas')
         # for frontend routing. New verticals work without code changes.
-        DC_VERTICALS = {'dc2_s', 'dc2s', 'dc', 'datacenter'}
+        DC_VERTICALS = {'dc2_s', 'dc2s', 'dc', 'datacenter', 'datacenter_v1'}
+        # Prefer the user's vertical; fall back to the customer's config vertical so a
+        # datacenter_v1 tenant routes to the DC family even if user.vertical is unset.
         user_vertical = user.vertical if hasattr(user, 'vertical') and user.vertical else None
+        if not user_vertical:
+            try:
+                from models import CustomerConfig as _CC
+                _cc = _CC.query.filter_by(customer_id=getattr(user, 'customer_id', None)).first()
+                if _cc and _cc.vertical:
+                    user_vertical = _cc.vertical
+            except Exception:
+                pass
 
         if user_vertical:
             user_vertical_normalized = user_vertical.lower().replace('-', '_').replace(' ', '_')

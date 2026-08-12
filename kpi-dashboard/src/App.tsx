@@ -43,7 +43,7 @@ const getDashboardFamily = (session: any): 'datacenter' | 'saas' => {
   }
   // Fallback: derive from vertical string for sessions created before this change
   const v = (session?.vertical || localStorage.getItem('vertical') || '').toLowerCase().replace(/-/g, '_');
-  if (['dc2_s', 'dc2s', 'dc', 'datacenter'].includes(v)) return 'datacenter';
+  if (['dc2_s', 'dc2s', 'dc', 'datacenter', 'datacenter_v1'].includes(v)) return 'datacenter';
   return 'saas';
 };
 const getDashboardRoute = (session: any): string => {
