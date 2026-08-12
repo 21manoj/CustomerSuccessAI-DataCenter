@@ -2230,7 +2230,7 @@ def complete_onboarding():
                 "enabled_kpi_count": len(resolved_enabled_kpis),
                 "total_available_kpis": len(ALL_DC2S_KPI_CODES),
                 "active_pillars": {
-                    p: DC2S_PILLARS[p]['name'] for p in active_pillars
+                    p: _v_pillars.get(p, {}).get('name', p) for p in active_pillars
                 },
                 "pillar_count": len(active_pillars),
                 "weights": pillar_weights,
