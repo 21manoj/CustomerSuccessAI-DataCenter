@@ -16,9 +16,14 @@ import logging
 _logger = logging.getLogger(__name__)
 _DIR = os.path.dirname(__file__)
 # Canonical catalogs live in the backend config dir; load-driver keeps local copies
-# for the legacy verticals. Search both so a NEW vertical only needs its backend
-# catalog (no duplicate copy in load-driver/).
-_BACKEND_CONFIG_DIR = os.path.abspath(os.path.join(_DIR, '..', 'kpi-dashboard', 'backend', 'config'))
+# for the legacy verticals. Support BOTH the local repo layout
+# (repo/load-driver + repo/kpi-dashboard/backend/config) AND the container's
+# flattened layout (/app/load-driver + /app/backend/config), so a NEW vertical only
+# needs its backend catalog (no duplicate copy in load-driver/) in either environment.
+_BACKEND_CONFIG_DIRS = [
+    os.path.abspath(os.path.join(_DIR, '..', 'kpi-dashboard', 'backend', 'config')),
+    os.path.abspath(os.path.join(_DIR, '..', 'backend', 'config')),
+]
 _cached = None
 _active_vertical = 'dc2_s'
 
@@ -51,8 +56,9 @@ def _get_catalog_path() -> str:
         # Try generic pattern: {vertical}_kpi_catalog.json
         filename = f"{_active_vertical}_kpi_catalog.json"
 
-    # Prefer the load-driver copy (legacy verticals), then the canonical backend config.
-    for base in (_DIR, _BACKEND_CONFIG_DIR):
+    # Prefer the load-driver copy (legacy verticals), then the canonical backend
+    # config (checking both the repo and the container layouts).
+    for base in [_DIR, *_BACKEND_CONFIG_DIRS]:
         candidate = os.path.join(base, filename)
         if os.path.exists(candidate):
             return candidate
