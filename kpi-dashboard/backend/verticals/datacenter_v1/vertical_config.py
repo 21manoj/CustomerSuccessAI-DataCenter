@@ -20,6 +20,17 @@ VERTICAL = "datacenter_v1"
 # Playbooks that require ALL trigger conditions (AND), else OR (any).
 AND_LOGIC_PLAYBOOKS = {"PB-04", "PB-09"}
 
+# Secondary pillar-weakness → playbook map (when a pillar score < 50).
+# Keyed by the 6 datacenter_v1 pillars (P1 Revenue … P6 Provisioning).
+PILLAR_PLAYBOOK_MAP = {
+    "P1": "PB-13",  # Revenue & Unit Economics  → Competitive Price-Defense
+    "P2": "PB-07",  # Fleet Utilization & Goodput → Idle-Reserved-Cluster Rescue
+    "P3": "PB-08",  # Reliability & SLA Delivery → SLA / Goodput-Breach Recovery
+    "P4": "PB-09",  # Power & Facility           → Power & Thermal Headroom
+    "P5": "PB-04",  # Commercial & Expansion     → Capacity Planning
+    "P6": "PB-01",  # Provisioning Velocity      → Provisioning Acceleration
+}
+
 PLAYBOOK_CONFIG = {
     # ---- Kept / adapted from the base data-center motion ----
     "PB-01": {

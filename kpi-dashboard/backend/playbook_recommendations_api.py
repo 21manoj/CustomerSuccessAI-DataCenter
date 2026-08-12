@@ -44,9 +44,18 @@ def _get_playbook_historical_success(playbook_id, customer_id):
         return None
 
 
+# Verticals that use the KPI-threshold config-driven playbook evaluator
+# (verticals/{v}/vertical_config.py PLAYBOOK_CONFIG). Other verticals
+# (saas_premium, healthcare_provider, …) keep the generic SaaS evaluators below —
+# do NOT auto-detect by presence of a PLAYBOOK_CONFIG, since saas_premium has one
+# but is intentionally routed to the generic evaluators.
+_CONFIG_PLAYBOOK_VERTICALS = {'dc2_s', 'datacenter_v1'}
+
+
 def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None,
-                             customer_id=None):
-    """Evaluate DC2S-specific playbooks (PB-01 through PB-06).
+                             customer_id=None, vertical='dc2_s'):
+    """Evaluate config-driven playbooks for a vertical (dc2_s: PB-01..06;
+    datacenter_v1: PB-01/03/04/05/06 + PB-07..13).
 
     Uses OR logic for most playbooks: if ANY trigger condition is met, the
     playbook is recommended. PB-04 (Capacity Planning) uses AND logic because
@@ -65,10 +74,18 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None,
     Returns:
         List of recommendation dicts sorted by urgency (highest first)
     """
-    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
-
-    # PB-04 uses AND logic (all conditions must be met for expansion)
-    AND_LOGIC_PLAYBOOKS = {"PB-04"}
+    import importlib
+    try:
+        _vc = importlib.import_module(f'verticals.{vertical}.vertical_config')
+    except (ImportError, ModuleNotFoundError):
+        _vc = importlib.import_module('verticals.dc2_s.vertical_config')
+    PLAYBOOK_CONFIG = getattr(_vc, 'PLAYBOOK_CONFIG', {})
+    # AND-logic playbooks + pillar→playbook map come from the vertical config,
+    # falling back to the dc2_s defaults when a vertical doesn't declare them.
+    AND_LOGIC_PLAYBOOKS = getattr(_vc, 'AND_LOGIC_PLAYBOOKS', {"PB-04"})
+    PILLAR_PLAYBOOK_MAP = getattr(_vc, 'PILLAR_PLAYBOOK_MAP', {
+        'P1': 'PB-01', 'P2': 'PB-02', 'P3': 'PB-03', 'P4': 'PB-05', 'P5': 'PB-04',
+    })
 
     recommendations = []
 
@@ -97,6 +114,15 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None,
                     all_met = False
                     continue
                 value = kpi_values[kpi_code]
+
+            # Coerce DB Decimals / strings to float so the urgency arithmetic below
+            # never hits `Decimal * float` (KPI values from the DB are Decimal).
+            try:
+                value = float(value)
+                threshold = float(threshold)
+            except (TypeError, ValueError):
+                all_met = False
+                continue
 
             triggered = False
             if operator == ">" and value > threshold:
@@ -147,20 +173,13 @@ def _evaluate_dc2s_playbooks(kpi_values, health_score=None, pillar_scores=None,
                 ],
             })
 
-    # Pillar-weakness recommendations (secondary)
-    PILLAR_PLAYBOOK_MAP = {
-        'P1': 'PB-01',  # Deployment Velocity / Product Adoption → Deployment Acceleration
-        'P2': 'PB-02',  # Operational Stability / Engagement → RMA Prevention
-        'P3': 'PB-03',  # AI Workload / Sentiment → GPU Optimization
-        'P4': 'PB-05',  # Channel & Partner / Ecosystem → Health Monitoring
-        'P5': 'PB-04',  # Expansion Readiness / Revenue → Capacity Planning
-    }
-
+    # Pillar-weakness recommendations (secondary) — PILLAR_PLAYBOOK_MAP loaded above
     if pillar_scores:
         already_recommended = {r['playbook_id'] for r in recommendations}
         for pillar, score in pillar_scores.items():
-            if score < 50 and PILLAR_PLAYBOOK_MAP.get(pillar) not in already_recommended:
-                pb_id = PILLAR_PLAYBOOK_MAP[pillar]
+            mapped = PILLAR_PLAYBOOK_MAP.get(pillar)
+            if score < 50 and mapped and mapped not in already_recommended:
+                pb_id = mapped
                 pb_config = PLAYBOOK_CONFIG.get(pb_id, {})
                 recommendations.append({
                     'playbook_id': pb_id,
@@ -298,10 +317,10 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
     except Exception:
         pass
 
-    # ── DC2S Vertical Path: PB-01 through PB-06 ──
-    if vertical == 'dc2_s' and kpi_values is not None:
+    # ── Config-driven vertical path (dc2_s, datacenter_v1) ──
+    if vertical in _CONFIG_PLAYBOOK_VERTICALS and kpi_values is not None:
         recommendations = _evaluate_dc2s_playbooks(kpi_values, health_score, pillar_scores,
-                                                    customer_id=customer_id)
+                                                    customer_id=customer_id, vertical=vertical)
 
         # Enrich with historical success rates
         for rec in recommendations:
@@ -317,8 +336,8 @@ def get_recommendations_for_account(account_id, customer_id, health_score=None,
             'account_id': account_id,
             'account_name': account.account_name,
             'health_score': health_score,
-            'vertical': 'dc2_s',
-            'playbook_source': 'vertical_config (PB-01 through PB-06)',
+            'vertical': vertical,
+            'playbook_source': f'vertical_config ({vertical})',
             'total_recommendations': len(recommendations),
             'recommendations': recommendations,
         }
