@@ -933,7 +933,13 @@ if __name__ == "__main__":
         except Exception as _e:
             print(f"  ❌ FAILED to load cs_pulse_{_mod}: {_e}")
 
-    print(f"  Total tools registered: {len(mcp._tool_manager._tools)}")
+    try:
+        # FastMCP 2.x exposed _tool_manager._tools; 3.x changed internals.
+        _tm = getattr(mcp, '_tool_manager', None)
+        _tool_count = len(getattr(_tm, '_tools', None) or getattr(mcp, '_tools', {}) or {})
+        print(f"  Total tools registered: {_tool_count if _tool_count else '(unknown)'}")
+    except Exception:
+        print("  Total tools registered: (count unavailable on this FastMCP version)")
 
     transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
 
