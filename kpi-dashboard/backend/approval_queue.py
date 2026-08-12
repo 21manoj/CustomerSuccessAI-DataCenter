@@ -219,9 +219,8 @@ class ApprovalQueueService:
                     f"for account {request.account_id}"
                 )
                 try:
-                    from event_system import EventType, EventPublisher
-                    from app_v3_minimal import event_publisher
-                    event_publisher.publish(
+                    from event_system import EventType, event_manager
+                    event_manager.publisher.publish(
                         EventType.PLAYBOOK_AUTO_TRIGGERED,
                         customer_id=request.customer_id,
                         data={
@@ -230,6 +229,19 @@ class ApprovalQueueService:
                             "confidence": request.confidence,
                             "dollar_impact": request.dollar_impact,
                             "approval_request_id": request.id,
+                            # PlaybookAutoTriggerSubscriber iterates data['actions'];
+                            # provide the approved playbook as a single-item list so
+                            # the orchestrator dispatch actually fires.
+                            "actions": [
+                                {
+                                    "playbook_id": request.playbook_id,
+                                    "action": (
+                                        f"Approved playbook {request.playbook_id} "
+                                        f"for account {request.account_id}"
+                                    ),
+                                    "dollar_impact": request.dollar_impact,
+                                }
+                            ],
                         },
                     )
                 except Exception as e:
