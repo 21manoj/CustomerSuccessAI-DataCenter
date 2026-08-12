@@ -136,7 +136,7 @@ class ScoreCalculator:
         # Fallback: generic P-format KPI
         if '-' in kpi_code:
             pillar = kpi_code.split('-')[0]
-            if pillar in ['P1', 'P2', 'P3', 'P4', 'P5']:
+            if pillar in get_pillars(self.vertical):
                 override = self.config['kpi_overrides'].get(kpi_code, {})
                 return {
                     'pillar': pillar,
@@ -514,7 +514,7 @@ class ScoreCalculator:
     def _group_kpis_by_pillar(self, kpi_codes: List[str]) -> Dict[str, List[str]]:
         """Group KPI codes by their pillar"""
         
-        kpis_by_pillar = {'P1': [], 'P2': [], 'P3': [], 'P4': [], 'P5': []}
+        kpis_by_pillar = {p: [] for p in get_pillars(self.vertical)}
         
         for kpi_code in kpi_codes:
             kpi_def = self._get_kpi_definition(kpi_code)

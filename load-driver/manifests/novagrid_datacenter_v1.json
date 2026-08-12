@@ -1,0 +1,329 @@
+{
+  "manifest_version": "1.0",
+  "customer": {
+    "name": "NovaGrid GPU Cloud",
+    "domain": "novagrid-cloud.com",
+    "vertical": "datacenter_v1",
+    "admin_email": "admin@novagrid-cloud.com",
+    "admin_name": "Priya Raman",
+    "total_arr": 50000000,
+    "description": "GPU-rental neocloud (DataCenterV1 pilot) \u2014 hourly on-demand + reserved clusters (H100/H200/GB200)."
+  },
+  "time_range": {
+    "start": "2025-11-01",
+    "end": "2026-04-30",
+    "frequency": "weekly",
+    "data_points_per_kpi": 26
+  },
+  "kpis": {
+    "selection": "all",
+    "count": 38,
+    "codes": [
+      "P1-KPI1",
+      "P1-KPI2",
+      "P1-KPI3",
+      "P1-KPI4",
+      "P1-KPI5",
+      "P1-KPI6",
+      "P2-KPI1",
+      "P2-KPI2",
+      "P2-KPI3",
+      "P2-KPI4",
+      "P2-KPI5",
+      "P2-KPI6",
+      "P2-KPI7",
+      "P3-KPI1",
+      "P3-KPI2",
+      "P3-KPI3",
+      "P3-KPI4",
+      "P3-KPI5",
+      "P3-KPI6",
+      "P3-KPI7",
+      "P3-KPI8",
+      "P4-KPI1",
+      "P4-KPI2",
+      "P4-KPI3",
+      "P4-KPI4",
+      "P4-KPI5",
+      "P4-KPI6",
+      "P5-KPI1",
+      "P5-KPI2",
+      "P5-KPI3",
+      "P5-KPI4",
+      "P5-KPI5",
+      "P5-KPI6",
+      "P5-KPI7",
+      "P5-KPI8",
+      "P6-KPI1",
+      "P6-KPI2",
+      "P6-KPI3"
+    ]
+  },
+  "context_graph": {
+    "stakeholders_per_account": [
+      2,
+      4
+    ],
+    "events_per_account": [
+      6,
+      10
+    ],
+    "include_decisions": true,
+    "include_outcomes": true,
+    "include_signal_edges": true,
+    "include_benchmarks": true
+  },
+  "accounts": [
+    {
+      "name": "Titan Hyperscale Labs",
+      "arr": 8200000,
+      "target_health": 34,
+      "classification": "critical",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-15",
+      "product_type": "reserved_1k",
+      "silicon_generation": "H100",
+      "narrative": "Reserved 1,000-GPU cluster utilization fell 65%->22% over 8 weeks; workloads not landing. Renewal in June.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "key_signals": [
+        {
+          "type": "reserved_cluster_idle",
+          "date": "2026-03-15",
+          "content": "Reserved 1,000-GPU cluster utilization fell 65%->22% over 8 weeks; workloads not landing. Renewal in June.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Meridian AI",
+      "arr": 4100000,
+      "target_health": 58,
+      "classification": "at_risk",
+      "story_arc": "early_warning",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-20",
+      "product_type": "reserved_512",
+      "silicon_generation": "H100",
+      "narrative": "Training runs interrupted repeatedly; InfiniBand fabric errors + preemptions above SLA. Customer escalating.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 4,
+      "key_signals": [
+        {
+          "type": "reliability_sla_breach",
+          "date": "2026-04-15",
+          "content": "Training runs interrupted repeatedly; InfiniBand fabric errors + preemptions above SLA. Customer escalating.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Quantum Labs",
+      "arr": 2300000,
+      "target_health": 55,
+      "classification": "at_risk",
+      "story_arc": "budget_cut",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-01",
+      "product_type": "on_demand",
+      "silicon_generation": "H200",
+      "narrative": "Customer cited a competitor spot price 22% lower; asking for rate match on on-demand H200.",
+      "kpi_trajectory": "flat_high_risk",
+      "decline_start_month": 2,
+      "key_signals": [
+        {
+          "type": "spot_price_pressure",
+          "date": "2026-02-15",
+          "content": "Customer cited a competitor spot price 22% lower; asking for rate match on on-demand H200.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Apex Compute",
+      "arr": 3000000,
+      "target_health": 78,
+      "classification": "healthy",
+      "story_arc": "expansion_candidate",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-30",
+      "product_type": "reserved_256",
+      "silicon_generation": "H100",
+      "narrative": "ML infra lead asked about migrating H100 workloads to H200/GB200 for the next training run.",
+      "kpi_trajectory": "improving",
+      "key_signals": [
+        {
+          "type": "silicon_refresh_interest",
+          "date": "2026-02-15",
+          "content": "ML infra lead asked about migrating H100 workloads to H200/GB200 for the next training run.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Nova Foundry",
+      "arr": 900000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "budget_cut",
+      "partner_tier": "direct",
+      "renewal_date": "2026-06-30",
+      "product_type": "on_demand",
+      "silicon_generation": "H100",
+      "narrative": "Startup runway ~5 months, no new round closed; finance flagged spend review. Payment risk.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 3,
+      "key_signals": [
+        {
+          "type": "runway_risk",
+          "date": "2026-03-15",
+          "content": "Startup runway ~5 months, no new round closed; finance flagged spend review. Payment risk.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Pacific Dataworks",
+      "arr": 12500000,
+      "target_health": 83,
+      "classification": "healthy",
+      "story_arc": "growth_trajectory",
+      "partner_tier": "direct",
+      "renewal_date": "2026-11-15",
+      "product_type": "reserved_2k",
+      "silicon_generation": "GB200",
+      "narrative": "Closed a $180M Series C; plans to 4x training capacity next two quarters.",
+      "kpi_trajectory": "ramping_up",
+      "key_signals": [
+        {
+          "type": "funding_raised",
+          "date": "2026-02-15",
+          "content": "Closed a $180M Series C; plans to 4x training capacity next two quarters.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Orion Models",
+      "arr": 3600000,
+      "target_health": 41,
+      "classification": "critical",
+      "story_arc": "infrastructure_decay",
+      "partner_tier": "direct",
+      "renewal_date": "2026-05-10",
+      "product_type": "reserved_512",
+      "silicon_generation": "H100",
+      "narrative": "Rack power/cooling at limit; thermal events throttling the reserved cluster. Expansion blocked.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 2,
+      "key_signals": [
+        {
+          "type": "power_capacity_constraint",
+          "date": "2026-02-15",
+          "content": "Rack power/cooling at limit; thermal events throttling the reserved cluster. Expansion blocked.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Helix Compute",
+      "arr": 1100000,
+      "target_health": 60,
+      "classification": "at_risk",
+      "story_arc": "early_warning",
+      "partner_tier": "direct",
+      "renewal_date": "2026-08-01",
+      "product_type": "reserved_128",
+      "silicon_generation": "H100",
+      "narrative": "Consuming ~45% of contracted reserved minimum; ramp behind plan two months running.",
+      "kpi_trajectory": "flat_high_risk",
+      "decline_start_month": 3,
+      "key_signals": [
+        {
+          "type": "commitment_ramp_miss",
+          "date": "2026-03-15",
+          "content": "Consuming ~45% of contracted reserved minimum; ramp behind plan two months running.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Vector Dynamics",
+      "arr": 900000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "stable",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-01",
+      "product_type": "on_demand",
+      "silicon_generation": "H100",
+      "narrative": "Vector Dynamics: stable on demand H100 tenant.",
+      "kpi_trajectory": "stable"
+    },
+    {
+      "name": "Cirrus AI",
+      "arr": 1600000,
+      "target_health": 63,
+      "classification": "at_risk",
+      "story_arc": "engagement_drop",
+      "partner_tier": "direct",
+      "renewal_date": "2026-07-20",
+      "product_type": "on_demand",
+      "silicon_generation": "H200",
+      "narrative": "Shifting a share of inference to a second provider; multi-cloud diversification underway.",
+      "kpi_trajectory": "slow_decline",
+      "decline_start_month": 4,
+      "key_signals": [
+        {
+          "type": "multicloud_diversification",
+          "date": "2026-04-15",
+          "content": "Shifting a share of inference to a second provider; multi-cloud diversification underway.",
+          "sentiment": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Stellar Inference",
+      "arr": 2800000,
+      "target_health": 80,
+      "classification": "healthy",
+      "story_arc": "strong_adopter",
+      "partner_tier": "direct",
+      "renewal_date": "2026-10-10",
+      "product_type": "on_demand",
+      "silicon_generation": "H200",
+      "narrative": "On-demand H200 usage climbing steadily; sustained goodput, exploring a reserved commit.",
+      "kpi_trajectory": "improving",
+      "key_signals": [
+        {
+          "type": "utilization_ramp",
+          "date": "2026-02-15",
+          "content": "On-demand H200 usage climbing steadily; sustained goodput, exploring a reserved commit.",
+          "sentiment": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Zenith Training",
+      "arr": 9000000,
+      "target_health": 85,
+      "classification": "healthy",
+      "story_arc": "star_account",
+      "partner_tier": "direct",
+      "renewal_date": "2026-12-01",
+      "product_type": "reserved_1k",
+      "silicon_generation": "GB200",
+      "narrative": "Flagship GB200 tenant; discussing a second reserved cluster for a frontier model run.",
+      "kpi_trajectory": "stable_high",
+      "key_signals": [
+        {
+          "type": "reservation_expansion_interest",
+          "date": "2026-02-15",
+          "content": "Flagship GB200 tenant; discussing a second reserved cluster for a frontier model run.",
+          "sentiment": "positive"
+        }
+      ]
+    }
+  ]
+}

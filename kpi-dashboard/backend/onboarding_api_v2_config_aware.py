@@ -1953,18 +1953,27 @@ def complete_onboarding():
         #   - enabled_kpis: explicit list → use as-is
         #   - enabled_pillars: select all KPIs for those pillars
         #   - neither: all 38 KPIs (full catalog)
+        # Vertical-aware catalog resolution (was hardcoded to DC2S_*). For dc2_s these
+        # return exactly the DC2S constants, so behavior is unchanged; a 6-pillar
+        # vertical like datacenter_v1 now gets its OWN codes/pillars/weights.
+        from utils.vertical_registry import get_kpis as _vr_get_kpis, get_pillars as _vr_get_pillars
+        _v_kpis = _vr_get_kpis(vertical)
+        _v_pillars = _vr_get_pillars(vertical)
+        _v_all_codes = list(_v_kpis.keys())
+        _v_pillar_names = set(_v_pillars.keys())
+
         if enabled_kpis_input:
             # User specified exact KPIs they want
             resolved_enabled_kpis = enabled_kpis_input
         elif enabled_pillars:
             # User picked pillars — enable all KPIs for those pillars
             resolved_enabled_kpis = [
-                code for code, defn in DC2S_KPIS.items()
+                code for code, defn in _v_kpis.items()
                 if defn.get('pillar', code.split('-')[0]) in enabled_pillars
             ]
         else:
-            # Default: all 38 KPIs enabled (customer can narrow later)
-            resolved_enabled_kpis = list(ALL_DC2S_KPI_CODES)
+            # Default: all KPIs for the vertical enabled (customer can narrow later)
+            resolved_enabled_kpis = list(_v_all_codes)
 
         # Derive which pillars are active from the enabled KPIs
         active_pillars = sorted(set(
@@ -1976,8 +1985,8 @@ def complete_onboarding():
             pillar_weights = custom_weights
         else:
             # Equal-weight default across active pillars (sums to 1.0)
-            default_all = {p: DC2S_PILLARS[p].get('weight_l2', 0.20) for p in DC2S_PILLARS}
-            if set(active_pillars) == DC2S_PILLAR_NAMES:
+            default_all = {p: _v_pillars[p].get('weight_l2', 0.20) for p in _v_pillars}
+            if set(active_pillars) == _v_pillar_names:
                 pillar_weights = default_all
             else:
                 # Redistribute weights proportionally for the active subset

@@ -15,6 +15,10 @@ import logging
 
 _logger = logging.getLogger(__name__)
 _DIR = os.path.dirname(__file__)
+# Canonical catalogs live in the backend config dir; load-driver keeps local copies
+# for the legacy verticals. Search both so a NEW vertical only needs its backend
+# catalog (no duplicate copy in load-driver/).
+_BACKEND_CONFIG_DIR = os.path.abspath(os.path.join(_DIR, '..', 'kpi-dashboard', 'backend', 'config'))
 _cached = None
 _active_vertical = 'dc2_s'
 
@@ -24,6 +28,7 @@ _CATALOG_FILES = {
     'dc': 'dc2s_kpi_catalog.json',
     'dc2s': 'dc2s_kpi_catalog.json',
     'datacenter': 'dc2s_kpi_catalog.json',
+    'datacenter_v1': 'datacenter_v1_kpi_catalog.json',
     'saas': 'saas_premium_kpi_catalog.json',
     'saas_premium': 'saas_premium_kpi_catalog.json',
 }
@@ -46,11 +51,13 @@ def _get_catalog_path() -> str:
         # Try generic pattern: {vertical}_kpi_catalog.json
         filename = f"{_active_vertical}_kpi_catalog.json"
 
-    path = os.path.join(_DIR, filename)
-    if not os.path.exists(path):
-        _logger.warning(f"catalog_loader: {filename} not found, falling back to dc2s_kpi_catalog.json")
-        path = os.path.join(_DIR, 'dc2s_kpi_catalog.json')
-    return path
+    # Prefer the load-driver copy (legacy verticals), then the canonical backend config.
+    for base in (_DIR, _BACKEND_CONFIG_DIR):
+        candidate = os.path.join(base, filename)
+        if os.path.exists(candidate):
+            return candidate
+    _logger.warning(f"catalog_loader: {filename} not found in load-driver or backend config, falling back to dc2s_kpi_catalog.json")
+    return os.path.join(_DIR, 'dc2s_kpi_catalog.json')
 
 
 def _load():
