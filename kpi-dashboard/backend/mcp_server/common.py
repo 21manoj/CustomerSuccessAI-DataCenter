@@ -155,7 +155,19 @@ def resolve_customer_vertical(customer_id: int) -> str:
 # Pillar labels (vertical-aware)
 # ---------------------------------------------------------------------------
 def get_pillar_labels(vertical: str = 'dc2_s') -> dict:
-    """Return canonical pillar labels for a vertical."""
+    """Return canonical pillar labels for a vertical.
+
+    Resolves through the vertical registry so ANY vertical (JSON-catalog or
+    Python-module) gets its own pillar display names. Falls back to the legacy
+    hardcoded maps only if the registry can't resolve the vertical.
+    """
+    try:
+        from utils.vertical_registry import get_pillars
+        pillars = get_pillars(vertical)
+        if pillars:
+            return {code: (p.get('name') or code) for code, p in pillars.items()}
+    except Exception:
+        pass
     if vertical in ('saas_premium', 'saas'):
         try:
             from verticals.saas_premium.kpi_definitions import SAAS_PILLARS
