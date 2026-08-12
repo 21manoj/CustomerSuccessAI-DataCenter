@@ -2150,13 +2150,20 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         # (config-playbook verticals only: dc2_s, datacenter_v1). Non-fatal, idempotent.
         _t_stage = _time.time()
         try:
+            import logging as _log_seed
             from playbook_recommendations_api import seed_approval_queue_from_recommendations
             _seed = seed_approval_queue_from_recommendations(customer_id)
             if _seed.get('seeded'):
                 steps_completed.append(f"approval_seed_{_seed['seeded']}")
-            logger.info(f"Approval-queue seed for customer {customer_id}: {_seed}")
-        except Exception as _e:
-            logger.warning(f"Approval-queue seed failed (non-fatal): {_e}")
+            _log_seed.getLogger(__name__).info(
+                f"Approval-queue seed for customer {customer_id}: {_seed}")
+        except Exception as _seed_err:
+            try:
+                import logging as _log_seed2
+                _log_seed2.getLogger(__name__).warning(
+                    f"Approval-queue seed failed (non-fatal): {_seed_err}")
+            except Exception:
+                pass
         _step_timings['approval_seed'] = round(_time.time() - _t_stage, 2)
 
         # Stage 7: QDRANT indexing
