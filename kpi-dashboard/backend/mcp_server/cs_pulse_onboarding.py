@@ -1409,41 +1409,50 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         continue
 
                     if 'kpi_measurements' in csv_file:
-                        _kpi_added = 0
-                        _kpi_skipped = 0
+                        # Idempotent bulk load. The old path used ORM add() + a
+                        # dedup query that only saw COMMITTED rows and was gated on
+                        # has_new_csvs, so a concurrent/leftover run, a retry, or
+                        # re-processing could insert a duplicate (account_id,
+                        # kpi_code, measured_at) and the UniqueViolation aborted the
+                        # whole transaction — rolling back the just-created accounts
+                        # too (cascading into a context_nodes FK error). Now we
+                        # dedup within the run and INSERT ... ON CONFLICT DO NOTHING,
+                        # so genuine duplicates are skipped and the load always
+                        # completes. The source→DB account mapping is 1:1, so no
+                        # legitimate measurement is dropped.
+                        from sqlalchemy.dialects.postgresql import insert as _pg_insert
+                        _kpi_rows = []
+                        _seen_keys = set()
                         for _, row in df.iterrows():
                             acct_id = _resolve_acct_id(row)
-                            if acct_id:
-                                kpi_code = row.get('kpi_code', row.get('kpi_id', ''))
-                                measured_at = row.get('measured_at', row.get('date'))
-
-                                # Dedup: skip if exact (account, kpi_code, measured_at) already exists
-                                if has_new_csvs:
-                                    exists = DC2SKPI.query.filter_by(
-                                        account_id=acct_id,
-                                        kpi_code=kpi_code,
-                                        measured_at=measured_at,
-                                    ).first()
-                                    if exists:
-                                        _kpi_skipped += 1
-                                        continue
-
-                                kpi = DC2SKPI(
-                                    account_id=acct_id,
-                                    kpi_code=kpi_code,
-                                    value=float(row.get('value', 0)),
-                                    target=float(row.get('target', 100)),
-                                    pillar=row.get('pillar', ''),
-                                    weight=float(row.get('weight', 0)) if row.get('weight') else None,
-                                    status=row.get('status', ''),
-                                    measured_at=measured_at,
-                                )
-                                _db.session.add(kpi)
-                                _kpi_added += 1
-                        if has_new_csvs and _kpi_skipped > 0:
-                            steps_completed.append(f'kpis_loaded_{_kpi_added}_new_{_kpi_skipped}_skipped')
-                        else:
-                            steps_completed.append('kpis_loaded')
+                            if not acct_id:
+                                continue
+                            kpi_code = row.get('kpi_code', row.get('kpi_id', ''))
+                            measured_at = row.get('measured_at', row.get('date'))
+                            _k = (acct_id, kpi_code, str(measured_at))
+                            if _k in _seen_keys:
+                                continue
+                            _seen_keys.add(_k)
+                            _kpi_rows.append({
+                                'account_id': acct_id,
+                                'kpi_code': kpi_code,
+                                'value': float(row.get('value', 0)),
+                                'target': float(row.get('target', 100)),
+                                'pillar': row.get('pillar', ''),
+                                'weight': float(row.get('weight', 0)) if row.get('weight') else None,
+                                'status': row.get('status', ''),
+                                'measured_at': measured_at,
+                                'created_at': _dt.utcnow(),
+                            })
+                        _kpi_added = 0
+                        if _kpi_rows:
+                            _stmt = _pg_insert(DC2SKPI.__table__).values(_kpi_rows)
+                            _stmt = _stmt.on_conflict_do_nothing(
+                                index_elements=['account_id', 'kpi_code', 'measured_at']
+                            )
+                            _res = _db.session.execute(_stmt)
+                            _kpi_added = _res.rowcount if _res.rowcount is not None else len(_kpi_rows)
+                        steps_completed.append(f'kpis_loaded_{_kpi_added}')
                         # Commit KPIs immediately so a signals error can't roll them back
                         _db.session.commit()
 

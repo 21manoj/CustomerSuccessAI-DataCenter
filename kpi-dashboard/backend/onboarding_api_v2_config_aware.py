@@ -2342,7 +2342,19 @@ def process_data():
     if not customer_id:
         return jsonify({"status": "error", "message": "customer_id required"}), 400
 
-    customer_id = int(customer_id)
+    # Accept either a numeric customer_id or the prefixed UUID the UI sends.
+    # The onboarding wizard posts getCustomerIdentifier(session), which prefers
+    # session.customer_uuid (e.g. "saas_cust_019ff..."), so a bare int() crashes
+    # for any admin-created tenant. Resolve UUID → numeric id.
+    try:
+        customer_id = int(customer_id)
+    except (ValueError, TypeError):
+        from id_resolve_utils import resolve_customer
+        _c = resolve_customer(customer_id, allow_none=True)
+        if not _c:
+            return jsonify({"status": "error",
+                            "message": f"Unknown customer identifier: {customer_id}"}), 400
+        customer_id = int(_c.customer_id)
     sync_mode = request.args.get('sync', 'false').lower() in ('true', '1', 'yes')
 
     if sync_mode:
@@ -2445,13 +2457,25 @@ def process_data():
 # Signal Analyst (Layer A), Urgent Scanner (Layer C), ROI Engine,
 # and HEALTH_SCORES_UPDATED event publishing.
 # ──────────────────────────────────────────────────────────────────────
-@onboarding_api.route('/status/<int:customer_id>', methods=['GET'])
+@onboarding_api.route('/status/<customer_id>', methods=['GET'])
 def onboarding_status(customer_id):
     """
     GAP 3.8: Progress endpoint for process-data.
     GET /api/onboarding/status/<customer_id>
     Returns in_progress, current_step, steps_completed, started_at (when in progress).
+
+    Accepts either a numeric customer_id or the prefixed UUID the wizard polls with
+    (getCustomerIdentifier prefers customer_uuid).
     """
+    try:
+        customer_id = int(customer_id)
+    except (ValueError, TypeError):
+        from id_resolve_utils import resolve_customer
+        _c = resolve_customer(customer_id, allow_none=True)
+        if not _c:
+            return jsonify({"customer_id": customer_id, "in_progress": False,
+                            "message": "Unknown customer identifier."}), 404
+        customer_id = int(_c.customer_id)
     progress = _onboarding_progress.get(customer_id)
     if not progress:
         from utils.onboarding_progress_file import read_progress
