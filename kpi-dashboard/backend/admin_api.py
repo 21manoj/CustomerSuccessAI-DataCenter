@@ -410,14 +410,29 @@ def get_wizard_c_current_weights():
             customer_id = int(customer_id)
         
         base_path = get_customer_data_path(customer_id)
-        
-        # Default bootstrap weights
+
+        # Vertical-aware default pillar weights (never hardcode DC2_S 5-pillar).
+        # Resolve the customer's vertical, then derive pillars/weights from the
+        # catalog registry so datacenter_v1 (6 pillars), saas_premium, etc. render
+        # their real pillars instead of falling back to DC2_S.
+        from models import CustomerConfig
+        from utils.vertical_registry import get_pillars as _vr_get_pillars
+        vertical = 'dc2_s'
+        if customer_id:
+            cc = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+            if cc and cc.vertical:
+                vertical = cc.vertical
+        try:
+            _pillars = _vr_get_pillars(vertical)
+        except Exception:
+            _pillars = _vr_get_pillars('dc2_s')
         default_weights = {
-            "P1": {"name": "Deployment Velocity", "weight": 0.15, "source": "bootstrap"},
-            "P2": {"name": "Operational Stability", "weight": 0.20, "source": "bootstrap"},
-            "P3": {"name": "AI Workload Performance", "weight": 0.25, "source": "bootstrap"},
-            "P4": {"name": "Channel & Partner Health", "weight": 0.15, "source": "bootstrap"},
-            "P5": {"name": "Expansion Readiness", "weight": 0.25, "source": "bootstrap"}
+            pid: {
+                "name": p.get('name', pid),
+                "weight": p.get('weight_l2', 0.2),
+                "source": "bootstrap",
+            }
+            for pid, p in _pillars.items()
         }
         
         # Prefer bootstrap baseline_accuracy when learned has 0 or missing (avoid showing 0% in UI)
