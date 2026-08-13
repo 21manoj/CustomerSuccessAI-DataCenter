@@ -309,8 +309,14 @@ def create_customer():
         )
         db.session.add(ft)
 
-        # Create default accounts (3)
-        num_accounts = data.get("num_accounts", 3)
+        # Placeholder accounts: default to NONE. A real customer onboards their
+        # own accounts via the onboarding wizard (accounts.csv). Auto-seeding
+        # "<company> - Production/Staging/Development" left empty, 0-health rows
+        # cluttering every onboarded tenant. Callers that want demo placeholders
+        # can still pass num_accounts explicitly. (This endpoint is admin-only;
+        # the load-driver uses the /api/onboarding/complete register flow, so it
+        # is unaffected.)
+        num_accounts = data.get("num_accounts", 0)
         envs = ['Production', 'Staging', 'Development', 'DR', 'QA', 'Lab', 'Edge', 'GPU-Cluster', 'HPC', 'Archive']
         accounts_created = []
         for i in range(min(num_accounts, 10)):

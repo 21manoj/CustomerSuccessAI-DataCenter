@@ -103,6 +103,10 @@ export const OnboardingWizard: React.FC = () => {
   const { session } = useSession();
   const navigate = useNavigate();
   const customerId = getCustomerIdentifier(session);
+  // process-data / status take the numeric customer_id. getCustomerIdentifier
+  // prefers the UUID (correct for X-Customer-ID headers), but posting the UUID
+  // as a JSON body customer_id used to 500 the endpoint. Prefer the numeric id.
+  const numericCustomerId = session?.customer_id ?? customerId;
 
   const [step, setStep] = useState<Step>(1);
   const [uploads, setUploads] = useState<Record<string, UploadState>>({});
@@ -168,7 +172,7 @@ export const OnboardingWizard: React.FC = () => {
       const resp = await fetch('/api/onboarding/process-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer_id: customerId }),
+        body: JSON.stringify({ customer_id: numericCustomerId }),
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
@@ -180,10 +184,13 @@ export const OnboardingWizard: React.FC = () => {
       // Poll for completion
       const poll = async () => {
         try {
-          const sr = await fetch(`/api/onboarding/status/${customerId}`);
+          const sr = await fetch(`/api/onboarding/status/${numericCustomerId}`);
           if (sr.ok) {
             const status = await sr.json();
-            if (status.status === 'success' || status.status === 'completed') {
+            // 'partial' = pipeline finished but some non-fatal steps had issues
+            // (e.g. a signals warning). Data still loaded — treat as done and
+            // surface the result rather than polling forever.
+            if (status.status === 'success' || status.status === 'completed' || status.status === 'partial') {
               setProcessResult(status);
               setProcessing(false);
               return;
