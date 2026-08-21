@@ -1050,17 +1050,27 @@ def partner_portal(
         # Gate on content, not vertical identity: this portal hardcodes P4 as
         # "the partner pillar," but pillar index is stable across verticals
         # while pillar meaning is not (P4 = Power & Facility in datacenter_v1,
-        # not Channel & Partner Health). Rather than add a per-vertical lookup
-        # table here — which would just relocate the same defect — refuse to
-        # serve unless this tenant's own declared P4 pillar name is actually
-        # the partner pillar. A real pillar_roles registry replaces this
-        # string check with a proper role lookup later; this is the interim
-        # control that stops the leak today.
+        # Compliance & Risk in healthcare_provider — neither is a partner
+        # pillar). Rather than add a per-vertical lookup table here — which
+        # would just relocate the same defect — refuse to serve unless this
+        # tenant's own declared P4 pillar name is actually a partner pillar.
+        #
+        # An exact match against dc2_s's name ("Channel & Partner Health")
+        # was tried first and found wrong by testing against a second real
+        # vertical: saas_premium's own equivalent is genuinely named
+        # "Partner & Ecosystem Health" — different string, same role — and
+        # the exact match incorrectly refused a vertical that legitimately
+        # has one. Checked all four registered verticals directly: both real
+        # partner pillars contain "partner"; neither Power & Facility
+        # (datacenter_v1) nor Compliance & Risk (healthcare_provider) does.
+        # A real pillar_roles registry replaces this substring check with a
+        # proper role lookup later; this is the interim control that stops
+        # the leak today without also blocking legitimate use.
         from mcp_server.cs_pulse_mcp_server import _resolve_customer_vertical
         from utils.vertical_registry import get_pillars as _vr_get_pillars
         _tenant_vertical = _resolve_customer_vertical(customer_id)
         _p4_name = (_vr_get_pillars(_tenant_vertical).get('P4') or {}).get('name', '')
-        if _p4_name != 'Channel & Partner Health':
+        if 'partner' not in _p4_name.lower():
             raise ToolError(
                 f"partner_portal is not available for customer {customer_id} "
                 f"(vertical={_tenant_vertical!r}). This vertical's P4 pillar is "

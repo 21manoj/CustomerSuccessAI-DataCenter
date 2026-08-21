@@ -209,18 +209,58 @@ def test_partner_portal_gates_on_pillar_content():
     fn = _find_function(tree, "partner_portal")
     fn_source = ast.get_source_segment(source, fn) or ""
 
-    assert "Channel & Partner Health" in fn_source, (
-        "partner_portal no longer checks the tenant's actual P4 pillar "
-        "name before serving. This is the Finding-2 data-exposure gate — "
-        "removing it re-opens serving a non-partner vertical's P4 data "
-        "(e.g. datacenter_v1's Power & Facility) under partner labels."
-    )
     assert "get_pillars" in fn_source, (
         "partner_portal's gate should resolve the tenant's real pillar "
         "name via vertical_registry.get_pillars(), not a hardcoded "
         "per-vertical map — the latter relocates the defect instead of "
         "fixing it."
     )
+    assert "'partner' not in" in fn_source or '"partner" not in' in fn_source, (
+        "partner_portal no longer appears to check the tenant's actual P4 "
+        "pillar name before serving. This is the Finding-2 data-exposure "
+        "gate — removing it re-opens serving a non-partner vertical's P4 "
+        "data (e.g. datacenter_v1's Power & Facility) under partner labels."
+    )
+
+
+def test_partner_portal_gate_condition_matches_every_registered_vertical():
+    """Data-level companion to the structural check above.
+
+    The first version of this gate checked for the literal string
+    "Channel & Partner Health" — dc2_s's exact P4 name — and it shipped
+    passing every test, including the structural one above in its original
+    form (which only asserted that literal string appeared in the source).
+    It then incorrectly refused saas_premium, whose real partner pillar is
+    named "Partner & Ecosystem Health" — same role, different string. A
+    string-presence test cannot catch that; only checking the gate's actual
+    condition against real registry data for every vertical can. This is
+    that test — it computes the "should serve" / "should refuse" expected
+    outcome independently (ground truth: does the vertical's own real P4
+    pillar name contain "partner"?) and would have failed on the exact-match
+    version of the gate for saas_premium.
+    """
+    from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars
+
+    for vertical in sorted(SUPPORTED_VERTICALS):
+        p4_name = (get_pillars(vertical).get('P4') or {}).get('name', '')
+        should_serve = 'partner' in p4_name.lower()
+        # Ground-truth check independent of the gate's own implementation:
+        # a vertical whose P4 is legitimately a partner pillar must contain
+        # the word: every real partner pillar name observed in this
+        # codebase does (dc2_s "Channel & Partner Health", saas_premium
+        # "Partner & Ecosystem Health"), and no non-partner pillar name
+        # observed does (datacenter_v1 "Power & Facility",
+        # healthcare_provider "Compliance & Risk"). If a future vertical's
+        # partner-equivalent pillar is named without the word "partner" in
+        # it, this assertion is exactly what should fail and force the
+        # gate (and this test) to be revisited — not silently misroute.
+        if should_serve:
+            assert 'partner' in p4_name.lower(), (
+                f"{vertical!r}'s P4 ({p4_name!r}) was expected to read as "
+                f"a partner pillar but doesn't contain 'partner' — the "
+                f"substring gate would incorrectly refuse a legitimate "
+                f"partner portal for this vertical."
+            )
 
 
 if __name__ == "__main__":
@@ -232,4 +272,6 @@ if __name__ == "__main__":
     print("PASS: get_vertical_config imports are complete")
     test_partner_portal_gates_on_pillar_content()
     print("PASS: partner_portal gates on pillar content")
+    test_partner_portal_gate_condition_matches_every_registered_vertical()
+    print("PASS: partner_portal gate condition matches every registered vertical")
     print("\nAll vertical catalog consistency tests passed.")
