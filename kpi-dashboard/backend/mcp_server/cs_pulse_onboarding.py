@@ -36,6 +36,10 @@ from cs_pulse_mcp_server import (
     _get_account_arr,
     _get_health_functions,
     _get_kpi_definitions,
+    _get_playbook_config,  # Aug 21 2026: was missing — caused NameError at runtime
+                           # in get_vertical_config. Same bug class as the
+                           # _require_auth fix above; surfaced via a live audit
+                           # against the claude.ai MCP connector.
     _get_dc2s_pillar_labels,  # DEPRECATED — kept for back-compat; use _get_pillar_labels(vertical)
     _get_pillar_labels,        # Apr 28 2026: vertical-aware pillar labels (saas_premium / dc2_s / etc.)
     _resolve_customer_vertical,
@@ -337,7 +341,13 @@ def get_vertical_config(vertical: str) -> dict:
         except Exception as exc:
             raise ToolError(f"Could not load vertical config for {vertical!r}: {exc}") from exc
 
-        playbook_config = _get_playbook_config(vertical) or {}
+        # _get_playbook_config returns (PLAYBOOK_CONFIG, should_trigger_playbook)
+        # — a masked second bug found only after fixing the NameError above:
+        # the tuple was being assigned whole and .items() called on it
+        # directly, which would have raised AttributeError on the very next
+        # line for every call, regardless of vertical.
+        playbook_config, _should_trigger = _get_playbook_config(vertical)
+        playbook_config = playbook_config or {}
         playbooks = {
             pb_id: {
                 'name': cfg.get('name', pb_id),
@@ -359,9 +369,12 @@ def get_vertical_config(vertical: str) -> dict:
             'kpis': kpis,
             'playbook_count': len(playbooks),
             'playbooks': playbooks,
+            # health_thresholds exposes these as functions, not constants —
+            # a third masked bug in this one function, found only after the
+            # first two were fixed.
             'health_bands': {
-                'healthy_min': ht.HEALTHY_MIN,
-                'at_risk_min': ht.AT_RISK_MIN,
+                'healthy_min': ht.healthy_min(),
+                'at_risk_min': ht.at_risk_min(),
             },
             'saas_kpi_tiers': saas_tiers if vertical in ('saas_premium', 'saas') else [],
         }

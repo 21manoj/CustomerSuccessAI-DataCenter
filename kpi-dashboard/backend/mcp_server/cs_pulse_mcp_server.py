@@ -272,15 +272,24 @@ def _get_health_functions(vertical: str):
 
 
 def _get_kpi_definitions(vertical: str) -> dict:
-    """Return the KPI definitions dict for a vertical."""
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.kpi_definitions import SAAS_KPIS
-            return SAAS_KPIS
-        except ImportError:
-            return {}
-    from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    return DC2S_KPIS
+    """Return the KPI definitions dict for a vertical.
+
+    Was the same hardcoded two-branch if/else as get_kpi_catalog's former
+    PILLARS sourcing (Aug 21 2026 vertical-coupling audit) — every vertical
+    except saas_premium/dc2_s silently got DC2S_KPIS. This is why get_kpi_catalog
+    kept reporting total_kpis=35 and dropping P6 for datacenter_v1 even after
+    the PILLARS fix: PILLARS knew P6 existed, but no KPI in kpi_defs was ever
+    tagged pillar='P6', so P6's KPI set stayed empty at every downstream step,
+    including the CustomerConfig.dc2s_enabled_kpis filter (which itself was
+    correct — 38 codes, P6 included — but had nothing to filter into).
+    """
+    try:
+        from utils.vertical_registry import get_kpis as _vr_get_kpis
+        return _vr_get_kpis(vertical)
+    except Exception as _kpi_exc:
+        raise ValueError(
+            f"Could not load KPI definitions for vertical {vertical!r}: {_kpi_exc}"
+        ) from _kpi_exc
 
 
 def _get_playbook_config(vertical: str):
@@ -520,19 +529,27 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
 
         kpi_defs = _get_kpi_definitions(vertical)
 
-        if vertical in ('saas_premium', 'saas'):
-            try:
-                from verticals.saas_premium.kpi_definitions import SAAS_PILLARS, SAAS_PILLAR_WEIGHTS
-                PILLARS = SAAS_PILLARS
-                default_l2 = SAAS_PILLAR_WEIGHTS
-            except ImportError:
-                from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-                PILLARS = DC2S_PILLARS
-                default_l2 = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
-        else:
-            from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-            PILLARS = DC2S_PILLARS
-            default_l2 = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
+        # Was a hardcoded two-branch if/else (saas_premium via direct module
+        # import, everything else silently defaulted to DC2S_PILLARS) that
+        # bypassed the vertical_registry loader the rest of the codebase
+        # already uses correctly — and the saas_premium branch was itself
+        # broken (kpi_definitions.py has no SAAS_PILLAR_WEIGHTS symbol),
+        # so its except ImportError fell through to the same DC2S default.
+        # Every vertical except dc2_s was silently served dc2_s's pillar
+        # names and weights. No silent fallback: if the registry can't
+        # serve this vertical's catalog, fail loud rather than serve
+        # another vertical's data under this one's name.
+        try:
+            from utils.vertical_registry import get_pillars as _vr_get_pillars
+            PILLARS = _vr_get_pillars(vertical)
+            default_l2 = {
+                pcode: pdata.get('weight_l2', 0.2) for pcode, pdata in PILLARS.items()
+            }
+        except Exception as _pillar_exc:
+            raise ToolError(
+                f"Could not load pillar catalog for vertical {vertical!r} "
+                f"(customer_id={customer_id}): {_pillar_exc}"
+            ) from _pillar_exc
 
         pillar_catalog = {}
         for pcode, pdata in PILLARS.items():
