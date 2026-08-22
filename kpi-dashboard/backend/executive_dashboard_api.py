@@ -35,19 +35,75 @@ from models import (
 )
 import utils.health_thresholds as ht
 from utils.context_graph import aggregate_revenue_across_accounts, aggregate_revenue_with_provenance
+from utils.vertical_registry import get_vertical_for_customer, get_pillars
 
 logger = logging.getLogger(__name__)
 
 executive_dashboard_api = Blueprint('executive_dashboard_api', __name__)
 
-# DC2S pillar display names
-DC2S_PILLAR_DISPLAY = {
-    'P1': 'Deployment Velocity',
-    'P2': 'Operational Stability',
-    'P3': 'AI Workload Performance',
-    'P4': 'Channel & Partner Health',
-    'P5': 'Expansion Readiness',
+# Per-vertical CFO pillar-investment breakdown config (Aug 21 2026
+# vertical-coupling audit, bug #2). Was hardcoded to dc2_s's 5 pillars —
+# every other vertical (datacenter_v1 included, which has 6 real pillars)
+# silently got dc2_s's names, and datacenter_v1's 6th pillar's real-dollar
+# data was dropped from the CFO report entirely, not even mislabeled.
+#
+# 'metric_groups': pillar_code -> list of Power-of-1 metric_ids whose
+#   dollar_impact rolls up into that pillar's investment-breakdown tile.
+#   An empty list means "no direct Po1 metric for this pillar" — falls
+#   through to weight-based allocation (existing behavior, unchanged).
+# 'weights': pillar_code -> investment-allocation weight, must sum to 1.0.
+#
+# dc2_s's values are UNCHANGED from the original hardcode — this is a
+# regression-safety requirement, not a design choice.
+CFO_PILLAR_INVESTMENT_CONFIG = {
+    'dc2_s': {
+        'metric_groups': {
+            'P1': ['TTFV', 'product_adoption'],
+            'P2': ['ticket_resolution_time'],
+            'P3': ['NRR', 'GRR'],
+            'P4': [],  # partner — no direct Po1 metric
+            'P5': ['expansion_rate'],
+        },
+        'weights': {'P1': 0.25, 'P2': 0.15, 'P3': 0.30, 'P4': 0.10, 'P5': 0.20},
+    },
+    'saas_premium': {
+        'metric_groups': {
+            'P1': ['product_adoption'],       # Product Adoption & Usage
+            'P2': ['TTFV'],                    # Customer Engagement
+            'P3': ['ticket_resolution_time'],  # Customer Sentiment & Support
+            'P4': ['GRR'],                     # Partner & Ecosystem Health
+            'P5': ['NRR', 'expansion_rate'],   # Revenue & Growth
+        },
+        'weights': {'P1': 0.25, 'P2': 0.15, 'P3': 0.30, 'P4': 0.10, 'P5': 0.20},
+    },
+    'datacenter_v1': {
+        'metric_groups': {
+            'P1': ['NRR'],                     # Revenue & Unit Economics
+            'P2': ['product_adoption'],        # Fleet Utilization & Goodput
+            'P3': ['ticket_resolution_time'],  # Reliability & SLA Delivery
+            'P4': ['GRR'],                     # Power & Facility
+            'P5': ['expansion_rate'],          # Commercial & Expansion
+            'P6': ['TTFV'],                    # Provisioning Velocity
+        },
+        'weights': {'P1': 0.25, 'P2': 0.15, 'P3': 0.20, 'P4': 0.10, 'P5': 0.15, 'P6': 0.15},
+    },
 }
+
+
+def _cfo_pillar_investment_config(vertical, pillar_codes):
+    """Return (metric_groups, weights) for a vertical's CFO pillar breakdown.
+
+    Falls back to an even weight split across the vertical's own real
+    pillar codes (from vertical_registry, not a guess) with no metric
+    groups, for any vertical without a curated entry above — never
+    borrows another vertical's config.
+    """
+    cfg = CFO_PILLAR_INVESTMENT_CONFIG.get(vertical)
+    if cfg:
+        return cfg['metric_groups'], cfg['weights']
+    n = max(len(pillar_codes), 1)
+    even_weight = round(1.0 / n, 4)
+    return {}, {pcode: even_weight for pcode in pillar_codes}
 
 # Story arc pattern definitions (matched against context_node subtypes/properties)
 STORY_ARC_PATTERNS = {
@@ -1060,6 +1116,7 @@ def cfo_dashboard():
 
         accounts = _get_customer_accounts(customer_id)
         account_ids = [a.account_id for a in accounts]
+        vertical = get_vertical_for_customer(customer_id)
 
         # ── Total ARR ──
         total_arr = sum(_safe_float(a.revenue) for a in accounts)
@@ -1204,33 +1261,31 @@ def cfo_dashboard():
         roi_scaling['roi_multiple'] = roi_multiple
 
         # ── Pillar investment breakdown (from Power-of-1 metrics) ──
-        # Map Po1 metrics to pillars for realistic per-pillar impact
-        pillar_metric_map = {
-            'P1': ['TTFV', 'product_adoption'],
-            'P2': ['ticket_resolution_time'],
-            'P3': ['NRR', 'GRR'],
-            'P4': [],  # partner — no direct Po1 metric
-            'P5': ['expansion_rate'],
-        }
-        # Pillar weights for investment allocation
-        pillar_weights = {'P1': 0.25, 'P2': 0.15, 'P3': 0.30, 'P4': 0.10, 'P5': 0.20}
+        # Vertical-aware: was hardcoded to dc2_s's 5 pillars (bug #2, Aug 21
+        # 2026 vertical-coupling audit) — every other vertical got dc2_s's
+        # pillar names, and any vertical with more than 5 pillars (e.g.
+        # datacenter_v1's 6) silently lost its extra pillar's $ entirely.
+        vertical_pillars = get_pillars(vertical)
+        pillar_codes = sorted(vertical_pillars.keys())
+        pillar_metric_map, pillar_weights = _cfo_pillar_investment_config(vertical, pillar_codes)
         po1_by_metric = {m['metric_id']: m.get('dollar_impact', 0) for m in power_of_1_metrics}
 
         pillar_investments = []
-        for pcode in ['P1', 'P2', 'P3', 'P4', 'P5']:
+        for pcode in pillar_codes:
             # Impact: sum of Power-of-1 dollar impacts for metrics in this pillar
             mapped_metrics = pillar_metric_map.get(pcode, [])
             pillar_impact = sum(po1_by_metric.get(m, 0) for m in mapped_metrics)
+            weight = pillar_weights.get(pcode, 0)
             if pillar_impact == 0 and effective_investment > 0:
                 # Fallback: allocate by weight
-                pillar_impact = round(roi_impact * pillar_weights[pcode], 2)
+                pillar_impact = round(roi_impact * weight, 2)
 
-            pillar_investment = round(effective_investment * pillar_weights[pcode], 2)
+            pillar_investment = round(effective_investment * weight, 2)
             pillar_roi = round(pillar_impact / pillar_investment, 1) if pillar_investment > 0 else 0
 
             pillar_investments.append({
                 'pillar': pcode,
-                'name': DC2S_PILLAR_DISPLAY.get(pcode, pcode),
+                'name': vertical_pillars.get(pcode, {}).get('name', pcode),
                 'investment': pillar_investment,
                 'impact': round(pillar_impact, 2),
                 'roi': pillar_roi,
