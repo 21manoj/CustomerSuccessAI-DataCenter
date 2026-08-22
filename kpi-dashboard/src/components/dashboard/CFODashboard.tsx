@@ -403,7 +403,7 @@ const SourceLabel: React.FC<{ source: SourceKey | string; className?: string }> 
   const tier = entry?.tier;
   return (
     <p className={`flex items-center gap-1.5 text-[9px] italic text-gray-500 leading-tight ${className}`}>
-      {tier && <ProvenanceTierBadge tier={tier} detail={text} compact showMeasured />}
+      {tier && <ProvenanceTierBadge tier={tier} detail={text} compact showMeasured dark />}
       <span title="System-of-record disclosure. Full GL reconciliation pending GL connector.">
         {text}
       </span>
