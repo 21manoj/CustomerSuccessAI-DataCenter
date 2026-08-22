@@ -107,3 +107,67 @@ def test_nrr_synthesis_pillars_belong_to_the_same_vertical():
 def test_pillar_metric_map_for_customer_falls_back_to_dc2s_only_without_customer_id():
     pillar_map, nrr = api._pillar_metric_map_for_customer(None)
     assert (pillar_map, nrr) == api._get_pillar_metric_map('dc2_s')
+
+
+def test_nrr_synthesis_expansion_pillar_matches_phase2_pillar_roles_registry():
+    """Phase 3 retrofit (2026-08-21): nrr_synthesis's expansion_pillar must be
+    sourced from utils.vertical_registry.role(vertical, 'expansion') -- Phase 2's
+    pillar_roles registry -- not just hand-authored a second time in
+    POWER_OF_1_PILLAR_MAPS. 'expansion' has an exact match in the registry's
+    shared vocabulary (unlike 'retention', which has none, so retention_pillar
+    stays hand-authored on purpose and is NOT checked here)."""
+    from utils.vertical_registry import role, SUPPORTED_VERTICALS
+
+    checked_any = False
+    for vertical in SUPPORTED_VERTICALS:
+        _pillar_map, nrr = api._get_pillar_metric_map(vertical)
+        if nrr is None:
+            continue
+        expected = role(vertical, 'expansion')
+        assert expected is not None, (
+            f"{vertical} declares nrr_synthesis but pillar_roles has no "
+            f"'expansion' role for it -- registry and Power-of-1 map disagree"
+        )
+        assert nrr['expansion_pillar'] == expected, (
+            f"{vertical}: nrr_synthesis.expansion_pillar={nrr['expansion_pillar']!r} "
+            f"does not match pillar_roles' role('expansion')={expected!r}"
+        )
+        checked_any = True
+
+    assert checked_any, "no vertical with nrr_synthesis was found to check"
+
+
+def test_nrr_synthesis_expansion_pillar_is_actually_wired_through_role():
+    """Prove the resolution goes THROUGH utils.vertical_registry.role() at call
+    time -- not just that the hand-authored dict happens to already agree with
+    it (it does, for every vertical today, which would let a no-op pass a
+    naive equality check). Monkeypatch role() to return a distinguishable
+    sentinel pillar code and confirm _get_pillar_metric_map picks it up."""
+    import utils.vertical_registry as registry
+
+    original_role = registry.role
+    try:
+        registry.role = lambda vertical, role_name: (
+            'P9-SENTINEL' if role_name == 'expansion' else original_role(vertical, role_name)
+        )
+        _pillar_map, nrr = api._get_pillar_metric_map('dc2_s')
+        assert nrr['expansion_pillar'] == 'P9-SENTINEL', (
+            "expansion_pillar did not pick up the monkeypatched role() return value "
+            "-- _get_pillar_metric_map is not actually resolving it dynamically"
+        )
+        # retention_pillar must be unaffected by patching the 'expansion' role
+        assert nrr['retention_pillar'] == 'P4'
+    finally:
+        registry.role = original_role
+
+
+def test_nrr_synthesis_retention_pillar_stays_hand_authored_no_partner_role_used():
+    """retention_pillar must NOT be silently sourced from role(vertical, 'partner')
+    -- pillar_roles has no 'retention' role, and 'partner' is not the same concept
+    even though they land on the same pillar for dc2_s/saas_premium today. This
+    guards against a future refactor collapsing the two without a deliberate
+    decision (see Phase 3 report's open question)."""
+    for vertical in ('dc2_s', 'saas_premium'):
+        _pillar_map, nrr = api._get_pillar_metric_map(vertical)
+        assert nrr['retention_pillar'] == \
+            api.POWER_OF_1_PILLAR_MAPS[vertical]['nrr_synthesis']['retention_pillar']

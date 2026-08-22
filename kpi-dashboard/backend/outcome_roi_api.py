@@ -37,6 +37,23 @@ outcome_roi_api = Blueprint('outcome_roi_api', __name__)
 # Each entry pairs a pillar_metric_map (pillar_code → Power-of-1 metric_id) with an
 # optional nrr_synthesis (which two pillars combine into a synthetic NRR reading,
 # when NRR isn't already covered directly).
+#
+# nrr_synthesis retention_pillar vs. expansion_pillar (Phase 3 retrofit, 2026-08-21):
+# Phase 2's utils.vertical_registry.role() vocabulary is
+# revenue/reliability/capacity/partner/expansion/adoption/engagement/compliance —
+# it has an exact 'expansion' role but NO 'retention' role. So:
+#   - expansion_pillar is now resolved at call time via role(vertical, 'expansion')
+#     in _get_pillar_metric_map() below, not hand-authored a second time here. The
+#     'expansion_pillar' values still present in this dict are kept only as a
+#     documented fallback for verticals role() can't resolve (defensive, not
+#     expected to fire for the three verticals below — role() already agrees with
+#     every value here).
+#   - retention_pillar stays hand-authored here on purpose: there is no 'retention'
+#     role in Phase 2's vocabulary to source it from. It is NOT the same concept as
+#     'partner' — it only happens to land on the same pillar (P4) for dc2_s and
+#     saas_premium today. Do not silently swap this for role(vertical, 'partner');
+#     see Phase 3 report for the open question of whether pillar_roles should grow
+#     a real 'retention' role.
 POWER_OF_1_PILLAR_MAPS = {
     'dc2_s': {
         'pillar_metric_map': {
@@ -89,10 +106,27 @@ def _get_pillar_metric_map(vertical):
     pillar_metric_map: dict of pillar_code -> Power-of-1 metric_id.
     nrr_synthesis: {'retention_pillar', 'retention_weight', 'expansion_pillar',
         'expansion_weight'} or None if the vertical's map already covers NRR directly.
+
+    expansion_pillar is resolved here from utils.vertical_registry.role(vertical,
+    'expansion') — Phase 2's pillar_roles registry — rather than trusting only the
+    hand-authored value baked into POWER_OF_1_PILLAR_MAPS, since 'expansion' has an
+    exact match in that registry's shared vocabulary. retention_pillar is left as
+    hand-authored: the registry's vocabulary has no 'retention' role to source it
+    from (see the comment above POWER_OF_1_PILLAR_MAPS).
     """
     entry = POWER_OF_1_PILLAR_MAPS.get(vertical)
     if entry:
-        return entry['pillar_metric_map'], entry['nrr_synthesis']
+        nrr_synthesis = entry['nrr_synthesis']
+        if nrr_synthesis:
+            nrr_synthesis = dict(nrr_synthesis)  # don't mutate the module-level dict
+            from utils.vertical_registry import role
+            resolved_expansion = role(vertical, 'expansion')
+            if resolved_expansion:
+                nrr_synthesis['expansion_pillar'] = resolved_expansion
+            # else: pillar_roles has no 'expansion' role for this vertical -- fall
+            # back to the hand-authored value already in the dict rather than
+            # breaking nrr synthesis for a vertical role() doesn't cover.
+        return entry['pillar_metric_map'], nrr_synthesis
 
     from utils.vertical_registry import get_pillars
     try:
