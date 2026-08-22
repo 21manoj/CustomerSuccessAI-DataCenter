@@ -249,6 +249,64 @@ def _scan_violations():
 # tests/test_phase5_api_v1_routes_fixes.py, which imports
 # verticals.dc2_s.api_routes locally in 2 of its test functions) = 75 sites
 # across 46 files.
+#
+# Phase 5 update #3 (Aug 22 2026, mcp_server cluster — common.py,
+# _ask_ai_helpers.py, cs_pulse_admin.py, cs_pulse_mcp_server.py): re-scanned
+# all 4 files fresh rather than trusting the existing baseline count, since
+# 3 of them had already been partially fixed earlier the same day and the
+# BASELINE literal had drifted out of sync with the actual post-fix source:
+#
+#   - mcp_server/common.py: 4 of its 6 baseline entries (DC2S_KPIS,
+#     DC2S_PILLARS, SAAS_KPIS, SAAS_PILLARS) no longer exist in the file —
+#     get_pillar_labels() and get_kpi_definitions() were already routed
+#     through utils.vertical_registry.get_pillars/get_kpis by an earlier
+#     pass today, confirmed by reading the current source (both now contain
+#     zero verticals.* imports). REMOVED from BASELINE (stale, not a live
+#     site — fixing an entry that no longer exists never fails this test,
+#     but leaving it in overstates the remaining inventory). The other 2
+#     (dc2_s and saas_premium PLAYBOOK_CONFIG/should_trigger_playbook, both
+#     inside get_playbook_config()) are genuinely still there and legitimate:
+#     no generic registry accessor exists for playbook config, and the code
+#     already correctly if/elif-gates per known vertical with a safe no-op
+#     default for everything else — same treatment as playbook_cost_bridge.py
+#     above. LEFT IN BASELINE.
+#   - mcp_server/cs_pulse_mcp_server.py: BOTH baseline entries (dc2_s and
+#     saas_premium PLAYBOOK_CONFIG/should_trigger_playbook) are stale —
+#     _get_playbook_config() (line ~303) now delegates to the fixed
+#     mcp_server.common.get_playbook_config() instead of carrying its own
+#     copy of the import, per that function's own docstring ("delegates to
+#     that fixed implementation instead of carrying its own stale copy").
+#     The file has zero verticals.* imports in the current scan. REMOVED
+#     from BASELINE entirely.
+#   - _ask_ai_helpers.py: both entries (dc2_s and saas_premium
+#     PLAYBOOK_CONFIG/should_trigger_playbook, inside its own
+#     _get_playbook_config()) are real and current, and already correctly
+#     if/elif-gated per vertical with a safe no-op default — deliberately
+#     NOT delegated to mcp_server.common.get_playbook_config because this
+#     module has zero fastmcp dependency by design (documented in its own
+#     docstring) and common.py imports fastmcp.exceptions at module level.
+#     LEFT IN BASELINE, same legitimate-gated treatment as common.py above.
+#   - mcp_server/cs_pulse_admin.py: both entries are real and current, inside
+#     get_csm_daily_actions() (line ~456). _get_roi_context is already gated
+#     `if vertical == 'dc2_s':` with a documented honest-unavailable fallback
+#     for every other vertical (no fabricated ROI numbers). The
+#     _compute_impact_score/_compute_effort_score/_determine_urgency import
+#     is unconditional (not gated) but the function is genuinely
+#     vertical-neutral by inspection — it operates only on
+#     health/churn/expansion floats and playbook sub-component counts, no
+#     vertical-specific KPI codes or playbook IDs — documented inline at the
+#     import site (see the file's own Aug 21 2026 comment). Same
+#     physically-homed-but-vertical-neutral-reuse pattern already accepted
+#     elsewhere in this baseline for utils/vpcs_dashboard_helpers.py and
+#     scripts/generate_context_graph_data.py. LEFT IN BASELINE.
+#
+# No code changes were needed for any of these 4 files this pass — every
+# genuinely-unfixed site turned out to already be a documented, gated,
+# legitimate exception; the only real bugs in this cluster (resolver +
+# _get_kpi_definitions/_get_playbook_config duplication) had already been
+# fixed earlier the same day. Net: 75 - 6 (4 stale common.py + 2 stale
+# cs_pulse_mcp_server.py, both already-fixed-but-uncounted) = 69 sites
+# across 44 files.
 # ──────────────────────────────────────────────────────────────────────────
 BASELINE = {
     ('_ask_ai_helpers.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
@@ -267,16 +325,10 @@ BASELINE = {
     ('data_quality_api.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
     ('debug_import.py', 'verticals.dc2_s', ('DC2S_KPIS',)): 1,
     ('journey_api_dynamic.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
-    ('mcp_server/common.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
-    ('mcp_server/common.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
     ('mcp_server/common.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
-    ('mcp_server/common.py', 'verticals.saas_premium.kpi_definitions', ('SAAS_KPIS',)): 1,
-    ('mcp_server/common.py', 'verticals.saas_premium.kpi_definitions', ('SAAS_PILLARS',)): 1,
     ('mcp_server/common.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('mcp_server/cs_pulse_admin.py', 'verticals.dc2_s.api_routes', ('_compute_impact_score', '_compute_effort_score', '_determine_urgency')): 1,
     ('mcp_server/cs_pulse_admin.py', 'verticals.dc2_s.api_routes', ('_get_roi_context',)): 1,
-    ('mcp_server/cs_pulse_mcp_server.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
-    ('mcp_server/cs_pulse_mcp_server.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('onboarding_api_v2_config_aware.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
     ('onboarding_api_v2_config_aware.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS', 'DC2S_PILLARS')): 1,
     ('playbook_cost_bridge.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
@@ -327,7 +379,7 @@ BASELINE = {
     ('verticals/customer295-dc/services/bootstrap_weights_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
 }
 
-assert sum(BASELINE.values()) == 75, (
+assert sum(BASELINE.values()) == 69, (
     "BASELINE literal was hand-edited inconsistently with its own comment "
     "— fix the count or the entries."
 )
