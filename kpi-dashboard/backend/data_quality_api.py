@@ -17,14 +17,21 @@ import re
 data_quality_api = Blueprint('data_quality_api', __name__)
 
 
-def _get_dc2s_kpi_ranges():
-    """Load DC2_S KPI definitions and return (valid_min, valid_max) per kpi_code (union of healthy/risk/critical)."""
+def _get_dc2s_kpi_ranges(vertical: str = 'dc2_s'):
+    """Load a vertical's KPI definitions and return (valid_min, valid_max) per
+    kpi_code (union of healthy/risk/critical). Defaults to 'dc2_s' for
+    backward-compat callers, but resolved via utils.vertical_registry so a
+    customer's OWN vertical's ranges are used — was previously hardcoded to
+    DC2S_KPIS regardless of the caller's vertical, so a saas_premium/
+    datacenter_v1 customer's KPI codes never matched DC2S's codes and this
+    check silently found zero discrepancies for them."""
     try:
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    except ImportError:
+        from utils.vertical_registry import get_kpis
+        kpis = get_kpis(vertical)
+    except Exception:
         return {}
     out = {}
-    for kpi_code, defn in DC2S_KPIS.items():
+    for kpi_code, defn in kpis.items():
         ranges = defn.get('ranges') or {}
         mins, maxs = [], []
         for band in ('healthy', 'risk', 'critical'):
@@ -135,12 +142,24 @@ def get_kpi_range_discrepancies():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 401
 
-    ranges_map = _get_dc2s_kpi_ranges()
+    from utils.vertical_registry import get_vertical_for_customer
+    try:
+        _vertical = get_vertical_for_customer(customer_id)
+    except Exception as e:
+        # Fail closed: no silent re-substitution of dc2_s's ranges for a
+        # customer whose vertical can't be resolved — just report nothing
+        # rather than checking their data against the wrong vertical's KPIs.
+        return jsonify({
+            'summary': {'total_checked': 0, 'out_of_range_count': 0, 'accounts_affected': 0},
+            'discrepancies': [],
+            'message': f'Could not resolve vertical for customer {customer_id}: {e}'
+        })
+    ranges_map = _get_dc2s_kpi_ranges(_vertical)
     if not ranges_map:
         return jsonify({
             'summary': {'total_checked': 0, 'out_of_range_count': 0, 'accounts_affected': 0},
             'discrepancies': [],
-            'message': 'No DC2_S KPI range definitions available'
+            'message': f'No KPI range definitions available for vertical "{_vertical}"'
         })
 
     # dc2s_kpis for this customer's accounts

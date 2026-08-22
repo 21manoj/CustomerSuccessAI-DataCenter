@@ -153,14 +153,12 @@ def execute_script(script_path: Path, customer_id: int, timeout: int = 300,
         return (False, "", str(e))
 
 
-# Load canonical KPI/pillar definitions for defaults and validation
-from verticals.dc2_s.kpi_definitions import DC2S_KPIS, DC2S_PILLARS
-
-# Expected DC2_S pillar names for weight validation
-DC2S_PILLAR_NAMES = set(DC2S_PILLARS.keys())  # {'P1', 'P2', 'P3', 'P4', 'P5'}
-
-# All 38 KPIs as default enabled set (not 15)
-ALL_DC2S_KPI_CODES = list(DC2S_KPIS.keys())  # 38 KPIs
+# Canonical KPI/pillar definitions for defaults and validation are resolved
+# per-vertical via utils.vertical_registry at each call site below (see
+# _get_valid_pillar_names/_get_valid_kpi_codes above, and the
+# total_available_kpis/active_pillars response fields further down) — no
+# module-level dc2_s-only constant here, since this module is shared across
+# every vertical's onboarding flow.
 
 
 def _get_valid_pillar_names(vertical: str) -> Tuple[Optional[set], Optional[str]]:
@@ -520,14 +518,19 @@ def validate_kpi_csv_schema(df: pd.DataFrame) -> Tuple[bool, List[str]]:
     return (True, [])
 
 
-def _get_dc2s_kpi_valid_ranges():
-    """Return dict kpi_code -> {min, max, name, unit} from DC2_S KPI definitions (union of healthy/risk/critical)."""
+def _get_dc2s_kpi_valid_ranges(vertical: str = 'dc2_s'):
+    """Return dict kpi_code -> {min, max, name, unit} from a vertical's KPI
+    definitions (union of healthy/risk/critical). Defaults to 'dc2_s' to
+    preserve prior behavior for existing callers; resolved via
+    utils.vertical_registry so non-dc2_s verticals get their own ranges
+    instead of silently validating against dc2_s's."""
     try:
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    except ImportError:
+        from utils.vertical_registry import get_kpis
+        kpis = get_kpis(vertical)
+    except Exception:
         return {}
     out = {}
-    for kpi_code, defn in DC2S_KPIS.items():
+    for kpi_code, defn in kpis.items():
         ranges = defn.get('ranges') or {}
         mins, maxs = [], []
         for band in ('healthy', 'risk', 'critical'):
@@ -546,16 +549,17 @@ def _normalize_kpi_code_for_range(kpi_code, valid_codes):
     return kpi_code if kpi_code in valid_codes else None
 
 
-def validate_kpi_values_against_ranges(df_kpis: pd.DataFrame) -> Tuple[List[Dict], List[str]]:
+def validate_kpi_values_against_ranges(df_kpis: pd.DataFrame, vertical: str = 'dc2_s') -> Tuple[List[Dict], List[str]]:
     """
-    Validate KPI values against DC2_S reference ranges.
+    Validate KPI values against a vertical's reference ranges (defaults to
+    dc2_s to preserve prior behavior for existing callers).
     Returns (errors, warnings). Each error: {account_id, kpi_code, value, expected_min, expected_max, kpi_name, unit}.
     """
     errors = []
     warnings = []
     if df_kpis.empty or 'value' not in df_kpis.columns or 'kpi_code' not in df_kpis.columns:
         return (errors, warnings)
-    ranges_map = _get_dc2s_kpi_valid_ranges()
+    ranges_map = _get_dc2s_kpi_valid_ranges(vertical)
     if not ranges_map:
         return (errors, warnings)
     for idx, row in df_kpis.iterrows():
@@ -1837,6 +1841,17 @@ def complete_onboarding():
                         config = CustomerConfig.query.filter_by(customer_id=customer_id_explicit).first()
                         existing_enabled = config.dc2s_enabled_kpis or [] if config else []
                         existing_active_pillars = sorted(set(k.split('-')[0] for k in existing_enabled)) if existing_enabled else []
+                        # Vertical-aware catalog resolution (was hardcoded to DC2S_*, same
+                        # bug class as the complete_onboarding _v_kpis/_v_pillars fix below).
+                        # Falls back to the requested `vertical` when config has none yet.
+                        _reuse_vertical = getattr(config, "vertical", None) or vertical
+                        try:
+                            from utils.vertical_registry import get_kpis as _vr_get_kpis, get_pillars as _vr_get_pillars
+                            _reuse_all_codes = list(_vr_get_kpis(_reuse_vertical).keys())
+                            _reuse_pillars = _vr_get_pillars(_reuse_vertical)
+                        except Exception:
+                            _reuse_all_codes = []
+                            _reuse_pillars = {}
                         return jsonify({
                             "success": True,
                             "customer_id": existing.customer_id,
@@ -1849,8 +1864,8 @@ def complete_onboarding():
                             "config": {
                                 "enabled_kpis": existing_enabled,
                                 "enabled_kpi_count": len(existing_enabled),
-                                "total_available_kpis": len(ALL_DC2S_KPI_CODES),
-                                "active_pillars": {p: DC2S_PILLARS[p]['name'] for p in existing_active_pillars if p in DC2S_PILLARS},
+                                "total_available_kpis": len(_reuse_all_codes),
+                                "active_pillars": {p: _reuse_pillars[p]['name'] for p in existing_active_pillars if p in _reuse_pillars},
                                 "pillar_count": len(existing_active_pillars),
                                 "weights": (config.dc2s_pillar_weights if config else None) or custom_weights or {},
                                 "kpi_weights": (config.dc2s_kpi_weights if config else None) or custom_kpi_weights,
@@ -2272,7 +2287,7 @@ def complete_onboarding():
             "config": {
                 "enabled_kpis": resolved_enabled_kpis,
                 "enabled_kpi_count": len(resolved_enabled_kpis),
-                "total_available_kpis": len(ALL_DC2S_KPI_CODES),
+                "total_available_kpis": len(_v_all_codes),
                 "active_pillars": {
                     p: _v_pillars.get(p, {}).get('name', p) for p in active_pillars
                 },

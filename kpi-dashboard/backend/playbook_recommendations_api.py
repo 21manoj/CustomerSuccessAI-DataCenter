@@ -794,11 +794,50 @@ def get_playbook_recommendations(playbook_id):
         # Get all accounts for customer
         accounts = Account.query.filter_by(customer_id=customer_id).all()
 
-        # ── DC2S Vertical Path: PB-01 through PB-06 ──
+        # ── Config-Driven Vertical Path: PB-01 through PB-13 ──
         if playbook_id.startswith('PB-'):
-            from verticals.dc2_s.vertical_config import (
-                PLAYBOOK_CONFIG, should_trigger_playbook,
-            )
+            # Vertical-aware PLAYBOOK_CONFIG resolution (was hardcoded to
+            # verticals.dc2_s.vertical_config regardless of the requesting
+            # customer's vertical — a datacenter_v1 customer's PB-07..13
+            # playbooks 404'd as "Unknown DC2S playbook" since they only
+            # exist in datacenter_v1's own PLAYBOOK_CONFIG). Mirrors the
+            # _CONFIG_PLAYBOOK_VERTICALS/dynamic-import pattern already
+            # established in _evaluate_dc2s_playbooks above. Any vertical
+            # outside that set falls back to dc2_s's config, matching prior
+            # behavior for saas_premium/other tenants (no PB- playbooks of
+            # their own).
+            import importlib
+            _vertical = _resolve_vertical_for_customer(customer_id)
+            _config_vertical = _vertical if _vertical in _CONFIG_PLAYBOOK_VERTICALS else 'dc2_s'
+            try:
+                _vc = importlib.import_module(f'verticals.{_config_vertical}.vertical_config')
+            except (ImportError, ModuleNotFoundError):
+                _vc = importlib.import_module('verticals.dc2_s.vertical_config')
+                _config_vertical = 'dc2_s'
+            PLAYBOOK_CONFIG = getattr(_vc, 'PLAYBOOK_CONFIG', {})
+
+            def should_trigger_playbook(pb_id, kpi_values_eval):
+                """Generic AND-logic trigger check against the resolved
+                vertical's PLAYBOOK_CONFIG (mirrors
+                verticals.dc2_s.vertical_config.should_trigger_playbook,
+                but takes PLAYBOOK_CONFIG explicitly instead of reading a
+                hardcoded dc2_s module-global, so it evaluates correctly
+                for any config-driven vertical, not just dc2_s)."""
+                cfg = PLAYBOOK_CONFIG.get(pb_id, {})
+                for kpi, condition in cfg.get("trigger_conditions", {}).items():
+                    if kpi not in kpi_values_eval:
+                        return False
+                    value = kpi_values_eval[kpi]
+                    operator = condition.get("operator")
+                    threshold = condition.get("value")
+                    if operator == ">" and value <= threshold:
+                        return False
+                    elif operator == "<" and value >= threshold:
+                        return False
+                    elif operator == "==" and value != threshold:
+                        return False
+                return True
+
             from utils.vertical_health import (
                 get_health_calculator, get_trailing_kpi_values_func,
                 get_precalculated_scores,
@@ -810,7 +849,7 @@ def get_playbook_recommendations(playbook_id):
             if not config:
                 return jsonify({
                     'status': 'error',
-                    'message': f"Unknown DC2S playbook: {playbook_id}. "
+                    'message': f"Unknown playbook for vertical '{_config_vertical}': {playbook_id}. "
                                f"Valid: {', '.join(sorted(PLAYBOOK_CONFIG.keys()))}"
                 }), 404
 
@@ -871,7 +910,7 @@ def get_playbook_recommendations(playbook_id):
                 'status': 'success',
                 'playbook_id': playbook_id,
                 'playbook_name': config.get('name', playbook_id),
-                'vertical': 'dc2_s',
+                'vertical': _config_vertical,
                 'total_accounts': len(accounts),
                 'accounts_needing_playbook': len([r for r in recommendations if r['needed']]),
                 'urgency_breakdown': urgency_counts,

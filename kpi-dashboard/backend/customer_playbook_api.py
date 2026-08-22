@@ -34,9 +34,22 @@ def _seed_system_playbooks(customer_id: int) -> None:
     if existing > 0:
         return  # already seeded
 
+    # Vertical-aware playbook-config resolution (was hardcoded to dc2_s's
+    # PLAYBOOK_CONFIG regardless of the customer's actual vertical — a
+    # saas_premium/datacenter_v1 customer would get dc2_s's playbooks
+    # seeded, with trigger_conditions referencing KPI codes that don't
+    # even exist in their catalog). Routes through the canonical
+    # fail-closed-per-vertical helper (dc2_s/saas_premium native; a safe
+    # no-op — zero playbooks seeded, not a misfire — for any other
+    # vertical that has no PLAYBOOK_CONFIG equivalent yet).
     try:
-        from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
-    except ImportError:
+        from utils.vertical_registry import get_vertical_for_customer
+        vertical = get_vertical_for_customer(customer_id)
+    except Exception:
+        return
+    from _ask_ai_helpers import _get_playbook_config
+    PLAYBOOK_CONFIG, _ = _get_playbook_config(vertical)
+    if not PLAYBOOK_CONFIG:
         return
 
     for pb_id, cfg in PLAYBOOK_CONFIG.items():

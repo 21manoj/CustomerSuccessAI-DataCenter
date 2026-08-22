@@ -307,6 +307,98 @@ def _scan_violations():
 # fixed earlier the same day. Net: 75 - 6 (4 stale common.py + 2 stale
 # cs_pulse_mcp_server.py, both already-fixed-but-uncounted) = 69 sites
 # across 44 files.
+#
+# Phase 5 update #4 (Aug 22 2026, 7-file scoped pass — onboarding_api_v2_
+# config_aware.py, app_v3_minimal.py, customer_playbook_api.py,
+# data_quality_api.py, journey_api_dynamic.py, playbook_recommendations_api.py,
+# ask_ai_tools.py): 6 real bugs found and fixed (all confirmed via
+# tests/test_phase5_import_inventory_fixes_round2.py's AST + behavioral
+# proofs):
+#
+#   - onboarding_api_v2_config_aware.py (2 sites, both cleared): the
+#     module-level DC2S_PILLAR_NAMES/ALL_DC2S_KPI_CODES constants (built
+#     from a hardcoded DC2S_KPIS/DC2S_PILLARS import) fed
+#     complete_onboarding's idempotent-reuse response AND its
+#     total_available_kpis field regardless of the customer's actual
+#     vertical — a saas_premium/datacenter_v1 customer's onboarding
+#     response reported dc2_s's 38-KPI/5-pillar counts. Now resolved
+#     per-vertical via utils.vertical_registry at each call site
+#     (complete_onboarding already had _v_kpis/_v_pillars in scope for a
+#     different field — total_available_kpis just wasn't using them yet).
+#     The dead _get_dc2s_kpi_valid_ranges/validate_kpi_values_against_ranges
+#     pair (confirmed unreferenced anywhere in the codebase) also gained a
+#     `vertical` parameter for correctness, defaulting to 'dc2_s' to
+#     preserve exact prior behavior for any future caller.
+#   - customer_playbook_api.py (1 site, cleared): _seed_system_playbooks
+#     unconditionally seeded every customer's playbook library from dc2_s's
+#     PLAYBOOK_CONFIG. Now resolves the customer's real vertical via
+#     utils.vertical_registry.get_vertical_for_customer and routes through
+#     the established _ask_ai_helpers._get_playbook_config helper (dc2_s/
+#     saas_premium native, safe no-op elsewhere) instead of reimplementing
+#     the gate.
+#   - data_quality_api.py (1 site, cleared): /api/data-quality/
+#     kpi-range-discrepancies validated every customer's KPI values against
+#     DC2S_KPIS's ranges regardless of their vertical — a saas_premium/
+#     datacenter_v1 tenant's KPI codes rarely matched dc2_s's, so the check
+#     silently found ~zero discrepancies for them. _get_dc2s_kpi_ranges
+#     gained a `vertical` param (default 'dc2_s' preserves old behavior for
+#     any other caller) and the route now resolves+passes the requesting
+#     customer's real vertical, failing closed (empty report, not a 500) if
+#     resolution fails.
+#   - journey_api_dynamic.py (1 site, cleared): enrich_weekly_data_with_
+#     dc2s_kpis looked up every account's KPI name/unit/target in DC2S_KPIS
+#     regardless of the account's actual vertical — since KPI codes are
+#     P-format across verticals, a saas_premium/datacenter_v1 code could
+#     silently resolve to the wrong (dc2_s) KPI's name/unit in the journey
+#     timeline. Now resolves the account's real vertical via
+#     utils.vertical_registry and fails closed (skips enrichment for that
+#     week) rather than substituting dc2_s's definitions if resolution
+#     fails.
+#   - playbook_recommendations_api.py (1 site, cleared): POST /api/
+#     playbooks/recommendations/<playbook_id> hardcoded dc2_s's
+#     PLAYBOOK_CONFIG/should_trigger_playbook for ANY playbook_id starting
+#     with 'PB-', and hardcoded the response's 'vertical' field to
+#     'dc2_s'. Confirmed datacenter_v1 has its own PB-07..13 playbook ids
+#     beyond dc2_s's PB-01..06, so a datacenter_v1 customer requesting one
+#     404'd as "Unknown DC2S playbook". Now mirrors the file's own
+#     pre-existing _CONFIG_PLAYBOOK_VERTICALS/dynamic-import pattern
+#     (already used by _evaluate_dc2s_playbooks above it) via the existing
+#     _resolve_vertical_for_customer helper, with a local generic AND-logic
+#     trigger check (mirrors verticals.dc2_s.vertical_config.
+#     should_trigger_playbook's semantics exactly, but takes the resolved
+#     vertical's PLAYBOOK_CONFIG as data instead of reading a hardcoded
+#     dc2_s module-global) so it evaluates correctly against ANY
+#     config-driven vertical's own playbook set.
+#
+# 2 sites reviewed and deliberately left (documented at their BASELINE
+# entries below):
+#   - app_v3_minimal.py (2 sites): Flask Blueprint registration wiring for
+#     dc2_s's and saas_premium's own dedicated route surfaces
+#     (/api/dc2s/*, /api/saas/*) — app-boot wiring, not a vertical-
+#     resolution bug. No generic equivalent exists (datacenter_v1/
+#     healthcare_provider use the generic scorer with no Blueprint of
+#     their own); each import is independently try/except-gated.
+#   - ask_ai_tools.py (1 site): get_csm_daily_actions's PLAYBOOK_CONFIG/
+#     should_trigger_playbook half of this same bug was ALREADY fixed
+#     (routes through _ask_ai_helpers._get_playbook_config) before this
+#     pass started. The remaining 5-name import
+#     (_normalize_kpi_code_for_health, _compute_impact_score,
+#     _compute_effort_score, _determine_urgency, _get_roi_context) mirrors
+#     the exact same residual gap already present, unaddressed, in the
+#     canonical reference implementation this module was modeled on
+#     (verticals/dc2_s/api_routes.py's own get_csm_daily_actions, fixed by
+#     the mcp_server-cluster sibling agent earlier the same day) — fixing
+#     the root cause (_normalize_kpi_code_for_health's internal `kpi_code
+#     in DC2S_KPIS` check) requires editing verticals/dc2_s/api_routes.py,
+#     out of scope for this pass (owned by that sibling agent). Left
+#     unfixed for consistency with the canonical reference rather than
+#     diverging into an ad hoc, one-off fix.
+#
+# Net: 69 - 6 (fixed) + 4 (this pass's own verification test,
+# tests/test_phase5_import_inventory_fixes_round2.py, which imports
+# verticals.dc2_s.vertical_config / verticals.datacenter_v1.vertical_config
+# directly in 2 of its test functions as ground-truth comparators) = 67
+# sites across 47 files.
 # ──────────────────────────────────────────────────────────────────────────
 BASELINE = {
     ('_ask_ai_helpers.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
@@ -318,22 +410,25 @@ BASELINE = {
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_account_detail',)): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_accounts',)): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_alerts',)): 1,
+    # App-boot Flask Blueprint registration for dc2_s's/saas_premium's own
+    # dedicated route surfaces (/api/dc2s/*, /api/saas/*) — not a
+    # vertical-resolution bug, no generic equivalent exists. See "Phase 5
+    # update #4" comment above.
     ('app_v3_minimal.py', 'verticals.dc2_s.api_routes', ('dc2s_api',)): 1,
     ('app_v3_minimal.py', 'verticals.saas_premium.api_routes', ('saas_premium_api',)): 1,
+    # PLAYBOOK_CONFIG/should_trigger_playbook half of this bug already fixed
+    # (routes through _ask_ai_helpers._get_playbook_config); the remaining
+    # 5-name import mirrors an unaddressed gap already present in the
+    # canonical reference (verticals/dc2_s/api_routes.py's own
+    # get_csm_daily_actions) — see "Phase 5 update #4" comment above.
     ('ask_ai_tools.py', 'verticals.dc2_s.api_routes', ('_normalize_kpi_code_for_health', '_compute_impact_score', '_compute_effort_score', '_determine_urgency', '_get_roi_context')): 1,
-    ('customer_playbook_api.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
-    ('data_quality_api.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
     ('debug_import.py', 'verticals.dc2_s', ('DC2S_KPIS',)): 1,
-    ('journey_api_dynamic.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
     ('mcp_server/common.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('mcp_server/common.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('mcp_server/cs_pulse_admin.py', 'verticals.dc2_s.api_routes', ('_compute_impact_score', '_compute_effort_score', '_determine_urgency')): 1,
     ('mcp_server/cs_pulse_admin.py', 'verticals.dc2_s.api_routes', ('_get_roi_context',)): 1,
-    ('onboarding_api_v2_config_aware.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
-    ('onboarding_api_v2_config_aware.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS', 'DC2S_PILLARS')): 1,
     ('playbook_cost_bridge.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
     ('playbook_cost_bridge.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
-    ('playbook_recommendations_api.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('quick_onboard.py', 'verticals.dc2_s.vertical_loader', ('DC2SVertical',)): 1,
     ('scripts/generate_context_graph_data.py', 'verticals.dc2_s.api_routes', ('calculate_kpi_health', '_get_trailing_kpi_values')): 1,
     ('scripts/generate_onboarding_template.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS', 'DC2S_PILLARS')): 1,
@@ -366,6 +461,16 @@ BASELINE = {
     # import used as the ground-truth comparator to PROVE the Phase 5 fix
     # (get_pillars('dc2_s')) is byte-identical — not a coupling bug.
     ('tests/test_phase5_import_inventory_fixes.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
+    # Same pattern again: direct dc2_s/datacenter_v1 vertical_config imports
+    # used as ground-truth comparators to prove
+    # playbook_recommendations_api.py's new local should_trigger_playbook
+    # closure reproduces verticals.dc2_s.vertical_config.
+    # should_trigger_playbook's AND-logic semantics exactly, AND that it
+    # (unlike the old hardcoded-dc2_s version) also works against
+    # datacenter_v1's own PLAYBOOK_CONFIG — not a coupling bug.
+    ('tests/test_phase5_import_inventory_fixes_round2.py', 'verticals.datacenter_v1.vertical_config', ('PLAYBOOK_CONFIG',)): 2,
+    ('tests/test_phase5_import_inventory_fixes_round2.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
+    ('tests/test_phase5_import_inventory_fixes_round2.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('tests/test_vertical_playbook_routing.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG',)): 2,
     ('tests/test_vertical_playbook_routing.py', 'verticals.saas_premium.vertical_config', ('should_trigger_playbook',)): 1,
     ('utils/account_config_manager.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS', 'DC2S_PILLARS')): 1,
@@ -379,7 +484,7 @@ BASELINE = {
     ('verticals/customer295-dc/services/bootstrap_weights_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
 }
 
-assert sum(BASELINE.values()) == 69, (
+assert sum(BASELINE.values()) == 67, (
     "BASELINE literal was hand-edited inconsistently with its own comment "
     "— fix the count or the entries."
 )

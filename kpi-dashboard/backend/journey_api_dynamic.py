@@ -232,7 +232,6 @@ def enrich_weekly_data_with_dc2s_kpis(weekly_data, account_id, start_date, total
     try:
         from models import DC2SKPI
         from utils.vertical_health import get_health_calculator
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
     except ImportError as e:
         current_app.logger.debug(f"Journey KPI enrichment skip (import): {e}")
         return
@@ -240,6 +239,19 @@ def enrich_weekly_data_with_dc2s_kpis(weekly_data, account_id, start_date, total
         account_id_int = int(account_id) if isinstance(account_id, str) else account_id
         customer_id = get_customer_from_account(account_id_int)
     except (ValueError, TypeError):
+        return
+    # Vertical-aware KPI-definition resolution (was hardcoded to DC2S_KPIS
+    # regardless of the account's actual vertical — a saas_premium/
+    # datacenter_v1 account's KPI codes could collide in P-format with a
+    # dc2_s code that means something entirely different, silently showing
+    # the wrong KPI name/unit/target in the journey timeline). Fails closed:
+    # if the vertical can't be resolved, skip enrichment for this week
+    # rather than silently substituting dc2_s's definitions.
+    try:
+        from utils.vertical_registry import get_vertical_for_customer, get_kpis
+        DC2S_KPIS = get_kpis(get_vertical_for_customer(customer_id))
+    except Exception as e:
+        current_app.logger.debug(f"Journey KPI enrichment skip (vertical resolution): {e}")
         return
     calculate_kpi_health = get_health_calculator(customer_id)
     if isinstance(start_date, str):
