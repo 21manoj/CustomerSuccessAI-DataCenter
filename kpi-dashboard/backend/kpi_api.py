@@ -374,21 +374,40 @@ def get_account_products(account_id):
 
 @kpi_api.route('/api/accounts/<int:account_id>/kpis', methods=['GET'])
 def get_account_kpis(account_id):
-    """Get all KPIs for a specific account"""
+    """Get all KPIs for a specific account.
+
+    Reads from DC2SKPI (`dc2s_kpis`) first — that's where every tenant onboarded
+    through the current generic-scorer pipeline (dc2_s, saas_premium,
+    datacenter_v1 alike) actually lands its KPI measurements. Falls back to the
+    legacy `kpis` table (KPI model) only when DC2SKPI has no rows for this
+    account, so any tenant that genuinely still depends on the legacy
+    per-CSV-upload shape keeps working unchanged. Read-time fallback only —
+    no data migration/backfill (tracer finding, Aug 2026: this endpoint
+    returned [] for every real tenant despite dc2s_kpis holding hundreds of
+    rows per account).
+    """
     try:
         customer_id = get_current_customer_id()
-        
+
         # ✅ FIXED: Validate account ownership using filter instead of get()
         account = Account.query.filter_by(
             account_id=account_id,
             customer_id=customer_id
         ).first()
-        
+
         if not account:
             return jsonify({'error': 'Account not found or access denied'}), 404
-        
+
+        from models import DC2SKPI
+
+        dc2s_kpis = DC2SKPI.query.filter_by(account_id=account_id).all()
+        if dc2s_kpis:
+            return jsonify([k.to_dict() for k in dc2s_kpis])
+
+        # Fallback: legacy per-CSV-upload `kpis` table (only reached when
+        # this account has no dc2s_kpis rows at all).
         kpis = KPI.query.filter_by(account_id=account_id).all()
-        
+
         return jsonify([{
             'kpi_id': k.kpi_id,
             'account_id': k.account_id,
@@ -404,7 +423,7 @@ def get_account_kpis(account_id):
             'last_edited_by': k.last_edited_by,
             'last_edited_at': k.last_edited_at.isoformat() if k.last_edited_at else None
         } for k in kpis])
-        
+
     except Exception as e:
         logger.error(f"Error getting KPIs for account {account_id}: {e}", exc_info=True)
         return jsonify({'error': 'Failed to get KPIs'}), 500

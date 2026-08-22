@@ -521,15 +521,30 @@ def _scale_scenarios(arr_scale: float) -> Dict:
 
     All dollar values in scaling_scenarios are calibrated at _arr_base=$10M.
     When the actual portfolio/account ARR differs, we scale proportionally.
+
+    NOTE: impact fields scale linearly with ARR (arr_scale), but `investment`
+    is deliberately scaled sub-linearly (sqrt of arr_scale) — matching the
+    sqrt(ARR) sub-linear investment scaling used in
+    outcome_roi_engine.calculate_forward_roi. Scaling investment by the exact
+    same linear arr_scale as impact makes the "recalculated" year_1_roi
+    mathematically identical to the unscaled ratio for every account,
+    regardless of ARR: (total*k - investment*k) / (investment*k) always
+    equals (total - investment) / investment. That was the root cause of
+    scaling_scenarios.*.year_1_roi being a constant across every account
+    (tracer finding, Aug 2026). Sub-linear investment scaling breaks that
+    cancellation so year_1_roi actually varies by account size again.
     """
+    inv_scale = arr_scale ** 0.5 if arr_scale > 0 else 0.0
     scaled = {}
     for key, scenario in SCALING_SCENARIOS.items():
         s = dict(scenario)  # shallow copy
-        for dollar_field in ("direct_impact", "compounding_impact", "total_impact", "investment", "three_year_net"):
+        for dollar_field in ("direct_impact", "compounding_impact", "total_impact", "three_year_net"):
             if s.get(dollar_field) is not None:
                 s[dollar_field] = round(s[dollar_field] * arr_scale, 0)
-        # Recalculate year_1_roi with scaled impact and investment
-        investment = s.get("investment", round(247000 * arr_scale, 0))
+        if s.get("investment") is not None:
+            s["investment"] = round(s["investment"] * inv_scale, 0)
+        # Recalculate year_1_roi with scaled impact and (sub-linearly scaled) investment
+        investment = s.get("investment", round(247000 * inv_scale, 0))
         total = s.get("total_impact", 0) or 0
         if investment and total:
             s["year_1_roi"] = round((total - investment) / investment, 2)
