@@ -1314,7 +1314,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     customer_id=customer_id,
                                     account_id=acct.account_id,
                                     node_type='STAKEHOLDER',
-                                    source='account_details',
+                                    source='observed',  # from customer-uploaded account_details profile_metadata
                                     node_subtype=role,
                                     title=f'{name_val} ({title_val})' if title_val else name_val,
                                     properties={
@@ -1606,15 +1606,28 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                         from_node_id=sn.node_id, to_node_id=dn.node_id
                                     ).first()
                                     if not existing:
-                                        _db.session.add(ContextEdge(
-                                            customer_id=customer_id,
+                                        # WS-1 edge-provenance sweep (Aug 2026):
+                                        # was a raw constructor, NO source_platform.
+                                        from utils.context_graph import upsert_edge  # noqa: PLC0415
+                                        _e, _created_new = upsert_edge(
                                             from_node_id=sn.node_id,
                                             to_node_id=dn.node_id,
                                             edge_type='INVOLVES',
                                             confidence=0.8,
-                                            properties={'source': 'role_match', 'stakeholder_role': role},
-                                        ))
-                                        _edges_created += 1
+                                            properties={
+                                                'source': 'role_match',
+                                                'stakeholder_role': role,
+                                                'derivation': 'process_data.stakeholder_role_match',
+                                                # Typed heuristic constant, not an
+                                                # epistemic estimate (WS-1.2).
+                                                'confidence_semantics': 'role_match_heuristic_constant',
+                                            },
+                                            source_platform='process_data',
+                                            created_by='stakeholder_decision_linker',
+                                            customer_id=customer_id,
+                                        )
+                                        if _created_new:
+                                            _edges_created += 1
 
                         if _edges_created:
                             _db.session.flush()

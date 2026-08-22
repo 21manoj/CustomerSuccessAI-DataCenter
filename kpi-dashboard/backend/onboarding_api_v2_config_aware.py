@@ -690,8 +690,12 @@ def _auto_generate_involves_edges(customer_id: int, account_ids: list) -> int:
             )
 
             if match and (stk.node_id, dec.node_id) not in existing_involves:
-                edge = ContextEdge(
-                    customer_id=customer_id,
+                # WS-1 edge-provenance sweep (Aug 2026): was a raw ContextEdge
+                # constructor with NO source_platform — one of three untagged
+                # writers found (wizard_a_journey_db + the two stakeholder
+                # linkers). Routed through upsert_edge, the one sanctioned path.
+                from utils.context_graph import upsert_edge  # noqa: PLC0415
+                upsert_edge(
                     from_node_id=stk.node_id,
                     to_node_id=dec.node_id,
                     edge_type='INVOLVES',
@@ -701,9 +705,16 @@ def _auto_generate_involves_edges(customer_id: int, account_ids: list) -> int:
                         'role': maker_role,
                         'auto_generated': True,
                         'match_type': 'decision_maker_role',
+                        'derivation': 'onboarding.stakeholder_role_match',
+                        # 0.8 is a typed constant for a string-match heuristic,
+                        # not an epistemic estimate — same overloading class as
+                        # the arc-template 0.80 (WS-1.2).
+                        'confidence_semantics': 'role_match_heuristic_constant',
                     },
+                    source_platform='onboarding_provision',
+                    created_by='stakeholder_decision_linker',
+                    customer_id=customer_id,
                 )
-                db.session.add(edge)
                 existing_involves.add((stk.node_id, dec.node_id))
                 created += 1
 
