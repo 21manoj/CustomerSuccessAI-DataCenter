@@ -369,6 +369,41 @@ def _salvage_truncated_json(text: str) -> List[Dict]:
     return []
 
 
+def _derivation_payload(mode: str = 'full') -> Dict[str, str]:
+    """Reproducibility breadcrumbs for every LLM-written node/edge (WS-1.5,
+    edge-provenance work, Aug 2026).
+
+    Before this, an llm_enrichment edge's entire properties payload was
+    {"inferred_by": ..., "label": ...} — no model id, no prompt version, no
+    inference timestamp. ~4,663 such rows exist and can never be
+    retrofitted (a prompt version that was never recorded is not
+    recoverable); this stops the count growing.
+
+    prompt_version is a content hash of the active system prompt rather
+    than a hand-bumped constant — it can't drift from the prompt it
+    describes.
+    """
+    import hashlib
+    from datetime import datetime as _dt
+
+    try:
+        if mode == 'edges_only':
+            from llm.prompts.tier1_kpi_inference import (
+                EDGE_ENRICHMENT_SYSTEM_PROMPT as _SP,
+            )
+        else:
+            from llm.prompts.tier1_kpi_inference import SYSTEM_PROMPT as _SP
+        prompt_version = 'sha256:' + hashlib.sha256(_SP.encode()).hexdigest()[:12]
+    except Exception:
+        prompt_version = 'unknown'
+
+    return {
+        'model_id': LLM_MODEL,
+        'prompt_version': prompt_version,
+        'inferred_at': _dt.utcnow().isoformat(),
+    }
+
+
 def _call_claude(summaries: List[Dict], customer_id: int, mode: str = 'full') -> List[Dict]:
     """Call Claude API with account summaries, return inferred context.
 
@@ -574,6 +609,10 @@ def _write_inferred_nodes(
     source_platform = 'llm_enrichment' if mode == 'edges_only' else 'llm_inference'
     created_by = 'llm_tier1_enrichment' if mode == 'edges_only' else 'llm_tier1'
 
+    # WS-1.5: one derivation payload per write batch, merged into every
+    # node/edge properties dict below — model id + prompt hash + timestamp.
+    derivation = _derivation_payload(mode)
+
     counts = {'signals': 0, 'outcomes': 0, 'decisions': 0, 'edges': 0}
 
     for inf in inferences:
@@ -602,6 +641,7 @@ def _write_inferred_nodes(
                             'sentiment': sig.get('sentiment', 'negative'),
                             'inferred_by': created_by,
                             'confidence': str(sig.get('confidence', 0.7)),
+                            **derivation,
                         },
                         source_platform=source_platform,
                         source_event_id=source_eid,
@@ -631,6 +671,7 @@ def _write_inferred_nodes(
                         'inferred_by': created_by,
                         'confidence': str(dec.get('confidence', 0.7)),
                         'triggered_by_signals': dec.get('triggered_by_signals', []),
+                        **derivation,
                     },
                     source_platform=source_platform,
                     source_event_id=source_eid,
@@ -663,6 +704,7 @@ def _write_inferred_nodes(
                         'outcome_type': out['type'],
                         'inferred_by': created_by,
                         'confidence': str(out.get('confidence', 0.7)),
+                        **derivation,
                     },
                     source_platform=source_platform,
                     source_event_id=source_eid,
@@ -684,11 +726,13 @@ def _write_inferred_nodes(
             counts['edges'] += _write_explicit_edges(
                 customer_id, inf, created_node_ids,
                 signal_ref_to_node_id or {}, source_platform, created_by,
+                derivation=derivation,
             )
         else:
             # Original simple edge logic: signal → first decision → all outcomes
             counts['edges'] += _write_simple_edges(
                 customer_id, created_node_ids, source_platform, created_by,
+                derivation=derivation,
             )
 
     try:
@@ -705,6 +749,7 @@ def _write_simple_edges(
     created_node_ids: Dict[str, int],
     source_platform: str,
     created_by: str,
+    derivation: Optional[Dict[str, str]] = None,
 ) -> int:
     """Original edge logic: all signals → first decision, all decisions → all outcomes."""
     from utils.context_graph import upsert_edge
@@ -726,7 +771,7 @@ def _write_simple_edges(
                     source_platform=source_platform,
                     created_by=created_by,
                     customer_id=customer_id,
-                    properties={'inferred_by': created_by},
+                    properties={'inferred_by': created_by, **(derivation or {})},
                 )
                 if created:
                     edge_count += 1
@@ -746,7 +791,7 @@ def _write_simple_edges(
                         source_platform=source_platform,
                         created_by=created_by,
                         customer_id=customer_id,
-                        properties={'inferred_by': created_by},
+                        properties={'inferred_by': created_by, **(derivation or {})},
                     )
                     if created:
                         edge_count += 1
@@ -787,6 +832,7 @@ def _write_explicit_edges(
     signal_ref_to_node_id: Dict[str, int],
     source_platform: str,
     created_by: str,
+    derivation: Optional[Dict[str, str]] = None,
 ) -> int:
     """Write explicit causal edges from LLM edge enrichment response.
 
@@ -822,6 +868,8 @@ def _write_explicit_edges(
                 properties={
                     'inferred_by': created_by,
                     'label': edge_spec.get('label', ''),
+                    'input_refs': [edge_spec.get('from_ref', ''), edge_spec.get('to_ref', '')],
+                    **(derivation or {}),
                 },
             )
             if created:
@@ -853,6 +901,8 @@ def _write_explicit_edges(
                     'inferred_by': created_by,
                     'label': edge_spec.get('label', ''),
                     'edge_class': 'signal_to_signal',
+                    'input_refs': [edge_spec.get('from_signal_ref', ''), edge_spec.get('to_signal_ref', '')],
+                    **(derivation or {}),
                 },
             )
             if created:
@@ -884,7 +934,7 @@ def _write_explicit_edges(
                             source_platform=source_platform,
                             created_by=created_by,
                             customer_id=customer_id,
-                            properties={'inferred_by': created_by, 'fallback': True},
+                            properties={'inferred_by': created_by, 'fallback': True, **(derivation or {})},
                         )
                         if created:
                             edge_count += 1
@@ -904,7 +954,7 @@ def _write_explicit_edges(
                             source_platform=source_platform,
                             created_by=created_by,
                             customer_id=customer_id,
-                            properties={'inferred_by': created_by, 'fallback': True},
+                            properties={'inferred_by': created_by, 'fallback': True, **(derivation or {})},
                         )
                         if created:
                             edge_count += 1
