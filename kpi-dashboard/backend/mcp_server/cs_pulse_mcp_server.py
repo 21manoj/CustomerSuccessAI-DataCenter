@@ -301,15 +301,23 @@ def _get_kpi_definitions(vertical: str) -> dict:
 
 
 def _get_playbook_config(vertical: str):
-    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical."""
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
-            return PLAYBOOK_CONFIG, should_trigger_playbook
-        except ImportError:
-            return {}, lambda *a, **kw: False
-    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
-    return PLAYBOOK_CONFIG, should_trigger_playbook
+    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical.
+
+    Was a hardcoded two-branch if/else duplicate of
+    mcp_server/common.py::get_playbook_config that silently fell through to
+    dc2_s's PLAYBOOK_CONFIG for any vertical other than dc2_s/saas_premium
+    (e.g. datacenter_v1 got served dc2_s's PB-05/PB-06 playbooks, with
+    trigger_conditions referencing dc2_s KPI codes that mean something else
+    entirely in datacenter_v1's own catalog). common.py's copy was already
+    fixed (Aug 21 2026 vertical-coupling audit) to gate explicitly per known
+    vertical and return a safe empty default otherwise. This function now
+    delegates to that fixed implementation instead of carrying its own
+    stale copy of the same logic — no circular import risk, since
+    mcp_server/common.py has no dependency back on this module (this file
+    already imports mcp_server.common.get_pillar_labels elsewhere).
+    """
+    from mcp_server.common import get_playbook_config
+    return get_playbook_config(vertical)
 
 
 def _require_auth(customer_id: int, required_scope: str = 'read',

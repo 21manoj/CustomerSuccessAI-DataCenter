@@ -108,15 +108,31 @@ def _get_kpi_definitions(vertical: str) -> dict:
 
 
 def _get_playbook_config(vertical: str):
-    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical."""
+    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical.
+
+    Was a third, independently-drifted copy of the same hardcoded
+    two-branch if/else already fixed in mcp_server/common.py and
+    mcp_server/cs_pulse_mcp_server.py (Aug 21-22 2026 vertical-coupling
+    audit) — any vertical other than dc2_s/saas_premium (e.g.
+    datacenter_v1) silently fell through to dc2_s's PLAYBOOK_CONFIG. Not
+    delegated to mcp_server.common.get_playbook_config: this module is
+    explicitly documented above as having ZERO dependency on fastmcp (so it
+    can run on Python 3.9+ from ask_ai_tools.py's _execute_direct path
+    without fastmcp installed), while mcp_server/common.py imports
+    `fastmcp.exceptions` at module level — importing it here would break
+    that constraint. Gated inline instead, matching the fixed sibling's
+    behavior exactly.
+    """
     if vertical in ('saas_premium', 'saas'):
         try:
             from verticals.saas_premium.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
             return PLAYBOOK_CONFIG, should_trigger_playbook
         except ImportError:
             return {}, lambda *a, **kw: False
-    try:
+    if vertical == 'dc2_s':
         from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
         return PLAYBOOK_CONFIG, should_trigger_playbook
-    except ImportError:
-        return {}, lambda *a, **kw: False
+    # No generic playbook-config equivalent exists yet for other verticals
+    # (e.g. datacenter_v1) — return a safe no-op rather than silently
+    # borrowing dc2_s's playbooks.
+    return {}, lambda *a, **kw: False
