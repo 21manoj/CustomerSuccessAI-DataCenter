@@ -319,7 +319,11 @@ interface CFODashboardData {
   grr: number;
   nrr_arr_protectable: number;
   cost_of_inaction: CostOfInaction;
-  nrr_waterfall: { expected_loss: number; protectable: number; expandable: number; attributed_save: number; intervention_cost: number; roi_x: number };
+  // data_source: value-provenance tier of the blend (utils/value_provenance.py).
+  // roi_x divides a derived numerator (health/ARR through the churn model) by a
+  // benchmark denominator (fixed per-account cost constant) — the backend
+  // computes most_conservative() of the two, so this is 'benchmark' today.
+  nrr_waterfall: { expected_loss: number; protectable: number; expandable: number; attributed_save: number; intervention_cost: number; roi_x: number; data_source?: ProvenanceTier };
   // Raw numeric values for Investment Allocation widget
   total_arr: number;
   cs_investment: number;
@@ -327,10 +331,16 @@ interface CFODashboardData {
   is_estimated_investment: boolean;
   renewals_at_risk: Array<{ account_name: string; arr: number; days_until: number; health_score: number }>;
   layered_story: {
-    layers: Array<{ name: string; value: number; cost: number; roi: number; status: string; color: string }>;
+    // Per-layer and blended data_source tiers from the backend's
+    // most_conservative() over each figure's numerator+denominator —
+    // replaces the old hardcoded color→source mapping, which mislabeled
+    // layer 2 as Wizard B (it's the health-churn model) and as derived
+    // (its cost side is a benchmark constant).
+    layers: Array<{ name: string; value: number; cost: number; roi: number; status: string; color: string; data_source?: ProvenanceTier }>;
     total_value: number;
     total_cost: number;
     blended_roi: number;
+    data_source?: ProvenanceTier;
   } | null;
   period: string;
   last_updated: string;
@@ -2560,7 +2570,18 @@ const CFODashboard: React.FC = () => {
                   <Layers className="w-4 h-4 text-purple-400" />
                   <h3 className="text-xs font-semibold text-white uppercase tracking-wide">Investment Allocation Story</h3>
                 </div>
-                <span className="text-xs text-gray-500">Total addressable: {formatCompact(d.layered_story.total_value)} &middot; {d.layered_story.blended_roi}x blended ROI</span>
+                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                  Total addressable: {formatCompact(d.layered_story.total_value)} &middot; {d.layered_story.blended_roi}x blended ROI
+                  {d.layered_story.data_source && (
+                    <ProvenanceTierBadge
+                      tier={d.layered_story.data_source}
+                      detail="Blend of all three layers — carries the weakest input's tier"
+                      compact
+                      dark
+                      showMeasured
+                    />
+                  )}
+                </span>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 {d.layered_story.layers.map((layer: any, i: number) => {
@@ -2572,12 +2593,16 @@ const CFODashboard: React.FC = () => {
                   const c = colors[layer.color] || colors.green;
                   // Layers map: green=Already Delivered (proof_data) →
                   // cyan=Still Protectable (waterfall) → purple=Growth (Po1).
-                  // Each has a different system of record.
-                  const layerSource: SourceKey = layer.color === 'green'
-                    ? 'csPulseProof'
+                  // Detail sentences per layer's ACTUAL system of record —
+                  // the cyan layer is the health-churn model + a fixed cost
+                  // constant (the old hardcoded mapping mislabeled it as
+                  // Wizard B). The TIER itself comes from the backend's
+                  // most_conservative() over each layer's value+cost.
+                  const layerDetail: string = layer.color === 'green'
+                    ? SOURCES.csPulseProof.text
                     : layer.color === 'purple'
-                      ? 'benchmark'
-                      : 'wizardB';
+                      ? SOURCES.benchmark.text
+                      : 'Source: CS Pulse · health churn model × cost-bridge constant · modeled';
                   return (
                     <div key={i} className={`rounded-xl border ${c.border} ${c.bg} p-4`}>
                       <div className="flex items-center justify-between mb-2">
@@ -2585,7 +2610,17 @@ const CFODashboard: React.FC = () => {
                         <span className={`text-[9px] px-2 py-0.5 rounded-full ${c.bg} ${c.text} font-semibold`}>{c.badge}</span>
                       </div>
                       <p className={`text-2xl font-bold ${c.text} mb-1`}>{formatCompact(layer.value)}</p>
-                      <SourceLabel source={layerSource} className="mb-1" />
+                      {layer.data_source ? (
+                        <p className="flex items-center gap-1.5 text-[9px] italic text-gray-500 leading-tight mb-1">
+                          <ProvenanceTierBadge tier={layer.data_source} detail={layerDetail} compact dark showMeasured />
+                          <span>{layerDetail}</span>
+                        </p>
+                      ) : (
+                        <SourceLabel
+                          source={layer.color === 'green' ? 'csPulseProof' : layer.color === 'purple' ? 'benchmark' : 'modeledExposure'}
+                          className="mb-1"
+                        />
+                      )}
                       <div className="flex items-center justify-between text-[10px] text-gray-500">
                         <span>Cost: {formatCompact(layer.cost)}</span>
                         <span className={`font-semibold ${c.text}`}>{layer.roi}x ROI</span>
@@ -2928,11 +2963,25 @@ const CFODashboard: React.FC = () => {
               {d.nrr_waterfall.roi_x > 0 && (
                 <div className="flex justify-between border-t border-gray-700/50 pt-2">
                   <span className="text-gray-400">Intervention ROI</span>
-                  <span className="text-cyan-400 font-bold">{d.nrr_waterfall.roi_x}x</span>
+                  <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
+                    {d.nrr_waterfall.data_source && (
+                      <ProvenanceTierBadge
+                        tier={d.nrr_waterfall.data_source}
+                        detail="attributed_save (health churn model) ÷ intervention_cost (fixed per-account constant) — carries the weaker input's tier"
+                        compact
+                        dark
+                        showMeasured
+                      />
+                    )}
+                    {d.nrr_waterfall.roi_x}x
+                  </span>
                 </div>
               )}
             </div>
-            <SourceLabel source="csPulseProof" className="mt-2" />
+            {/* Was SourceLabel source="csPulseProof" — wrong: this whole panel
+                is modeled (health churn model + cost-bridge constant), not
+                playbook-execution proof. */}
+            <SourceLabel source="modeledExposure" className="mt-2" />
           </div>
         )}
 

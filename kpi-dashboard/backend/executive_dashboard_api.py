@@ -36,6 +36,7 @@ from models import (
 import utils.health_thresholds as ht
 from utils.context_graph import aggregate_revenue_across_accounts, aggregate_revenue_with_provenance
 from utils.vertical_registry import get_vertical_for_customer, get_pillars
+from utils import value_provenance as _vp
 from power_of_1_model import dedupe_portfolio_dollar_impact
 
 logger = logging.getLogger(__name__)
@@ -1541,6 +1542,11 @@ def cfo_dashboard():
                 'attributed_save': round(wf_attributed, 0),
                 'intervention_cost': round(wf_cost, 0),
                 'roi_x': round(wf_attributed / wf_cost, 1) if wf_cost > 0 else 0,
+                # attributed_save is real health/ARR through the churn model
+                # (derived); intervention_cost is the fixed 4560-per-account
+                # constant (benchmark). roi_x divides one by the other, so it
+                # carries the weaker tier of its two inputs.
+                'data_source': _vp.most_conservative([_vp.DERIVED, _vp.BENCHMARK]),
             },
             'expansion_missed': round(total_expansion_missed, 0),
             'cs_investment': cs_investment,
@@ -1587,18 +1593,33 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
     Layer 1: Already delivered (from playbook executions)
     Layer 2: Still protectable (from waterfall — at-risk accounts)
     Layer 3: Growth upside (from Power-of-1 — 1% improvement across all metrics)
+
+    Every layer (and the blended totals) carries a value-provenance
+    `data_source` tier. Each layer's tier is most_conservative(value, cost)
+    — a ROI number is only as grounded as the weaker of its numerator and
+    denominator — and the blended totals take most_conservative across all
+    six inputs. This is why layer 2 is 'benchmark', not 'derived': its
+    value is real health/ARR run through the churn model (derived), but
+    its cost is a fixed per-account constant (benchmark), so the ROI
+    blends the two.
     """
-    # Layer 1: Proof
+    from utils import value_provenance as vp
+
+    # Layer 1: Proof — real PlaybookExecutionV2 rows, value and cost both.
     prot = proof_data.get('revenue_protected', 0)
     exp = proof_data.get('revenue_expanded', 0)
     cost1 = proof_data.get('total_cost', 0)
     value1 = prot + exp
     roi1 = round(value1 / cost1, 1) if cost1 > 0 else 0
+    value1_tier, cost1_tier = vp.MEASURED, vp.MEASURED
 
-    # Layer 2: Protectable
+    # Layer 2: Protectable — value is real health/ARR through the
+    # health_to_annual_churn_prob model (derived); cost is the fixed
+    # 4560-per-account cost-bridge constant (benchmark).
     value2 = wf_protectable + wf_expandable
     cost2 = wf_cost
     roi2 = round(value2 / cost2, 1) if cost2 > 0 else 0
+    value2_tier, cost2_tier = vp.DERIVED, vp.BENCHMARK
 
     # Layer 3: Power-of-1 growth
     # Impact scales linearly with ARR, cost scales sub-linearly (sqrt).
@@ -1616,10 +1637,13 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
     except Exception:
         po1_cost = total_arr * 0.01  # fallback: 1% of ARR
     roi3 = round(po1_impact / po1_cost, 1) if po1_cost > 0 else 0
+    value3_tier, cost3_tier = vp.BENCHMARK, vp.BENCHMARK
 
     total_value = value1 + value2 + po1_impact
     total_cost = cost1 + cost2 + po1_cost
     blended_roi = round(total_value / total_cost, 1) if total_cost > 0 else 0
+
+    all_tiers = [value1_tier, cost1_tier, value2_tier, cost2_tier, value3_tier, cost3_tier]
 
     return {
         'layers': [
@@ -1630,6 +1654,7 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
                 'roi': roi1,
                 'status': 'done',
                 'color': 'green',
+                'data_source': vp.most_conservative([value1_tier, cost1_tier]),
             },
             {
                 'name': 'Still Protectable',
@@ -1638,6 +1663,7 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
                 'roi': roi2,
                 'status': 'intervene_now',
                 'color': 'cyan',
+                'data_source': vp.most_conservative([value2_tier, cost2_tier]),
             },
             {
                 'name': 'Growth (Po1 1%)',
@@ -1646,11 +1672,15 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
                 'roi': roi3,
                 'status': 'invest_to_grow',
                 'color': 'purple',
+                'data_source': vp.most_conservative([value3_tier, cost3_tier]),
             },
         ],
         'total_value': round(total_value, 0),
         'total_cost': round(total_cost, 0),
         'blended_roi': blended_roi,
+        # The blended figures mix all three layers — honest label is the
+        # weakest input across all six numerators/denominators.
+        'data_source': vp.most_conservative(all_tiers),
     }
 
 
