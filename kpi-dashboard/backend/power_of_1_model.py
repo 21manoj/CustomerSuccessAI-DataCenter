@@ -161,11 +161,22 @@ class PowerOf1Metric:
         """Return playbook IDs appropriate for the vertical.
 
         For DC2S (vertical='dc2_s'), returns PB-01 through PB-06 mappings.
-        Otherwise returns generic playbook names.
+        For saas_premium, `linked_playbooks` is that vertical's own real
+        playbook catalog (activation-blitz, voc-sprint, etc.) — keep it.
+        For every other vertical (datacenter_v1, manufacturing_iot, ...),
+        `linked_playbooks` is NOT a true generic default — it's SaaS's
+        catalog — so return an empty list rather than leak SaaS playbook
+        slugs into a vertical that has none defined yet.
         """
         if vertical == "dc2_s" and self.dc2s_linked_playbooks:
             return self.dc2s_linked_playbooks
-        return self.linked_playbooks
+        if vertical == "saas_premium":
+            return self.linked_playbooks
+        if vertical is None:
+            # No vertical resolved (e.g. benchmark/demo callers that never
+            # pass one) — preserve prior behavior of the generic catalog.
+            return self.linked_playbooks
+        return []
 
 
 # ============================================================

@@ -506,7 +506,13 @@ def calculate_historical_roi(
             revenue_portion=round(revenue_portion, 2),
             savings_portion=round(savings_portion, 2),
             category=metric.category.value,
-            linked_kpis=metric.linked_kpi_codes,
+            # linked_kpi_codes are dc2_s-specific KPI codes (P1-KPI1 style)
+            # with no per-vertical equivalent yet — suppress them for any
+            # *named* non-dc2_s vertical so we don't display dc2_s KPI codes
+            # as if they applied to that customer. vertical=None (e.g. the
+            # /api/outcome-roi/demo route, which has no real customer/
+            # vertical) keeps the legacy generic display unchanged.
+            linked_kpis=metric.linked_kpi_codes if vertical in (None, "dc2_s") else [],
             linked_playbooks=metric.get_playbooks(vertical),
             data_source=data_source,
         ))
@@ -791,7 +797,9 @@ def calculate_forward_roi(
             revenue_portion=round(revenue_portion, 2),
             savings_portion=round(savings_portion, 2),
             category=metric.category.value,
-            linked_kpis=metric.linked_kpi_codes,
+            # See matching comment in calculate_historical_roi(): dc2_s-only
+            # KPI codes shouldn't be displayed as if they apply elsewhere.
+            linked_kpis=metric.linked_kpi_codes if vertical in (None, "dc2_s") else [],
             linked_playbooks=metric.get_playbooks(vertical),
             data_source=data_source,
         ))
@@ -1162,7 +1170,9 @@ def _build_implementation_roadmap(
             "target_improvement_pct": target_improvement_pct,
             "active_quarters": metric_quarters,
             "all_quarters": metric.quarters,
-            "linked_kpis": metric.linked_kpi_codes,
+            # See matching comment in calculate_historical_roi(): dc2_s-only
+            # KPI codes shouldn't be displayed as if they apply elsewhere.
+            "linked_kpis": metric.linked_kpi_codes if vertical in (None, "dc2_s") else [],
             "linked_playbooks": metric.get_playbooks(vertical),
             "accounts_at_risk": metric_at_risk,
             "at_risk_revenue": round(at_risk_revenue, 0),
