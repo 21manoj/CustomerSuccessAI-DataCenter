@@ -226,14 +226,14 @@ def _get_precalculated_scores(account_id: int):
 
 
 def _get_trailing_kpi_values_generic(account_id: int, days: int = 30) -> dict:
-    """Vertical-agnostic: read latest KPI values from KpiScore table.
+    """Vertical-agnostic: read latest KPI values from KPIScore table.
 
     Returns dict of {kpi_code: score_value}.
     """
     try:
-        from models import KpiScore
-        rows = KpiScore.query.filter_by(account_id=account_id) \
-            .order_by(KpiScore.measurement_month.desc()).all()
+        from models import KPIScore
+        rows = KPIScore.query.filter_by(account_id=account_id) \
+            .order_by(KPIScore.measurement_month.desc()).all()
         seen = {}
         for r in rows:
             if r.kpi_code not in seen and r.kpi_score is not None:

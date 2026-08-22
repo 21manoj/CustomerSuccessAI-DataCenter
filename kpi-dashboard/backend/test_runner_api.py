@@ -664,7 +664,8 @@ def get_platform_state():
         return jsonify({'error': f'Access denied: not authorized for customer {customer_id}'}), 403
 
     try:
-        from models import db, Customer, Account, PrecalculatedScore, ContextNode
+        from models import db, Customer, Account, ContextNode
+        from utils.account_health import get_precalculated_scores_tuple
         import utils.health_thresholds as ht
     except ImportError as e:
         return jsonify({'error': f'Import error: {e}'}), 500
@@ -689,18 +690,11 @@ def get_platform_state():
     total_cg_nodes = 0
 
     for acct in accounts:
-        # Get latest precalculated score
-        latest_score = (
-            PrecalculatedScore.query
-            .filter_by(account_id=acct.account_id, customer_id=customer_id)
-            .order_by(PrecalculatedScore.calculated_at.desc())
-            .first()
-        )
-
-        health_score = latest_score.overall_score if latest_score else None
-        pillar_scores = {}
-        if latest_score and latest_score.pillar_scores:
-            pillar_scores = latest_score.pillar_scores
+        # Canonical account-health read (HealthScore.contributing_pillars) —
+        # the previous code queried a PrecalculatedScore model that has never
+        # existed in models.py, so this endpoint 500'd on every call.
+        health_score, _health_status, pillar_scores = get_precalculated_scores_tuple(acct.account_id)
+        pillar_scores = pillar_scores or {}
 
         # Count context graph nodes for this account
         cg_count = (

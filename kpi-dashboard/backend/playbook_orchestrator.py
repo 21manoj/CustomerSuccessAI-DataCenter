@@ -16,7 +16,7 @@ import requests
 from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
-from models import PlaybookExecution, CustomerWorkflowConfig, StatusUpdate
+from models import PlaybookExecution, CustomerWorkflowConfig
 from security_utils import decrypt_credential, generate_webhook_signature
 
 logger = logging.getLogger(__name__)
@@ -426,12 +426,13 @@ class PlaybookOrchestrator:
         message: Optional[str],
         metadata: Optional[Dict[str, Any]],
     ) -> None:
-        update = StatusUpdate(
-            execution_id=execution.id,
-            status=status,
-            message=message,
-            metadata=metadata,
-            external_ticket_url=execution.external_ticket_url,
-            timestamp=datetime.utcnow(),
+        # This wrote to a StatusUpdate model that has never existed in
+        # models.py (no status_updates table either) — the import crashed
+        # this whole module, taking the live n8n-callback route down with
+        # ImportError. Status history already lives on the execution row
+        # itself (status/updated_at, committed by callers before this runs);
+        # log the transition rather than fabricate a new table.
+        logger.info(
+            "playbook execution %s status update: %s — %s (metadata=%s)",
+            execution.id, status, message, metadata,
         )
-        db.session.add(update)

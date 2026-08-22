@@ -142,15 +142,6 @@ def validate_account_ownership(customer_id: int, account_id: int):
     return account
 
 
-def resolve_customer_vertical(customer_id: int) -> str:
-    """Look up the vertical for a customer. Falls back to 'dc2_s'."""
-    from models import Customer
-    customer = Customer.query.get(int(customer_id))
-    if not customer:
-        raise ToolError(f"Customer {customer_id} not found")
-    return getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-
-
 # ---------------------------------------------------------------------------
 # Pillar labels (vertical-aware)
 # ---------------------------------------------------------------------------
@@ -201,11 +192,11 @@ def get_precalculated_scores(account_id: int):
 
 
 def get_trailing_kpi_values_generic(account_id: int) -> dict:
-    """Read latest KPI values from KpiScore table. Returns {kpi_code: score}."""
+    """Read latest KPI values from KPIScore table. Returns {kpi_code: score}."""
     try:
-        from models import KpiScore
-        rows = KpiScore.query.filter_by(account_id=account_id) \
-            .order_by(KpiScore.measurement_month.desc()).all()
+        from models import KPIScore
+        rows = KPIScore.query.filter_by(account_id=account_id) \
+            .order_by(KPIScore.measurement_month.desc()).all()
         seen = {}
         for r in rows:
             if r.kpi_code not in seen and r.kpi_score is not None:

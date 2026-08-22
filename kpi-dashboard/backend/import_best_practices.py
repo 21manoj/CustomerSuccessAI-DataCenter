@@ -9,7 +9,8 @@ import csv
 import json
 import pandas as pd
 from datetime import datetime
-from models import db, KPIBestPractices
+from models import db
+from rag_knowledge_schema import KPIBestPractices
 from extensions import db
 
 def import_best_practices_json(file_path):

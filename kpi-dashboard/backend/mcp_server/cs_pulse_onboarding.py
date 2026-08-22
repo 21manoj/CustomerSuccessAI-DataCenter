@@ -56,19 +56,18 @@ def _is_onboarding_tool(name: str) -> bool:
 
 
 def _reference_customer_for_vertical(vertical: str):
-    """Demo/reference tenant for a vertical (used by list_verticals + get_reference_customer)."""
+    """Demo/reference tenant for a vertical (used by list_verticals + get_reference_customer).
+
+    Resolution is simply "first customer row on this vertical." An
+    is_reference/reference_for query used to sit above this, silently
+    swallowed — but Customer has neither column, so it raised on every call
+    and the fallback below was always the real path (2026-08-22
+    swallowed-exception sweep). If a curated reference flag is ever added,
+    add the column first, then the query — not the other way around.
+    """
     from models import Customer, Account
 
-    ref_customer = None
-    try:
-        ref_customer = Customer.query.filter_by(
-            is_reference=True,
-            reference_for=vertical,
-        ).first()
-    except Exception:
-        pass
-    if not ref_customer:
-        ref_customer = Customer.query.filter_by(vertical=vertical).first()
+    ref_customer = Customer.query.filter_by(vertical=vertical).first()
     if not ref_customer:
         return None
     acct_count = Account.query.filter_by(customer_id=ref_customer.customer_id).count()
@@ -97,72 +96,36 @@ def list_verticals() -> dict:
     app = _get_flask_app()
 
     with app.app_context():
+        # The registry is the single source of truth here. A VerticalTemplate
+        # DB query used to sit above this, wrapped in a silently-swallowed
+        # try/except — but that model has never existed in models.py, so the
+        # branch never once executed and every response came from the
+        # registry fallback below. Removed (2026-08-22 swallowed-exception
+        # sweep) rather than kept as an aspirational cache: if a DB-backed
+        # template table is ever added, it must be validated against the
+        # registry at write time, not silently substituted at read time —
+        # see tests/test_kpi_count_round_trip_identity.py.
         verticals: dict = {}
 
+        # Auto-discover from registry instead of hardcoding
         try:
-            from models import VerticalTemplate
-            from extensions import db
-            from sqlalchemy import func
-
-            rows = (
-                db.session.query(
-                    VerticalTemplate.vertical,
-                    VerticalTemplate.config_type,
-                    func.count(VerticalTemplate.template_id).label('cnt'),
-                )
-                .group_by(VerticalTemplate.vertical, VerticalTemplate.config_type)
-                .all()
-            )
-
-            for vertical, config_type, cnt in rows:
-                if vertical not in verticals:
-                    verticals[vertical] = {
-                        'vertical': vertical,
+            from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars, get_kpis
+            for v_slug in sorted(SUPPORTED_VERTICALS):
+                try:
+                    kpi_defs = get_kpis(v_slug)
+                    pillar_defs = get_pillars(v_slug)
+                    pillar_names = [p.get('name', pid) for pid, p in pillar_defs.items()]
+                    verticals[v_slug] = {
+                        'vertical': v_slug,
                         'config_types': [],
                         'config_type_count': 0,
-                        'kpi_count': 0,
-                        'description': None,
+                        'kpi_count': len(kpi_defs),
+                        'description': f"{v_slug.replace('_', ' ').title()} vertical — {', '.join(pillar_names)}",
                     }
-                verticals[vertical]['config_types'].append(config_type)
-                verticals[vertical]['config_type_count'] += 1
-        except (ImportError, Exception):
-            pass
-
-        for v_key, v_info in verticals.items():
-            try:
-                kpi_defs = _get_kpi_definitions(v_key)
-                v_info['kpi_count'] = len(kpi_defs)
-            except Exception:
-                pass
-            # Auto-generate description from pillar names if not already set
-            if not v_info.get('description'):
-                try:
-                    from utils.vertical_registry import get_pillars
-                    pillar_names = [p.get('name', pid) for pid, p in get_pillars(v_key).items()]
-                    v_info['description'] = f"{v_key.replace('_', ' ').title()} vertical — {', '.join(pillar_names)}"
                 except Exception:
-                    v_info['description'] = f"{v_key.replace('_', ' ').title()} vertical"
-
-        if not verticals:
-            # Auto-discover from registry instead of hardcoding
-            try:
-                from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars, get_kpis
-                for v_slug in sorted(SUPPORTED_VERTICALS):
-                    try:
-                        kpi_defs = get_kpis(v_slug)
-                        pillar_defs = get_pillars(v_slug)
-                        pillar_names = [p.get('name', pid) for pid, p in pillar_defs.items()]
-                        verticals[v_slug] = {
-                            'vertical': v_slug,
-                            'config_types': [],
-                            'config_type_count': 0,
-                            'kpi_count': len(kpi_defs),
-                            'description': f"{v_slug.replace('_', ' ').title()} vertical — {', '.join(pillar_names)}",
-                        }
-                    except Exception:
-                        pass
-            except Exception:
-                pass  # Registry not available — return empty
+                    pass
+        except Exception:
+            pass  # Registry not available — return empty
 
         try:
             for v_slug, v_info in verticals.items():

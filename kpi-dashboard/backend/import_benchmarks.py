@@ -9,7 +9,8 @@ import csv
 import json
 import pandas as pd
 from datetime import datetime
-from models import db, IndustryBenchmarks
+from models import db
+from rag_knowledge_schema import IndustryBenchmarks
 from extensions import db
 
 def import_benchmarks_csv(file_path):

@@ -210,7 +210,8 @@ class RAGRebuildSubscriber:
     def _update_knowledge_base_status(self, customer_id: int, status: str):
         """Update knowledge base status in database"""
         try:
-            from models import db, RAGKnowledgeBase
+            from models import db
+            from rag_knowledge_schema import RAGKnowledgeBase
             
             # Update or create status record
             kb_status = RAGKnowledgeBase.query.filter_by(customer_id=customer_id).first()

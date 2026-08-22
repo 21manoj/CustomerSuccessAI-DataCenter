@@ -329,7 +329,7 @@ def get_upload_status(upload_id):
     upload = KPIUpload.query.get_or_404(upload_id)
     
     # Check RAG knowledge base status
-    from models import RAGKnowledgeBase
+    from rag_knowledge_schema import RAGKnowledgeBase
     kb_status = RAGKnowledgeBase.query.filter_by(customer_id=upload.customer_id).first()
     
     return jsonify({
