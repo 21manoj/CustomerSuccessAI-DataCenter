@@ -158,8 +158,16 @@ def get_pillar_labels(vertical: str = 'dc2_s') -> dict:
     """Return canonical pillar labels for a vertical.
 
     Resolves through the vertical registry so ANY vertical (JSON-catalog or
-    Python-module) gets its own pillar display names. Falls back to the legacy
-    hardcoded maps only if the registry can't resolve the vertical.
+    Python-module) gets its own pillar display names. The registry already
+    covers dc2_s and saas_premium via their JSON catalogs (see
+    utils/vertical_registry.py), so the two vertical-specific import
+    fallbacks that used to live here (one for saas_premium, one for dc2_s)
+    were dead in practice — cross-vertical import cleanup, Phase 5 of the
+    vertical-registry fail-closed refactor, Aug 21 2026. Only the final
+    vertical-agnostic literal dict remains, as a last resort for the case
+    where the registry itself can't resolve ANY vertical (e.g. import
+    failure) — it is intentionally not vertical-specific data, just an
+    inert default.
     """
     try:
         from utils.vertical_registry import get_pillars
@@ -168,21 +176,11 @@ def get_pillar_labels(vertical: str = 'dc2_s') -> dict:
             return {code: (p.get('name') or code) for code, p in pillars.items()}
     except Exception:
         pass
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.kpi_definitions import SAAS_PILLARS
-            return {code: p['name'] for code, p in SAAS_PILLARS.items()}
-        except ImportError:
-            pass
-    try:
-        from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-        return {code: p['name'] for code, p in DC2S_PILLARS.items()}
-    except ImportError:
-        return {
-            'P1': 'Deployment Velocity', 'P2': 'Operational Stability',
-            'P3': 'AI Workload Performance', 'P4': 'Channel & Partner Health',
-            'P5': 'Expansion Readiness',
-        }
+    return {
+        'P1': 'Deployment Velocity', 'P2': 'Operational Stability',
+        'P3': 'AI Workload Performance', 'P4': 'Channel & Partner Health',
+        'P5': 'Expansion Readiness',
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -235,27 +233,54 @@ def get_health_functions(vertical: str):
 
 
 def get_kpi_definitions(vertical: str) -> dict:
-    """Return the KPI definitions dict for a vertical."""
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.kpi_definitions import SAAS_KPIS
-            return SAAS_KPIS
-        except ImportError:
-            return {}
-    from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    return DC2S_KPIS
+    """Return the KPI definitions dict for a vertical.
+
+    Routes through utils.vertical_registry.get_kpis so ANY vertical (JSON
+    catalog or legacy Python module) gets its own KPI catalog, instead of
+    the hardcoded saas_premium/dc2_s two-branch that used to silently
+    serve DC2S_KPIS to every other vertical (e.g. datacenter_v1) — the
+    same bug class already fixed the same day in
+    cs_pulse_mcp_server.py::_get_kpi_definitions (Aug 21 2026
+    vertical-coupling audit, commit b1232d97a; see also
+    tests/test_ask_ai_helpers_kpi_definitions.py for the sibling fix's
+    coverage). This is a real, live call site — wizards/wizard_c_weight_
+    calibrator_db.py imports it directly for weight calibration.
+
+    Raises ValueError for a vertical the registry can't resolve at all
+    (no JSON catalog, no Python module) — matches the sibling function's
+    fail-closed behavior rather than silently returning {} and letting
+    callers iterate over nothing.
+    """
+    from utils.vertical_registry import get_kpis
+    return get_kpis(vertical)
 
 
 def get_playbook_config(vertical: str):
-    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical."""
+    """Return (PLAYBOOK_CONFIG, should_trigger_playbook) for a vertical.
+
+    Genuinely vertical-specific: dc2_s and saas_premium each define their
+    own playbook trigger logic in Python
+    (verticals/{vertical}/vertical_config.py) and there is no generic /
+    JSON-catalog equivalent yet (playbook_recommendations_api has the same
+    gap — see backlog_vertical_registry_fail_closed_refactor). Explicitly
+    gated per known vertical rather than falling through to dc2_s's config
+    for every other vertical, which is what this function did before: any
+    non-dc2_s/saas_premium customer (e.g. datacenter_v1) was silently
+    served dc2_s's playbook definitions under its own vertical's name.
+    """
     if vertical in ('saas_premium', 'saas'):
         try:
             from verticals.saas_premium.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
             return PLAYBOOK_CONFIG, should_trigger_playbook
         except ImportError:
             return {}, lambda *a, **kw: False
-    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
-    return PLAYBOOK_CONFIG, should_trigger_playbook
+    if vertical == 'dc2_s':
+        from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
+        return PLAYBOOK_CONFIG, should_trigger_playbook
+    # No generic playbook-config equivalent exists yet for other
+    # verticals (e.g. datacenter_v1) — return a safe no-op rather than
+    # crashing onboarding or silently borrowing dc2_s's playbooks.
+    return {}, lambda *a, **kw: False
 
 
 # ---------------------------------------------------------------------------

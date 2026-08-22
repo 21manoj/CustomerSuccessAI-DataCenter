@@ -16,15 +16,48 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Load canonical pillar weights from kpi_definitions (single source of truth)
-try:
-    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-    _CANONICAL_PILLAR_WEIGHTS = {
-        pid: info.get('weight_l2', 0.20)
-        for pid, info in DC2S_PILLARS.items()
-    }
-except ImportError:
-    _CANONICAL_PILLAR_WEIGHTS = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
+# Vertical-agnostic fallback pillar weights.
+#
+# IMPORTANT: this module is the shared PROVISIONING TEMPLATE
+# (verticals/_template/services/bootstrap_weights_loader.py) — it gets
+# copied verbatim into every newly-provisioned customer directory
+# regardless of vertical (see verticals/provision_dc_customer.py, invoked
+# with vertical_slug=<the customer's actual vertical> from both
+# mcp_server/cs_pulse_onboarding.py::create_customer and
+# onboarding_api_v2_config_aware.py). Hardcoding dc2_s's pillar weights
+# here would make every new saas_premium/datacenter_v1/etc. customer
+# silently inherit dc2_s's canonical weights as its "single source of
+# truth" default — the exact bug class this refactor exists to prevent.
+#
+# Real per-vertical weights are resolved lazily by
+# _canonical_pillar_weights_for(vertical) once the vertical is known (from
+# the loaded bootstrap_weights_config.json). The module-level constants
+# below are only the last-resort default before any config has been
+# loaded, or when the vertical genuinely can't be resolved.
+_GENERIC_FALLBACK_PILLAR_WEIGHTS = {'P1': 0.20, 'P2': 0.20, 'P3': 0.20, 'P4': 0.20, 'P5': 0.20}
+
+
+def _canonical_pillar_weights_for(vertical: str) -> Dict[str, float]:
+    """Resolve default L2 pillar weights for a vertical via the registry.
+
+    Routes through utils.vertical_registry.get_default_pillar_weights so
+    each vertical (dc2_s, saas_premium, datacenter_v1, or any future
+    JSON-catalog vertical) gets its OWN canonical weights instead of
+    silently inheriting dc2_s's. Falls back to an equal-weight generic
+    default only if the registry can't resolve the vertical at all (e.g.
+    vertical is 'unknown', or the registry import fails) — this must not
+    hard-crash a brand-new customer's onboarding just because weights
+    aren't resolvable yet.
+    """
+    try:
+        from utils.vertical_registry import get_default_pillar_weights
+        weights = get_default_pillar_weights(vertical)
+        if weights:
+            return weights
+    except Exception:
+        pass
+    return dict(_GENERIC_FALLBACK_PILLAR_WEIGHTS)
+
 
 # Load health thresholds from centralized config
 try:
@@ -35,6 +68,7 @@ except ImportError:
     _HEALTHY_MIN = 70
     _AT_RISK_MIN = 50
 
+_CANONICAL_PILLAR_WEIGHTS = dict(_GENERIC_FALLBACK_PILLAR_WEIGHTS)
 _DEFAULT_PILLAR_WEIGHT = sum(_CANONICAL_PILLAR_WEIGHTS.values()) / len(_CANONICAL_PILLAR_WEIGHTS)
 
 
@@ -91,7 +125,12 @@ class BootstrapWeightsLoader:
         self.kpi_weights: Dict[str, float] = {}
         self.pillar_weights: Dict[str, float] = {}
         self.kpi_to_pillar: Dict[str, str] = {}
-        
+        # Vertical-resolved canonical weights (see _canonical_pillar_weights_for).
+        # Start with the generic equal-weight fallback; load_config() will
+        # re-resolve these once the config's 'vertical' field is known.
+        self._canonical_pillar_weights: Dict[str, float] = dict(_CANONICAL_PILLAR_WEIGHTS)
+        self._default_pillar_weight: float = _DEFAULT_PILLAR_WEIGHT
+
         if config_path:
             self.load_config(config_path)
     
@@ -112,7 +151,16 @@ class BootstrapWeightsLoader:
             # Extract version and vertical
             version = data.get('version', '1.0')
             vertical = data.get('vertical', 'unknown')
-            
+
+            # Re-resolve canonical pillar weights for THIS vertical now that
+            # it's known (routes through utils.vertical_registry — see
+            # _canonical_pillar_weights_for() above).
+            self._canonical_pillar_weights = _canonical_pillar_weights_for(vertical)
+            self._default_pillar_weight = (
+                sum(self._canonical_pillar_weights.values()) / len(self._canonical_pillar_weights)
+                if self._canonical_pillar_weights else _DEFAULT_PILLAR_WEIGHT
+            )
+
             # FIX: Handle both 'pillar_weights' and 'pillar_weights_L2' keys
             pillar_data = data.get('pillar_weights') or data.get('pillar_weights_L2') or {}
             
@@ -128,7 +176,7 @@ class BootstrapWeightsLoader:
             for pillar_id, pillar_info in pillar_data.items():
                 # Handle different config formats
                 if isinstance(pillar_info, dict):
-                    pillar_weight = pillar_info.get('weight', pillar_info.get('pillar_weight', _CANONICAL_PILLAR_WEIGHTS.get(pillar_id, _DEFAULT_PILLAR_WEIGHT)))
+                    pillar_weight = pillar_info.get('weight', pillar_info.get('pillar_weight', self._canonical_pillar_weights.get(pillar_id, self._default_pillar_weight)))
                     pillar_name = pillar_info.get('name', pillar_id)
                     kpi_list = pillar_info.get('kpis', pillar_info.get('kpi_weights', []))
                 else:
@@ -214,7 +262,7 @@ class BootstrapWeightsLoader:
     def get_pillar_weight(self, pillar_id: str, default: float = None) -> float:
         """Get weight for a specific pillar"""
         if default is None:
-            default = _CANONICAL_PILLAR_WEIGHTS.get(pillar_id, _DEFAULT_PILLAR_WEIGHT)
+            default = self._canonical_pillar_weights.get(pillar_id, self._default_pillar_weight)
         return self.pillar_weights.get(pillar_id, default)
     
     def get_kpi_pillar(self, kpi_id: str) -> Optional[str]:
@@ -304,10 +352,10 @@ class BootstrapWeightsLoader:
         
         if is_pillar_scores:
             # Direct pillar scores - just calculate weighted average
-            total_weight = sum(self.pillar_weights.get(p, _CANONICAL_PILLAR_WEIGHTS.get(p, _DEFAULT_PILLAR_WEIGHT)) for p in kpi_values.keys())
+            total_weight = sum(self.pillar_weights.get(p, self._canonical_pillar_weights.get(p, self._default_pillar_weight)) for p in kpi_values.keys())
             if total_weight > 0:
                 health_score = sum(
-                    score * self.pillar_weights.get(pillar, _CANONICAL_PILLAR_WEIGHTS.get(pillar, _DEFAULT_PILLAR_WEIGHT))
+                    score * self.pillar_weights.get(pillar, self._canonical_pillar_weights.get(pillar, self._default_pillar_weight))
                     for pillar, score in kpi_values.items()
                 ) / total_weight
             else:
@@ -346,10 +394,10 @@ class BootstrapWeightsLoader:
         
         # Calculate overall health score (weighted by pillar weights)
         if pillar_scores:
-            total_pillar_weight = sum(self.pillar_weights.get(p, _CANONICAL_PILLAR_WEIGHTS.get(p, _DEFAULT_PILLAR_WEIGHT)) for p in pillar_scores)
+            total_pillar_weight = sum(self.pillar_weights.get(p, self._canonical_pillar_weights.get(p, self._default_pillar_weight)) for p in pillar_scores)
             if total_pillar_weight > 0:
                 health_score = sum(
-                    score * self.pillar_weights.get(pillar, _CANONICAL_PILLAR_WEIGHTS.get(pillar, _DEFAULT_PILLAR_WEIGHT))
+                    score * self.pillar_weights.get(pillar, self._canonical_pillar_weights.get(pillar, self._default_pillar_weight))
                     for pillar, score in pillar_scores.items()
                 ) / total_pillar_weight
             else:
