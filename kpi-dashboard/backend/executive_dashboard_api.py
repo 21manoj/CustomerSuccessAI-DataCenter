@@ -526,6 +526,10 @@ def _get_po1_benchmark_metrics(total_arr):
                 'improvement_pct': 1.0,
                 'dollar_impact': impact,
                 'estimated': True,
+                # Deck benchmarks ARR-scaled — no customer measurement behind
+                # any of these values. Explicit tier alongside the legacy
+                # boolean so the frontend badge doesn't have to infer it.
+                'data_source': _vp.BENCHMARK,
             })
         return metrics
     except Exception:
@@ -1191,6 +1195,13 @@ def cfo_dashboard():
                             'current': round(current, 2),
                             'improvement_pct': round(pct, 1),
                             'dollar_impact': round(impact, 2),
+                            # dollar_impact is from a real ROI snapshot
+                            # (derived), but baseline/current here are
+                            # SYNTHESIZED from the default_baselines
+                            # constants above — the card's headline
+                            # "baseline → current" is default-tier, and
+                            # the blend carries the weaker input.
+                            'data_source': _vp.most_conservative([_vp.DERIVED, _vp.DEFAULT]),
                         })
 
                         if mid == 'NRR':
@@ -1216,6 +1227,9 @@ def cfo_dashboard():
                             'current': round(current, 2) if current else 0,
                             'improvement_pct': improvement_pct,
                             'dollar_impact': round(dollar_impact, 2) if dollar_impact else 0,
+                            # All values from a persisted ROI snapshot of
+                            # computed-from-real-data results.
+                            'data_source': _vp.DERIVED,
                         })
 
                     nrr_detail = details.get('NRR', {})

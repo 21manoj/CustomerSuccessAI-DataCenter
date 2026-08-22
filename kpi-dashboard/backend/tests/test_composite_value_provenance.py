@@ -77,6 +77,26 @@ def test_most_conservative_derived_benchmark_is_benchmark():
     assert vp.most_conservative([vp.DERIVED, vp.BENCHMARK]) == vp.BENCHMARK
 
 
+def test_po1_benchmark_fallback_metrics_carry_explicit_benchmark_tier():
+    """_get_po1_benchmark_metrics builds cards purely from ARR-scaled deck
+    constants — every entry must say so explicitly, not just via the legacy
+    `estimated` boolean."""
+    from executive_dashboard_api import _get_po1_benchmark_metrics
+
+    metrics = _get_po1_benchmark_metrics(10_000_000)
+    assert metrics, "expected benchmark metrics for a nonzero ARR"
+    for m in metrics:
+        assert m['data_source'] == vp.BENCHMARK, m['metric_id']
+        assert m['estimated'] is True  # legacy flag kept for back-compat
+
+
+def test_snapshot_format_b_blend_is_default_tier():
+    """Format B (snapshot forward_metrics) synthesizes baseline/current from
+    the default_baselines constants while dollar_impact is snapshot-derived —
+    the per-card blend must carry the weaker tier."""
+    assert vp.most_conservative([vp.DERIVED, vp.DEFAULT]) == vp.DEFAULT
+
+
 def test_nrr_waterfall_response_block_declares_the_blend():
     """Source-level guard: the nrr_waterfall dict in the CFO response must
     carry a data_source computed via most_conservative, not a bare literal

@@ -60,6 +60,10 @@ interface MetricOutcome {
   direction: string;
   dollar_impact: number;
   category: string;
+  // Value-provenance tier (utils/value_provenance.py) — sent per metric by
+  // outcome_roi_engine._result_to_dict since Aug 2026; previously dropped
+  // here because this interface never declared it.
+  data_source?: ProvenanceTier;
 }
 
 interface StoryData {
@@ -91,6 +95,9 @@ interface PowerOf1Metric {
   current: number;
   improvement_pct: number;
   dollar_impact: number;
+  /** Legacy flag from the CFO benchmark-fallback path; data_source supersedes it. */
+  estimated?: boolean;
+  data_source?: ProvenanceTier;
 }
 
 interface PillarInvestment {
@@ -401,7 +408,17 @@ function PowerOf1Cards({ metrics }: { metrics: PowerOf1Metric[] }) {
 
               {/* Dollar impact */}
               <div className="flex items-center justify-between pt-2 border-t border-gray-700/30">
-                <span className="text-xs text-gray-400">Dollar Impact</span>
+                <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                  Dollar Impact
+                  {/* Tier from the backend per metric; legacy `estimated`
+                      flag (CFO benchmark-fallback path) maps to benchmark
+                      when no explicit tier is present. */}
+                  <ProvenanceTierBadge
+                    tier={m.data_source ?? (m.estimated ? 'benchmark' : undefined)}
+                    compact
+                    dark
+                  />
+                </span>
                 <span className={`text-base font-bold ${style.text}`}>{fmt(m.dollar_impact)}</span>
               </div>
             </div>
@@ -814,6 +831,7 @@ export default function ROIEngineView() {
             current: m.current_value,
             improvement_pct: m.improvement_pct,
             dollar_impact: m.dollar_impact,
+            data_source: m.data_source,
           })
         );
 
