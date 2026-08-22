@@ -477,22 +477,55 @@ def get_csm_daily_actions(customer_id: int, csm_name: str = None) -> dict:
         PLAYBOOK_CONFIG, should_trigger_playbook = _get_playbook_config(vertical)
         KPI_DEFS = _get_kpi_definitions(vertical)
 
-        try:
-            if vertical in ('saas_premium', 'saas'):
-                from verticals.saas_premium.api_routes import (
-                    _normalize_kpi_code_for_health,
-                    _compute_impact_score, _compute_effort_score,
-                    _determine_urgency, _get_roi_context,
-                )
-            else:
-                raise ImportError("use dc2_s")
-        except (ImportError, AttributeError):
-            from verticals.dc2_s.api_routes import (
-                _compute_impact_score, _compute_effort_score,
-                _determine_urgency, _get_roi_context,
-            )
-            from utils.vertical_health import normalize_kpi_code
-            _normalize_kpi_code_for_health = lambda c: normalize_kpi_code(c)
+        # Aug 21 2026 vertical-coupling audit (Bug 1): resolve this vertical's
+        # own "expansion probability/rate" KPI from its actual catalog instead
+        # of hardcoding dc2_s's 'P5-KPI7' for every vertical. dc2_s calls it
+        # P5-KPI7 ("Expansion Probability (90d)"), datacenter_v1 calls it
+        # P5-KPI4, saas_premium calls it P5-KPI3 ("Expansion Revenue Rate") —
+        # different codes per vertical, and healthcare_provider has no such
+        # KPI at all, so this must resolve to None (no expansion boost)
+        # rather than silently reading a KPI that isn't this tenant's.
+        _expansion_kpi_code = next(
+            (code for code, kdef in (KPI_DEFS or {}).items()
+             if 'expansion' in (kdef.get('name', '') or '').lower()),
+            None,
+        )
+
+        # Aug 21 2026 vertical-coupling audit (Bug 1): this used to be
+        # "if saas_premium use its own functions, else unconditionally fall
+        # through to dc2_s" — but verticals/saas_premium/api_routes.py never
+        # defined _normalize_kpi_code_for_health/_compute_impact_score/etc,
+        # so that import always raised and EVERY vertical (saas_premium
+        # included) silently inherited dc2_s's PB-01..PB-06 playbook→ROI
+        # mapping. _compute_impact_score/_compute_effort_score/_determine_urgency
+        # only operate on health/churn/expansion numbers and playbook
+        # sub-component counts — no vertical-specific KPI codes or playbook
+        # IDs — so they're genuinely vertical-neutral and safe to reuse from
+        # dc2_s's module for every vertical. _get_roi_context is NOT neutral:
+        # it hardcodes dc2_s's own playbook IDs (PB-01..PB-06) mapped to
+        # dc2_s's Power-of-1 metrics, so it's only valid for dc2_s tenants.
+        from verticals.dc2_s.api_routes import (
+            _compute_impact_score, _compute_effort_score, _determine_urgency,
+        )
+        from utils.vertical_health import normalize_kpi_code
+        _normalize_kpi_code_for_health = lambda c: normalize_kpi_code(c)
+
+        def _no_roi_context(action_type, playbook_id, account_revenue=0):
+            """Honest 'not available' ROI context for verticals with no
+            verified Power-of-1 playbook/action mapping yet — instead of
+            fabricating one by borrowing dc2_s's PB-01..PB-06 map."""
+            return {
+                'roi_metric_id': None,
+                'roi_metric_name': None,
+                'roi_projected_impact': 0,
+                'roi_impact_type': None,
+                'roi_context_available': False,
+            }
+
+        if vertical == 'dc2_s':
+            from verticals.dc2_s.api_routes import _get_roi_context
+        else:
+            _get_roi_context = _no_roi_context
 
         DC2S_KPIS = KPI_DEFS
 
@@ -630,7 +663,7 @@ def get_csm_daily_actions(customer_id: int, csm_name: str = None) -> dict:
             churn_prob = 80 if h_cls == 'critical' else (40 if h_cls == 'at_risk' else 15)
             expansion_prob_val = 75 if h_cls == 'healthy' else (30 if h_cls == 'at_risk' else 5)
 
-            exp_kpi = normalized_kpis.get('P5-KPI7')
+            exp_kpi = normalized_kpis.get(_expansion_kpi_code) if _expansion_kpi_code else None
             if exp_kpi is not None:
                 expansion_prob_val = max(expansion_prob_val, exp_kpi)
 
