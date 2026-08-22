@@ -21,7 +21,7 @@ from auth_middleware import get_current_customer_id
 from extensions import db
 from models import Account, HealthScore, DC2SKPI
 from utils.generic_scorer import score_account_health
-from utils.vertical_registry import get_catalog
+from utils.vertical_registry import get_pillars, get_kpis
 import utils.health_thresholds as ht
 
 logger = logging.getLogger(__name__)
@@ -125,15 +125,17 @@ def saas_health_summary():
 def saas_kpi_catalog():
     """Return the SaaS Premium KPI catalog."""
     try:
-        catalog = get_catalog('saas_premium')
-        if not catalog:
+        pillars = get_pillars('saas_premium')
+        kpis = get_kpis('saas_premium')
+        if not pillars or not kpis:
             return jsonify({'error': 'SaaS Premium catalog not found'}), 404
 
+        catalog = {'kpis': kpis, 'pillars': pillars}
         return jsonify({
             'status': 'success',
             'vertical': 'saas_premium',
-            'kpi_count': len(catalog.get('kpis', {})),
-            'pillar_count': len(catalog.get('pillars', {})),
+            'kpi_count': len(kpis),
+            'pillar_count': len(pillars),
             'catalog': catalog,
         })
 

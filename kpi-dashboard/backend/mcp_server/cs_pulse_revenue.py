@@ -710,11 +710,10 @@ def generate_playbook_from_description(
         # Load KPI catalog for this customer to inform condition generation
         kpi_names = {}
         try:
-            from utils.vertical_registry import get_catalog
-            catalog = get_catalog(customer_id)
-            for pillar in catalog.get('pillars', []):
-                for kpi in pillar.get('kpis', []):
-                    kpi_names[kpi['code']] = kpi.get('name', kpi['code'])
+            from utils.vertical_registry import get_catalog_for_customer
+            _pillars, _kpis = get_catalog_for_customer(customer_id)
+            for kpi_code, kpi_def in _kpis.items():
+                kpi_names[kpi_code] = kpi_def.get('name', kpi_code)
         except Exception:
             # Fallback KPI names
             kpi_names = {
