@@ -419,7 +419,7 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
         if revenue_protected > 0:
             node = ContextNode(
                 account_id=execution.account_id, customer_id=customer_id,
-                node_type='OUTCOME', source='system', node_subtype='playbook_outcome',
+                node_type='OUTCOME', source='inferred', node_subtype='playbook_outcome',
                 title=f'{outcome.title()}: {execution.playbook_id} — ${revenue_protected:,.0f} protected',
                 revenue_impact=revenue_protected,
                 revenue_impact_type='revenue_protected',
@@ -435,7 +435,7 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
         if revenue_expanded > 0:
             node = ContextNode(
                 account_id=execution.account_id, customer_id=customer_id,
-                node_type='OUTCOME', source='system', node_subtype='playbook_outcome',
+                node_type='OUTCOME', source='inferred', node_subtype='playbook_outcome',
                 title=f'{outcome.title()}: {execution.playbook_id} — ${revenue_expanded:,.0f} expansion',
                 revenue_impact=revenue_expanded,
                 revenue_impact_type='expansion_closed',
@@ -454,7 +454,7 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
             ri_type = 'revenue_at_risk' if outcome == 'timeout' else 'intervention_outcome'
             outcome_node = ContextNode(
                 account_id=execution.account_id, customer_id=customer_id,
-                node_type='OUTCOME', source='system', node_subtype='playbook_outcome',
+                node_type='OUTCOME', source='inferred', node_subtype='playbook_outcome',
                 title=f'{outcome.title()}: {execution.playbook_id}',
                 revenue_impact=0,
                 revenue_impact_type=ri_type,
