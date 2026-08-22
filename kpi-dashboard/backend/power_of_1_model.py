@@ -523,6 +523,38 @@ def get_metric_cost(metric_id: str) -> Dict:
     }
 
 
+def dedupe_portfolio_dollar_impact(metrics: List[Dict]) -> float:
+    """
+    Sum per-metric Power-of-1 dollar impacts without double-counting metrics
+    driven by the same underlying playbook.
+
+    Three metric pairs share a playbook (see `dc2s_linked_playbooks` in
+    power_of_1_economics.json — vertical-agnostic, describes the modeling
+    relationship, not which playbooks a given vertical exposes):
+    PB-01 drives TTFV + product_adoption, PB-02 drives GRR +
+    ticket_resolution_time, PB-04 drives NRR + expansion_rate. A naive sum
+    of all six metrics' dollar_impact counts each of those three playbooks'
+    benefit twice — once under each metric it's linked to.
+
+    `metrics`: list of dicts with at least `metric_id` and `dollar_impact`
+    (the shape `power_of_1_metrics` takes everywhere it's threaded through
+    the CFO dashboard). Ties are broken by keeping the larger figure —
+    same "weakest/most-conservative claim wins" convention as
+    `utils.value_provenance.most_conservative`.
+    """
+    seen_playbooks = set()
+    total = 0.0
+    for m in sorted(metrics, key=lambda x: x.get('dollar_impact', 0) or 0, reverse=True):
+        impact = m.get('dollar_impact', 0) or 0
+        metric_def = POWER_OF_1_METRICS.get(m.get('metric_id'))
+        playbooks = set(metric_def.dc2s_linked_playbooks) if metric_def else set()
+        if playbooks and playbooks & seen_playbooks:
+            continue
+        total += impact
+        seen_playbooks |= playbooks
+    return total
+
+
 # ============================================================
 # INTERNAL HELPERS
 # ============================================================

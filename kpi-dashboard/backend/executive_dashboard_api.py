@@ -36,6 +36,7 @@ from models import (
 import utils.health_thresholds as ht
 from utils.context_graph import aggregate_revenue_across_accounts, aggregate_revenue_with_provenance
 from utils.vertical_registry import get_vertical_for_customer, get_pillars
+from power_of_1_model import dedupe_portfolio_dollar_impact
 
 logger = logging.getLogger(__name__)
 
@@ -1227,7 +1228,7 @@ def cfo_dashboard():
         if not power_of_1_metrics and total_arr > 0:
             power_of_1_metrics = _get_po1_benchmark_metrics(total_arr)
             if estimated_investment > 0:
-                roi_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
+                roi_impact = dedupe_portfolio_dollar_impact(power_of_1_metrics)
             for m in power_of_1_metrics:
                 if m['metric_id'] == 'NRR':
                     nrr_projection = round(m['current'])
@@ -1248,11 +1249,11 @@ def cfo_dashboard():
         roi_pct, roi_multiple, roi_is_modeled = resolve_cfo_roi_pct(
             roi_snap,
             power_of_1_metrics,
-            estimated_investment,
+            effective_investment,
             roi_impact=roi_impact,
         )
         if roi_impact <= 0 and power_of_1_metrics:
-            roi_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
+            roi_impact = dedupe_portfolio_dollar_impact(power_of_1_metrics)
 
         num_accounts = len(accounts)
         roi_scaling = build_roi_scaling(
@@ -1600,8 +1601,12 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
     roi2 = round(value2 / cost2, 1) if cost2 > 0 else 0
 
     # Layer 3: Power-of-1 growth
-    # Impact scales linearly with ARR, cost scales sub-linearly (sqrt)
-    po1_impact = sum(m.get('dollar_impact', 0) for m in power_of_1_metrics)
+    # Impact scales linearly with ARR, cost scales sub-linearly (sqrt).
+    # Deduped, not summed: 3 of the 6 metrics share a playbook with another
+    # metric (PB-01 → TTFV + product_adoption, PB-02 → GRR + ticket_resolution_time,
+    # PB-04 → NRR + expansion_rate) — a naive sum counted each shared
+    # playbook's benefit twice (vertical-coupling audit Finding 6, 2026-08-21).
+    po1_impact = dedupe_portfolio_dollar_impact(power_of_1_metrics)
     # Compute Po1 cost from POWER_OF_1_METRICS benchmarks
     po1_cost = 0
     try:
@@ -1804,7 +1809,7 @@ def ceo_dashboard():
             po1_metrics = _get_po1_benchmark_metrics(total_arr)
             po1_inv = _get_po1_benchmark_investment(total_arr)
             if po1_inv > 0:
-                po1_impact = sum(m.get('dollar_impact', 0) for m in po1_metrics)
+                po1_impact = dedupe_portfolio_dollar_impact(po1_metrics)
                 roi_pct = round((po1_impact / po1_inv - 1) * 100)
 
         # Sort by health ascending (worst first)

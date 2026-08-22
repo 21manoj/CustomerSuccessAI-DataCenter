@@ -38,7 +38,8 @@ def resolve_cfo_roi_pct(
             investment = float(roi_snap.historical_investment)
 
     if roi_pct <= 0 and power_of_1_metrics and investment > 0:
-        total_impact = sum(float(m.get('dollar_impact', 0) or 0) for m in power_of_1_metrics)
+        from power_of_1_model import dedupe_portfolio_dollar_impact
+        total_impact = dedupe_portfolio_dollar_impact(power_of_1_metrics)
         if total_impact > 0:
             impact = total_impact
             is_modeled = True
