@@ -39,6 +39,7 @@ import { trackPageView, trackEvent } from '../../utils/activityTracker';
 import PredictorV3Tile from '../predictor/PredictorV3Tile';
 import { PerAccountNRRForecastTable } from '../predictor/PerAccountNRRForecastTable';
 import { DashboardErrorState } from '../shared/DashboardErrorState';
+import ProvenanceTierBadge, { ProvenanceTier } from '../shared/ProvenanceTierBadge';
 import PendingDecisionsQueue from './PendingDecisionsQueue';
 
 // ============================================================================
@@ -364,40 +365,48 @@ function formatDollarFull(value: number): string {
 // dollar tile — when the GL connector lands we update the strings here and
 // every tile picks them up automatically.
 
-const SOURCES = {
+const SOURCES: Record<string, { text: string; tier: ProvenanceTier }> = {
   /** Aggregated from accounts.revenue (CRM/CSV import). */
-  crm: 'Source: CRM (CSV) · not GL-reconciled',
+  crm: { text: 'Source: CRM (CSV) · not GL-reconciled', tier: 'measured' },
   /** PlaybookExecutionV2 records — CRM-derived, attributed in CS Pulse. */
-  csPulseProof: 'Source: CS Pulse · playbook executions · not GL-reconciled',
+  csPulseProof: { text: 'Source: CS Pulse · playbook executions · not GL-reconciled', tier: 'measured' },
   /** Wizard B counterfactual model — directional, not auditable to GL. */
-  wizardB: 'Source: CS Pulse (Wizard B) · counterfactual model · directional',
+  wizardB: { text: 'Source: CS Pulse (Wizard B) · counterfactual model · directional', tier: 'derived' },
   /** Predictor v3 forward forecast — point estimate, not auditable to GL. */
-  predictorV3: 'Source: CS Pulse (Predictor v3) · forward forecast · point estimate',
+  predictorV3: { text: 'Source: CS Pulse (Predictor v3) · forward forecast · point estimate', tier: 'derived' },
   /** Power-of-1 industry benchmark estimate — not customer data. */
-  benchmark: 'Source: Power-of-1 benchmark · estimated · not customer data',
+  benchmark: { text: 'Source: Power-of-1 benchmark · estimated · not customer data', tier: 'benchmark' },
   /** OUTCOME-node aggregation — same engine as CRO "Confirmed Risk". */
-  contextGraph: 'Source: Context graph · OUTCOME nodes · evidence-weighted',
+  contextGraph: { text: 'Source: Context graph · OUTCOME nodes · evidence-weighted', tier: 'derived' },
   /** Health-score × churn-probability model (Cost of Inaction panel). */
-  modeledExposure: 'Source: CS Pulse · health churn model · modeled · not playbook proof',
-} as const;
+  modeledExposure: { text: 'Source: CS Pulse · health churn model · modeled · not playbook proof', tier: 'derived' },
+};
 
 type SourceKey = keyof typeof SOURCES;
 
 /**
- * Renders a small italic source-of-record label under a dollar value.
- * Use under any visible dollar tile to satisfy CFO traceability.
+ * Renders a source-of-record label + provenance-tier badge under a dollar
+ * value. Use under any visible dollar tile to satisfy CFO traceability.
+ *
+ * Previously plain italic text, identical style regardless of source —
+ * a benchmark constant and a CRM-measured figure read the same at a
+ * glance. Now the tier badge (see ProvenanceTierBadge) carries the
+ * at-a-glance distinction; this component's text becomes the badge's
+ * hover detail plus a compact caption, not the only signal.
  */
 const SourceLabel: React.FC<{ source: SourceKey | string; className?: string }> = ({
   source,
   className = '',
 }) => {
-  const text = (SOURCES as Record<string, string>)[source] || source;
+  const entry = SOURCES[source];
+  const text = entry?.text || source;
+  const tier = entry?.tier;
   return (
-    <p
-      className={`text-[9px] italic text-gray-500 leading-tight ${className}`}
-      title="System-of-record disclosure. Full GL reconciliation pending GL connector."
-    >
-      {text}
+    <p className={`flex items-center gap-1.5 text-[9px] italic text-gray-500 leading-tight ${className}`}>
+      {tier && <ProvenanceTierBadge tier={tier} detail={text} compact showMeasured />}
+      <span title="System-of-record disclosure. Full GL reconciliation pending GL connector.">
+        {text}
+      </span>
     </p>
   );
 };

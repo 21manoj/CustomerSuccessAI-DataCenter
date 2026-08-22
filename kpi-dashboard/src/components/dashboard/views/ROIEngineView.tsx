@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { apiCall, getCustomerIdentifier } from '../../../utils/api';
 import { useSession } from '../../../contexts/SessionContext';
+import ProvenanceTierBadge, { ProvenanceTier } from '../../shared/ProvenanceTierBadge';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -207,14 +208,16 @@ function MissionBanner({
   // tier directly rather than collapsing it to a validated/not-validated
   // boolean — 'benchmark' is real data, so folding it into a generic
   // "not validated" bucket would contradict its own name.
-  const PROVENANCE_LABELS: Record<string, string> = {
-    measured: 'Measured',
-    derived: 'Derived',
-    benchmark: 'Benchmark-blended',
-    default: 'Default',
-    unavailable: 'Unavailable',
-  };
-  const confidenceLabel = PROVENANCE_LABELS[dataSource] ?? 'Benchmark-modeled';
+  //
+  // ProvenanceTierBadge (not a fixed-color pill, unlike the previous
+  // version of this component) so 'benchmark' — the tier that caused the
+  // Aug 21 2026 audit findings — reads visibly differently from
+  // 'measured', not just as different text in the same emerald pill.
+  const tier: ProvenanceTier = (
+    ['measured', 'derived', 'benchmark', 'default', 'unavailable'].includes(dataSource)
+      ? (dataSource as ProvenanceTier)
+      : 'benchmark'
+  );
 
   return (
     <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#0a1628] via-[#0f2318] to-[#0a1628] border border-emerald-500/20">
@@ -235,9 +238,7 @@ function MissionBanner({
             <Clock className="w-3.5 h-3.5" />
             {monthsOfData > 0 ? `${monthsOfData} months of outcomes` : 'Projected outcomes'}
           </span>
-          <span className="px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-medium">
-            {confidenceLabel}
-          </span>
+          <ProvenanceTierBadge tier={tier} dark showMeasured />
         </div>
       </div>
     </div>
