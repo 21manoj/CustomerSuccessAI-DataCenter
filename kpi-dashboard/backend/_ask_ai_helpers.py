@@ -93,18 +93,18 @@ def _get_health_functions(vertical: str):
 
 
 def _get_kpi_definitions(vertical: str) -> dict:
-    """Return the KPI definitions dict for a vertical."""
-    if vertical in ('saas_premium', 'saas'):
-        try:
-            from verticals.saas_premium.kpi_definitions import SAAS_KPIS
-            return SAAS_KPIS
-        except ImportError:
-            return {}
-    try:
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-        return DC2S_KPIS
-    except ImportError:
-        return {}
+    """Return the KPI definitions dict for a vertical.
+
+    Was a hardcoded two-branch if/else (Aug 21 2026 vertical-coupling audit,
+    bug #4) — a second, untouched copy of the same bug already fixed the
+    same day in cs_pulse_mcp_server.py's own _get_kpi_definitions. Any
+    vertical that wasn't 'saas_premium'/'saas' silently got DC2S_KPIS,
+    feeding Ask AI directly (a flagship conversational surface). Now routes
+    through the same fail-closed vertical_registry.get_kpis used everywhere
+    else in the codebase — no silent fallback.
+    """
+    from utils.vertical_registry import get_kpis as _vr_get_kpis
+    return _vr_get_kpis(vertical)
 
 
 def _get_playbook_config(vertical: str):
