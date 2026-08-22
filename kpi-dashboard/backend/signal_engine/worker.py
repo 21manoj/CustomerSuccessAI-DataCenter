@@ -246,14 +246,17 @@ class SignalEnrichmentWorker:
             escalation_probability=_avg('escalation_probability', 0.0),
         )
 
-        vertical = 'dc2_s'
-        try:
-            from utils.vertical_registry import get_vertical_for_customer
-            acct = db.session.get(Account, account_id)
-            if acct:
-                vertical = get_vertical_for_customer(acct.customer_id)
-        except Exception:
-            pass
+        # No dc2_s fallback: an unresolvable vertical previously silently
+        # fused this account's signals using DC2S's fusion profile. The
+        # per-account try/except in the caller (see `_do_process_batch`)
+        # already logs-and-continues on any exception raised here, so
+        # propagating gives correct skip-with-log semantics without a
+        # wrong-vertical fuse.
+        from utils.vertical_registry import get_vertical_for_customer
+        acct = db.session.get(Account, account_id)
+        if not acct:
+            return
+        vertical = get_vertical_for_customer(acct.customer_id)
 
         fr = fuse_scores(quant, components, account_id, vertical)
 
@@ -302,13 +305,14 @@ class SignalEnrichmentWorker:
         if not customer_id:
             return 0
 
-        # Resolve vertical
-        vertical = 'dc2_s'
-        try:
-            from utils.vertical_registry import get_vertical_for_customer
-            vertical = get_vertical_for_customer(customer_id)
-        except Exception:
-            pass
+        # Resolve vertical. No dc2_s fallback: an unresolvable vertical
+        # previously silently enriched this signal with DC2S's taxonomy.
+        # The per-signal try/except in the caller (see `_do_process_batch`)
+        # already logs-and-continues on any exception raised here, so
+        # propagating gives correct skip-with-log semantics without a
+        # wrong-vertical enrichment.
+        from utils.vertical_registry import get_vertical_for_customer
+        vertical = get_vertical_for_customer(customer_id)
 
         # Step 1: Enrich via Qdrant->Claude RAG
         result = enrich_signal(

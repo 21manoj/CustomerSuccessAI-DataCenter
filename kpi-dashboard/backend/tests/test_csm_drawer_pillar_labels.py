@@ -106,17 +106,19 @@ def test_dc2s_catalog_still_has_dc2s_pillar_names():
 def test_inject_vertical_context_emits_pillar_labels():
     """_inject_vertical_context must add a `pillar_labels` map and a
     `vertical` slug to every dispatched response."""
+    from unittest.mock import patch
     import api_v1_routes
 
-    # Stub the registry — _inject_vertical_context delegates via the
-    # module-level helpers, which import vertical_registry lazily, so we
-    # exercise the real code path against the real saas_premium catalog.
     data = {'accounts': []}
-    # Customer ID is opaque to _inject_vertical_context — it just gets
-    # passed to vertical_registry.get_vertical_for_customer. With no DB
-    # context the registry falls back to dc2_s, which still proves the
-    # injection plumbing fires.
-    out = api_v1_routes._inject_vertical_context(data, customer_id=0)
+    # Phase 1 fail-closed fix (2026-08-21): get_vertical_for_customer no
+    # longer silently defaults to dc2_s when it can't resolve a customer
+    # (e.g. no DB/Flask app context here in a pure-Python test) — it raises
+    # instead. Stub _resolve_vertical so this test exercises only the
+    # injection plumbing (vertical/pillar_labels keys land in the response),
+    # not real DB resolution semantics — those are covered by
+    # tests/test_vertical_resolution_fail_closed.py.
+    with patch('api_v1_routes._resolve_vertical', return_value='saas_premium'):
+        out = api_v1_routes._inject_vertical_context(data, customer_id=42)
     assert 'vertical' in out, (
         "_inject_vertical_context must add a 'vertical' slug — the React "
         "drawer can't decide whether labels are DC2S or SaaS without it."

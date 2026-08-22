@@ -15,7 +15,7 @@ Usage:
 
     pillars = get_pillars('saas_premium')   # → SAAS_PILLARS
     kpis = get_kpis('dc2_s')               # → DC2S_KPIS
-    vertical = get_vertical_for_customer(444)  # → 'dc2_s'
+    vertical = get_vertical_for_customer(444)  # → 'dc2_s' (or raises ValueError)
 """
 
 import json
@@ -94,17 +94,25 @@ def get_default_pillar_weights(vertical: str) -> Dict[str, float]:
 
 
 def get_vertical_for_customer(customer_id: int) -> str:
-    """Look up vertical from CustomerConfig DB. No fallback to dc2_s for unknown customers."""
-    try:
-        from models import CustomerConfig
-        config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
-        if config and config.vertical:
-            return normalize_vertical(config.vertical)
-    except Exception as e:
-        log.debug("vertical_registry: could not load CustomerConfig for %s: %s", customer_id, e)
+    """Look up vertical from CustomerConfig DB.
 
-    # Legacy fallback — will be removed once all customers have explicit vertical in DB
-    return 'dc2_s'
+    Fails closed: raises ValueError if there's no CustomerConfig row for this
+    customer or its `vertical` column is unset. No fallback to dc2_s — a
+    silent default here previously masked missing-config bugs by serving the
+    wrong vertical's KPI/pillar catalog under the customer's own name.
+    Callers that need a "no customer context" default (e.g. customer_id is
+    None) must decide and implement that explicitly at the call site.
+    """
+    from models import CustomerConfig
+    config = CustomerConfig.query.filter_by(customer_id=customer_id).first()
+    if config and config.vertical:
+        return normalize_vertical(config.vertical)
+
+    raise ValueError(
+        f"Cannot resolve vertical for customer_id={customer_id}: no "
+        f"CustomerConfig row found, or its vertical column is unset. "
+        f"No fallback to dc2_s."
+    )
 
 
 def get_catalog_for_customer(customer_id: int) -> Tuple[Dict, Dict]:

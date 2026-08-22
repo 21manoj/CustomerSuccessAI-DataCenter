@@ -103,16 +103,11 @@ def get_high_risk_signal_types(vertical: Optional[str]) -> Dict[str, Dict[str, s
 
 
 def resolve_customer_vertical(customer_id: int) -> str:
-    try:
-        from mcp_server.cs_pulse_mcp_server import _resolve_customer_vertical
-        return _resolve_customer_vertical(customer_id)
-    except Exception:
-        try:
-            from models import Customer
-            cust = Customer.query.get(int(customer_id))
-            return (getattr(cust, 'vertical', None) or 'dc2_s') if cust else 'dc2_s'
-        except Exception:
-            return 'dc2_s'
+    """Resolve a customer's vertical. No dc2_s fallback — propagates the
+    resolver's exception (ToolError/customer-not-found) rather than silently
+    re-deriving a weaker guess and defaulting that guess to dc2_s too."""
+    from mcp_server.cs_pulse_mcp_server import _resolve_customer_vertical
+    return _resolve_customer_vertical(customer_id)
 
 
 def get_playbook_duration_days(playbook_id: str, vertical: Optional[str] = None) -> int:

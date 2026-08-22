@@ -172,12 +172,20 @@ def _resolve_customer_vertical(customer_id: int) -> str:
       1. CustomerConfig.vertical — canonical long form ('saas_premium', 'dc2_s', ...)
       2. Customer.vertical        — short code ('saas', 'dc', 'msp') — normalized via
                                     vertical_registry.VERTICAL_ALIASES
-      3. Legacy fallback 'dc2_s'
+      3. Fails closed — raises ToolError. No dc2_s fallback.
 
     Why two tables: Customer.vertical predates CustomerConfig.vertical and uses short
     codes ('saas', 'dc'). When a downstream caller checks `vertical == 'saas_premium'`
     the short form silently misses, defaulting the tenant to dc2_s. Normalizing both
     sources here is the single fix point — see bugs B-4 / B-5 in the May 17 FDE eval.
+
+    Deliberately NOT delegated to utils.vertical_registry.get_vertical_for_customer:
+    that resolver only checks CustomerConfig.vertical (tier 1 here) and doesn't know
+    about the legacy Customer.vertical short-code tier — collapsing the two would lose
+    tier 2 and regress B-4/B-5.
+
+    No fallback to dc2_s: a silent default here previously served the wrong vertical's
+    catalog/playbooks under the customer's own name whenever both tiers were unset.
     """
     from models import Customer, CustomerConfig
     from utils.vertical_registry import normalize_vertical
@@ -187,20 +195,20 @@ def _resolve_customer_vertical(customer_id: int) -> str:
         raise ToolError(f"Customer {customer_id} not found")
 
     # 1. CustomerConfig.vertical — canonical long form
-    try:
-        cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
-        if cfg and cfg.vertical:
-            return normalize_vertical(cfg.vertical)
-    except Exception:
-        pass
+    cfg = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
+    if cfg and cfg.vertical:
+        return normalize_vertical(cfg.vertical)
 
     # 2. Customer.vertical — short code, normalize to long form
     short = getattr(customer, 'vertical', None)
     if short:
         return normalize_vertical(short)
 
-    # 3. Legacy fallback
-    return 'dc2_s'
+    # 3. Fail closed — no legacy dc2_s fallback
+    raise ToolError(
+        f"Cannot resolve vertical for customer {customer_id}: no "
+        f"CustomerConfig.vertical and no Customer.vertical set. No fallback to dc2_s."
+    )
 
 
 def _get_precalculated_scores(account_id: int):
@@ -520,12 +528,13 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
     app = _get_flask_app()
 
     with app.app_context():
-        vertical = 'dc2_s'
         if customer_id and int(customer_id) > 0:
-            try:
-                vertical = _resolve_customer_vertical(int(customer_id))
-            except Exception:
-                pass
+            # Explicit customer_id: resolution failure must surface, not
+            # silently serve DC2S's catalog under this customer's name.
+            vertical = _resolve_customer_vertical(int(customer_id))
+        else:
+            # No customer context given — DC2S platform defaults per docstring.
+            vertical = 'dc2_s'
 
         kpi_defs = _get_kpi_definitions(vertical)
 

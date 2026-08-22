@@ -25,12 +25,16 @@ api_v1 = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 # ─── Vertical resolution helpers ────────────────────────────────────────────
 
 def _resolve_vertical(customer_id):
-    """Return vertical slug for a customer."""
-    try:
-        from utils.vertical_registry import get_vertical_for_customer
-        return get_vertical_for_customer(int(customer_id))
-    except Exception:
-        return 'dc2_s'
+    """Return vertical slug for a customer.
+
+    No dc2_s fallback: propagates ValueError when the customer's vertical
+    can't be resolved. A silent default here previously served the WRONG
+    vertical's dashboard (DC2S handlers/labels) to an unresolvable tenant
+    without any indication anything was wrong. Callers decide how to
+    surface the failure (see `_dispatch` below for the HTTP-route case).
+    """
+    from utils.vertical_registry import get_vertical_for_customer
+    return get_vertical_for_customer(int(customer_id))
 
 
 def _get_pillar_labels(customer_id):
@@ -79,7 +83,17 @@ def _dispatch(endpoint_name, default_handler, inject_context=True, **kwargs):
     4. Inject vertical context into successful responses
     """
     customer_id = get_current_customer_id()
-    vertical = _resolve_vertical(customer_id) if customer_id else 'dc2_s'
+    if customer_id:
+        try:
+            vertical = _resolve_vertical(customer_id)
+        except ValueError as e:
+            logger.warning(
+                "v1 dispatch: cannot resolve vertical for customer %s: %s",
+                customer_id, e,
+            )
+            return jsonify({'error': str(e)}), 400
+    else:
+        vertical = 'dc2_s'
 
     # Check for vertical-specific override
     handler = _VERTICAL_HANDLERS.get((vertical, endpoint_name))

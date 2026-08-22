@@ -3113,18 +3113,23 @@ def clone_customer(
         # Cust data was always correct; only this display string was wrong.
         # Now uses the vertical-aware helper with the new customer's actual
         # vertical, so saas_premium clones return SaaS pillar names.
-        new_vertical = _resolve_customer_vertical(new_cid) or 'dc2_s'
+        # No dc2_s fallback: the clone's vertical was just set from the source
+        # customer's, so this should always resolve. If it doesn't, that's a
+        # real bug in the clone path and should surface, not be papered over.
+        new_vertical = _resolve_customer_vertical(new_cid)
         result['pillar_labels'] = _get_pillar_labels(new_vertical)
 
         return result
 
 
 def _build_kpi_catalog_lookup(customer) -> dict:
-    """Map kpi_code → display fields for CSV export (DB stores code only)."""
-    try:
-        vertical = _resolve_customer_vertical(customer.customer_id)
-    except Exception:
-        vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
+    """Map kpi_code → display fields for CSV export (DB stores code only).
+
+    No dc2_s fallback on resolution failure: a single-customer CSV export
+    exported under the wrong vertical's KPI labels is worse than a clear
+    error, so this propagates ToolError rather than guessing.
+    """
+    vertical = _resolve_customer_vertical(customer.customer_id)
     defs = _get_kpi_definitions(vertical) or {}
     lookup = {}
     for code, defn in defs.items():

@@ -245,6 +245,10 @@ def get_historical_roi():
             'last_updated': datetime.now().isoformat(),
         })
 
+    except ValueError as e:
+        # Unresolvable vertical (no CustomerConfig / no vertical set) — a
+        # 4xx tells the caller this is a config problem, not a server error.
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         import traceback
         print(f"Historical ROI error: {e}\n{traceback.format_exc()}")
@@ -401,6 +405,8 @@ def get_forward_roi():
 
         return jsonify(response)
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         import traceback
         print(f"Forward ROI error: {e}\n{traceback.format_exc()}")
@@ -574,6 +580,8 @@ def get_outcome_story():
 
         return jsonify(response)
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         import traceback
         print(f"Outcome story error: {e}\n{traceback.format_exc()}")
@@ -639,6 +647,8 @@ def get_outcome_timeline():
             **timeline,
         })
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         import traceback
         print(f"Timeline error: {e}\n{traceback.format_exc()}")
@@ -1844,6 +1854,8 @@ def get_historical_details():
             'total_revenue': sum(a['revenue'] for a in result),
         })
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         import traceback
         print(f"Historical details error: {e}\n{traceback.format_exc()}")
