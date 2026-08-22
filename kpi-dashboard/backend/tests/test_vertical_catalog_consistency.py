@@ -29,6 +29,15 @@ Fixes:
     relocate the same defect). A pillar_roles registry replaces this with
     a proper role lookup later; this is the interim control.
 
+Update (Phase 2, same day): the pillar_roles registry promised above has
+landed — `config/*_kpi_catalog.json` now each carry a `pillar_roles` block
+(role_name -> pillar_code) and `utils.vertical_registry.role(vertical,
+role_name)` resolves it. partner_portal's gate was retrofitted from the
+'partner' substring-on-P4-name check to `role(vertical, 'partner')`, and
+the tests below were updated to match — see
+test_partner_portal_gate_condition_matches_every_registered_vertical and
+test_every_vertical_role_resolves_to_own_catalog_or_none.
+
 These tests import no Flask app and need no DB — same convention as
 test_mcp_tool_auth_coverage.py and test_vertical_playbook_routing.py.
 """
@@ -209,58 +218,125 @@ def test_partner_portal_gates_on_pillar_content():
     fn = _find_function(tree, "partner_portal")
     fn_source = ast.get_source_segment(source, fn) or ""
 
-    assert "get_pillars" in fn_source, (
-        "partner_portal's gate should resolve the tenant's real pillar "
-        "name via vertical_registry.get_pillars(), not a hardcoded "
-        "per-vertical map — the latter relocates the defect instead of "
-        "fixing it."
+    assert "vertical_registry import role" in fn_source or "role as _vr_role" in fn_source, (
+        "partner_portal's gate should resolve the tenant's partner pillar "
+        "via vertical_registry.role(vertical, 'partner') — the pillar_roles "
+        "registry — not a hardcoded per-vertical map or a name/substring "
+        "check, both of which relocate the defect instead of fixing it."
     )
-    assert "'partner' not in" in fn_source or '"partner" not in' in fn_source, (
-        "partner_portal no longer appears to check the tenant's actual P4 "
-        "pillar name before serving. This is the Finding-2 data-exposure "
-        "gate — removing it re-opens serving a non-partner vertical's P4 "
-        "data (e.g. datacenter_v1's Power & Facility) under partner labels."
+    assert "'partner')" in fn_source, (
+        "partner_portal no longer appears to call role(vertical, 'partner') "
+        "before serving. This is the Finding-2 data-exposure gate — "
+        "removing it re-opens serving a non-partner vertical's P4 data "
+        "(e.g. datacenter_v1's Power & Facility) under partner labels."
+    )
+    assert "is None" in fn_source, (
+        "partner_portal's gate should refuse to serve when role(vertical, "
+        "'partner') resolves to None (this vertical has no partner "
+        "pillar at all) — that's the case a pillar_roles lookup must "
+        "handle explicitly, not silently pass through."
     )
 
 
 def test_partner_portal_gate_condition_matches_every_registered_vertical():
     """Data-level companion to the structural check above.
 
-    The first version of this gate checked for the literal string
-    "Channel & Partner Health" — dc2_s's exact P4 name — and it shipped
-    passing every test, including the structural one above in its original
-    form (which only asserted that literal string appeared in the source).
-    It then incorrectly refused saas_premium, whose real partner pillar is
-    named "Partner & Ecosystem Health" — same role, different string. A
-    string-presence test cannot catch that; only checking the gate's actual
-    condition against real registry data for every vertical can. This is
-    that test — it computes the "should serve" / "should refuse" expected
-    outcome independently (ground truth: does the vertical's own real P4
-    pillar name contain "partner"?) and would have failed on the exact-match
-    version of the gate for saas_premium.
+    The gate has gone through two generations of bug already: an exact
+    string match against dc2_s's P4 name ("Channel & Partner Health")
+    incorrectly refused saas_premium (whose equivalent pillar is genuinely
+    named "Partner & Ecosystem Health" — same role, different string); the
+    substring fix ('partner' in P4's name) that replaced it was itself
+    documented as an interim control pending a real pillar_roles registry
+    — this phase. A name/substring test cannot express "this vertical's
+    partner pillar isn't P4" or "this vertical has no partner pillar";
+    only checking the gate's actual condition against real registry role
+    data for every vertical can. This is that test — it computes the
+    "should serve" / "should refuse" expected outcome independently
+    (ground truth: does vertical_registry.role(vertical, 'partner') —
+    NOT a name string — resolve to 'P4'?) for every registered vertical.
     """
-    from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars
+    from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars, role
+
+    # Ground truth, established from the audit that created this gate:
+    # dc2_s and saas_premium have a real partner pillar at P4; datacenter_v1
+    # (Power & Facility at P4) and healthcare_provider (Compliance & Risk
+    # at P4) do not. If a future vertical adds a partner pillar that
+    # ISN'T P4, or removes SUPPORTED_VERTICALS's assumption that P4 is
+    # always the partner slot, this table — and the gate's `!= 'P4'`
+    # branch — is exactly what should be revisited, not silently bypassed.
+    EXPECTED_PARTNER_PILLAR = {
+        'dc2_s': 'P4',
+        'saas_premium': 'P4',
+        'datacenter_v1': None,
+        'healthcare_provider': None,
+    }
 
     for vertical in sorted(SUPPORTED_VERTICALS):
-        p4_name = (get_pillars(vertical).get('P4') or {}).get('name', '')
-        should_serve = 'partner' in p4_name.lower()
-        # Ground-truth check independent of the gate's own implementation:
-        # a vertical whose P4 is legitimately a partner pillar must contain
-        # the word: every real partner pillar name observed in this
-        # codebase does (dc2_s "Channel & Partner Health", saas_premium
-        # "Partner & Ecosystem Health"), and no non-partner pillar name
-        # observed does (datacenter_v1 "Power & Facility",
-        # healthcare_provider "Compliance & Risk"). If a future vertical's
-        # partner-equivalent pillar is named without the word "partner" in
-        # it, this assertion is exactly what should fail and force the
-        # gate (and this test) to be revisited — not silently misroute.
-        if should_serve:
-            assert 'partner' in p4_name.lower(), (
-                f"{vertical!r}'s P4 ({p4_name!r}) was expected to read as "
-                f"a partner pillar but doesn't contain 'partner' — the "
-                f"substring gate would incorrectly refuse a legitimate "
-                f"partner portal for this vertical."
+        resolved = role(vertical, 'partner')
+        expected = EXPECTED_PARTNER_PILLAR.get(vertical, '__UNKNOWN__')
+        assert expected != '__UNKNOWN__', (
+            f"{vertical!r} is registered but has no expected-partner-pillar "
+            f"entry in this test's ground-truth table — add one (a real "
+            f"pillar code, or None) so this test actually covers it "
+            f"instead of silently skipping a new vertical."
+        )
+        assert resolved == expected, (
+            f"role({vertical!r}, 'partner') resolved to {resolved!r}, "
+            f"expected {expected!r}. If this vertical's real partner "
+            f"pillar genuinely changed, update EXPECTED_PARTNER_PILLAR "
+            f"here to match — don't just widen the assertion."
+        )
+        # Every non-None resolution must point at a pillar code that
+        # actually exists in this vertical's own catalog — role() must
+        # never resolve to another vertical's pillar code, or a stale
+        # code the vertical no longer has.
+        if resolved is not None:
+            assert resolved in get_pillars(vertical), (
+                f"role({vertical!r}, 'partner') = {resolved!r}, but "
+                f"{resolved!r} is not one of {vertical!r}'s own pillar "
+                f"codes {sorted(get_pillars(vertical).keys())} — role() "
+                f"must never point outside the vertical's own catalog."
             )
+
+
+def test_every_vertical_role_resolves_to_own_catalog_or_none():
+    """role() must never silently resolve to a wrong-looking pillar.
+
+    For every (vertical, role_name) pair in the shared vocabulary: the
+    result is either None (this vertical genuinely has no pillar for that
+    role — a legitimate, expected state) or a pillar code that is present
+    in that SAME vertical's own get_pillars() catalog. A pillar code
+    belonging to a different vertical, or a code absent from this
+    vertical's own catalog, is exactly the defect class pillar_roles
+    exists to prevent (the same class of bug as partner_portal serving
+    the wrong vertical's P4 data under partner labels).
+    """
+    from utils.vertical_registry import SUPPORTED_VERTICALS, get_pillars, role
+
+    ROLE_VOCABULARY = [
+        'revenue', 'reliability', 'capacity', 'partner',
+        'expansion', 'adoption', 'engagement', 'compliance',
+    ]
+
+    for vertical in sorted(SUPPORTED_VERTICALS):
+        own_pillar_codes = set(get_pillars(vertical).keys())
+        for role_name in ROLE_VOCABULARY:
+            resolved = role(vertical, role_name)
+            if resolved is None:
+                continue
+            assert resolved in own_pillar_codes, (
+                f"role({vertical!r}, {role_name!r}) = {resolved!r}, which "
+                f"is not a real pillar code in {vertical!r}'s own catalog "
+                f"{sorted(own_pillar_codes)} — this is either a stale "
+                f"entry or borrowed from another vertical's pillar_roles "
+                f"block."
+            )
+
+    # At least one vertical must actually resolve every role that's
+    # exercised by real code today (partner, expansion) — an empty
+    # pillar_roles block everywhere would vacuously pass the loop above.
+    assert role('dc2_s', 'partner') == 'P4'
+    assert role('dc2_s', 'expansion') == 'P5'
 
 
 if __name__ == "__main__":
@@ -274,4 +350,6 @@ if __name__ == "__main__":
     print("PASS: partner_portal gates on pillar content")
     test_partner_portal_gate_condition_matches_every_registered_vertical()
     print("PASS: partner_portal gate condition matches every registered vertical")
+    test_every_vertical_role_resolves_to_own_catalog_or_none()
+    print("PASS: every vertical's role() resolutions belong to its own catalog")
     print("\nAll vertical catalog consistency tests passed.")

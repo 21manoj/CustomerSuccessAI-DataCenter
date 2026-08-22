@@ -37,6 +37,16 @@
       "saas_equivalent": "Business Outcomes"
     }
   },
+  "pillar_roles": {
+    "adoption": "P1",
+    "reliability": "P2",
+    "capacity": "P3",
+    "partner": "P4",
+    "expansion": "P5"
+  },
+  "pillar_roles_notes": {
+    "P3": "AI Workload Performance ('GPU utilization and AI workload execution efficiency') maps to 'capacity' rather than 'adoption' -- it measures utilization of provisioned resources, the same concept datacenter_v1's Fleet Utilization & Goodput (P2) plays as 'capacity', not usage/onboarding."
+  },
   "kpis": {
     "P1-KPI1": {
       "name": "Time-to-First-Workload",

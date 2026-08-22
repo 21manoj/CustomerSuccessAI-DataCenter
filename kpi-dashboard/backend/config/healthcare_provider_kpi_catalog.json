@@ -5,6 +5,12 @@
     "P3": {"name": "Provider Satisfaction", "weight_l2": 0.20},
     "P4": {"name": "Compliance & Risk", "weight_l2": 0.25}
   },
+  "pillar_roles": {
+    "compliance": "P4"
+  },
+  "pillar_roles_notes": {
+    "P1_P2_P3": "Patient Outcomes, Operational Efficiency, and Provider Satisfaction have no clean match in the shared vocabulary (revenue/reliability/capacity/partner/expansion/adoption/engagement/compliance) -- this vertical has no partner or expansion pillar at all, by design (no channel/reseller motion, no commercial-expansion pillar). Left unmapped rather than force-fit onto 'reliability' or 'engagement'."
+  },
   "kpis": {
     "P1-KPI1": {
       "name": "Patient Satisfaction Score",

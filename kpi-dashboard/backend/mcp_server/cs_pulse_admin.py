@@ -1080,35 +1080,42 @@ def partner_portal(
         from models import Account
         import utils.health_thresholds as ht
 
-        # Gate on content, not vertical identity: this portal hardcodes P4 as
-        # "the partner pillar," but pillar index is stable across verticals
-        # while pillar meaning is not (P4 = Power & Facility in datacenter_v1,
-        # Compliance & Risk in healthcare_provider — neither is a partner
-        # pillar). Rather than add a per-vertical lookup table here — which
-        # would just relocate the same defect — refuse to serve unless this
-        # tenant's own declared P4 pillar name is actually a partner pillar.
+        # Gate on role, not vertical identity or pillar index: this portal
+        # serves "the partner pillar," but pillar index (P4) is stable
+        # across verticals while pillar meaning is not (P4 = Power &
+        # Facility in datacenter_v1, Compliance & Risk in
+        # healthcare_provider — neither is a partner pillar). Resolve the
+        # tenant's actual partner pillar via the pillar_roles registry and
+        # refuse to serve if this vertical doesn't have one.
         #
-        # An exact match against dc2_s's name ("Channel & Partner Health")
-        # was tried first and found wrong by testing against a second real
-        # vertical: saas_premium's own equivalent is genuinely named
-        # "Partner & Ecosystem Health" — different string, same role — and
-        # the exact match incorrectly refused a vertical that legitimately
-        # has one. Checked all four registered verticals directly: both real
-        # partner pillars contain "partner"; neither Power & Facility
-        # (datacenter_v1) nor Compliance & Risk (healthcare_provider) does.
-        # A real pillar_roles registry replaces this substring check with a
-        # proper role lookup later; this is the interim control that stops
-        # the leak today without also blocking legitimate use.
+        # This replaces an interim substring check ('partner' in the P4
+        # pillar name) that was itself a fix for an earlier exact-name-match
+        # gate wrongly refusing saas_premium (whose partner pillar is named
+        # "Partner & Ecosystem Health", not dc2_s's "Channel & Partner
+        # Health" — same role, different string). The role lookup is the
+        # generalized version of that fix: a vertical's partner pillar can
+        # be named anything, or not exist at all (P4 need not even BE the
+        # partner pillar in a future vertical) — pillar_roles is the single
+        # source of truth for "which pillar plays this role," not a naming
+        # convention callers have to pattern-match.
         from mcp_server.cs_pulse_mcp_server import _resolve_customer_vertical
-        from utils.vertical_registry import get_pillars as _vr_get_pillars
+        from utils.vertical_registry import role as _vr_role
         _tenant_vertical = _resolve_customer_vertical(customer_id)
-        _p4_name = (_vr_get_pillars(_tenant_vertical).get('P4') or {}).get('name', '')
-        if 'partner' not in _p4_name.lower():
+        _partner_pillar = _vr_role(_tenant_vertical, 'partner')
+        if _partner_pillar is None:
             raise ToolError(
                 f"partner_portal is not available for customer {customer_id} "
-                f"(vertical={_tenant_vertical!r}). This vertical's P4 pillar is "
-                f"{_p4_name!r}, not a partner pillar — serving it under partner "
-                f"labels would expose the wrong data to the partner."
+                f"(vertical={_tenant_vertical!r}). This vertical has no pillar "
+                f"in the 'partner' role — serving P4 data under partner labels "
+                f"would expose the wrong data to the partner."
+            )
+        if _partner_pillar != 'P4':
+            raise ToolError(
+                f"partner_portal is not available for customer {customer_id} "
+                f"(vertical={_tenant_vertical!r}). This vertical's partner "
+                f"pillar is {_partner_pillar!r}, not P4 — this tool only "
+                f"queries P4 data and would expose the wrong pillar under "
+                f"partner labels."
             )
 
         if action == 'submit_data':

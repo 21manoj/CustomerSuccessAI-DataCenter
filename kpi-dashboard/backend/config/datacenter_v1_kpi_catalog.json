@@ -40,6 +40,17 @@
       "semantic_code": "R6"
     }
   },
+  "pillar_roles": {
+    "revenue": "P1",
+    "capacity": "P2",
+    "reliability": "P3",
+    "expansion": "P5",
+    "adoption": "P6"
+  },
+  "pillar_roles_notes": {
+    "P4": "Power & Facility has no matching role in the shared vocabulary -- explicitly NOT 'partner' (confirmed by the partner_portal gate this phase retrofits: this pillar is facility/power infrastructure, not a channel/partner relationship) and not 'compliance' either. Left unmapped.",
+    "P6": "Provisioning Velocity mapped to 'adoption' by analogy with dc2_s's P1 Deployment Velocity (also 'adoption') -- both measure time-to-first-value/onboarding speed (Power-of-1 maps P6 to the TTFV metric_id). Moderate-confidence call: 'velocity' isn't literally 'adoption', flagged for review."
+  },
   "kpis": {
     "P1-KPI1": {
       "name": "Realized $/GPU-hour",

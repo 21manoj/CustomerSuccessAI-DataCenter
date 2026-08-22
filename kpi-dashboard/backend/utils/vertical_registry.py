@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 # Lazy-loaded caches
 _pillars_cache: Dict[str, Dict] = {}
 _kpis_cache: Dict[str, Dict] = {}
+_pillar_roles_cache: Dict[str, Dict[str, str]] = {}
 
 # Directory where JSON catalogs live
 _CATALOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'config')
@@ -87,6 +88,50 @@ def get_kpis(vertical: str) -> Dict[str, Dict[str, Any]]:
     return _kpis_cache[vertical]
 
 
+def get_pillar_roles(vertical: str) -> Dict[str, str]:
+    """Get the role_name -> pillar_code map for a vertical.
+
+    Sourced from the `pillar_roles` block of the vertical's JSON catalog
+    (config/{vertical}_kpi_catalog.json). Returns {} if the vertical has no
+    JSON catalog, or the catalog has no `pillar_roles` block — never raises,
+    since an incomplete role map is a legitimate state (not every vertical
+    fills every role; see `role()`).
+    """
+    vertical = normalize_vertical(vertical)
+
+    if vertical not in _pillar_roles_cache:
+        _pillar_roles_cache[vertical] = _load_pillar_roles(vertical)
+
+    return _pillar_roles_cache[vertical]
+
+
+def role(vertical: str, role_name: str) -> Optional[str]:
+    """Resolve which pillar code plays a semantic role for a vertical.
+
+    Roles are vertical-agnostic labels (e.g. 'partner', 'expansion',
+    'revenue', 'reliability', 'capacity', 'adoption', 'engagement',
+    'compliance') that let callers ask "which pillar is the partner
+    pillar for this vertical?" instead of hardcoding a pillar CODE (like
+    'P4') or a literal pillar NAME string and assuming it means the same
+    thing in every vertical — that assumption is exactly what let
+    partner_portal leak a non-partner vertical's pillar data under partner
+    labels (see mcp_server/cs_pulse_admin.py::partner_portal).
+
+    Returns the pillar code (e.g. 'P4') if this vertical has a pillar
+    playing that role, or None if it doesn't — a vertical is not required
+    to fill every role (e.g. healthcare_provider has no 'partner' or
+    'expansion' pillar at all). Callers must treat None as "this vertical
+    genuinely has no such pillar," not retry with a different vertical's
+    code or a hardcoded default.
+
+    Example:
+        role('dc2_s', 'partner')       # → 'P4' (Channel & Partner Health)
+        role('datacenter_v1', 'partner')  # → None (P4 there is Power & Facility)
+    """
+    vertical = normalize_vertical(vertical)
+    return get_pillar_roles(vertical).get(role_name)
+
+
 def get_default_pillar_weights(vertical: str) -> Dict[str, float]:
     """Get default L2 pillar weights for a vertical."""
     pillars = get_pillars(vertical)
@@ -144,13 +189,12 @@ def get_customer_kpi_overrides(customer_id: int) -> Optional[Dict]:
 # not here — this loads the BASE catalog for a vertical.
 # ----------------------------------------------------------------
 
-def _load_from_json_catalog(vertical: str) -> Optional[Tuple[Dict, Dict]]:
+def _find_json_catalog_path(vertical: str) -> Optional[str]:
     """
-    Try to load KPI + pillar catalogs from a JSON file.
-    Looks for: config/{vertical}_kpi_catalog.json
-    Returns (kpis, pillars) or None if file doesn't exist.
+    Locate the JSON catalog file for a vertical, if one exists.
+    Tries multiple naming patterns (dc2_s → dc2_s_kpi_catalog.json, dc2s_kpi_catalog.json).
+    Returns the path, or None if no candidate exists on disk.
     """
-    # Try multiple naming patterns (dc2_s → dc2_s_kpi_catalog.json, dc2s_kpi_catalog.json)
     slug = vertical.replace('_', '')  # dc2_s → dc2s
     candidates = [
         os.path.join(_CATALOG_DIR, f'{vertical}_kpi_catalog.json'),
@@ -159,14 +203,50 @@ def _load_from_json_catalog(vertical: str) -> Optional[Tuple[Dict, Dict]]:
     ]
     for path in candidates:
         if os.path.exists(path):
-            try:
-                from utils.generic_scorer import load_catalog_from_json
-                kpis, pillars = load_catalog_from_json(path)
-                log.info(f"vertical_registry: loaded {vertical} from JSON catalog: {path} ({len(kpis)} KPIs)")
-                return kpis, pillars
-            except Exception as e:
-                log.warning(f"vertical_registry: failed to load JSON catalog {path}: {e}")
+            return path
     return None
+
+
+def _load_from_json_catalog(vertical: str) -> Optional[Tuple[Dict, Dict]]:
+    """
+    Try to load KPI + pillar catalogs from a JSON file.
+    Looks for: config/{vertical}_kpi_catalog.json
+    Returns (kpis, pillars) or None if file doesn't exist.
+    """
+    path = _find_json_catalog_path(vertical)
+    if path:
+        try:
+            from utils.generic_scorer import load_catalog_from_json
+            kpis, pillars = load_catalog_from_json(path)
+            log.info(f"vertical_registry: loaded {vertical} from JSON catalog: {path} ({len(kpis)} KPIs)")
+            return kpis, pillars
+        except Exception as e:
+            log.warning(f"vertical_registry: failed to load JSON catalog {path}: {e}")
+    return None
+
+
+def _load_pillar_roles(vertical: str) -> Dict[str, str]:
+    """
+    Load the `pillar_roles` block (role_name -> pillar_code) from a
+    vertical's JSON catalog file. Returns {} if there's no JSON catalog
+    for this vertical, or the catalog has no `pillar_roles` block —
+    Python-module-only legacy verticals (Tier 2 in _load_catalog) have no
+    role map today; that's a gap for a future vertical, not an error here.
+    """
+    path = _find_json_catalog_path(vertical)
+    if not path:
+        return {}
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+        roles = data.get('pillar_roles') or {}
+        if not isinstance(roles, dict):
+            log.warning(f"vertical_registry: {path} has a non-dict pillar_roles block, ignoring")
+            return {}
+        return roles
+    except Exception as e:
+        log.warning(f"vertical_registry: failed to load pillar_roles from {path}: {e}")
+        return {}
 
 
 def _load_from_python_module(vertical: str) -> Optional[Tuple[Dict, Dict]]:

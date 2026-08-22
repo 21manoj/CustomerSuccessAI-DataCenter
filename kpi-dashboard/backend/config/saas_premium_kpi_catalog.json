@@ -29,6 +29,17 @@
       "kpi_count": 8
     }
   },
+  "pillar_roles": {
+    "adoption": "P1",
+    "engagement": "P2",
+    "partner": "P4",
+    "revenue": "P5",
+    "expansion": "P5"
+  },
+  "pillar_roles_notes": {
+    "P5": "'Revenue & Growth' is ambiguous between 'revenue' and 'expansion' in the shared vocabulary -- deliberately mapped to BOTH roles rather than forcing one pick. Precedent: outcome_roi_api.py's POWER_OF_1_PILLAR_MAPS nrr_synthesis designates P5 as the expansion_pillar (weight 0.6) while executive_dashboard_api.py's CFO_PILLAR_INVESTMENT_CONFIG groups NRR under P5's metrics -- this vertical genuinely conflates the two concepts in one pillar, unlike dc2_s/datacenter_v1 which split them across separate pillars.",
+    "P3": "Customer Sentiment & Support has no matching role in the shared vocabulary (revenue/reliability/capacity/partner/expansion/adoption/engagement/compliance) -- left unmapped rather than forced onto 'engagement' or 'reliability'."
+  },
   "kpis": {
     "P1-KPI1": {
       "name": "Daily Active Users (DAU) Rate",
