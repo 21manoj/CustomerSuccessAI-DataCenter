@@ -535,8 +535,23 @@ def get_dc2s_accounts():
         if accounts:
             logger.info(f"[DEBUG /api/dc2s/accounts] Account IDs: {[a.account_id for a in accounts[:5]]}")
         
-        # Determine enabled pillars from customer config (once per request)
-        enabled_pillar_codes = list(DC2S_PILLARS.keys())  # default: all
+        # Determine enabled pillars from customer config (once per request).
+        # Default: the CUSTOMER'S OWN vertical's pillars, not DC2S_PILLARS —
+        # found live on customer 400 (datacenter_v1, 6 pillars P1-P6) during
+        # the 2026-08-22 cross-vertical-import cleanup: with no
+        # dc2s_pillar_weights override configured, this used to silently
+        # default to DC2S_PILLARS.keys() (5 pillars, P1-P5), dropping P6
+        # ("Facility & Power") from every account's `enabled_pillars` even
+        # though pillar_scores (computed via the generic scorer) correctly
+        # included it.
+        try:
+            from utils.vertical_registry import get_vertical_for_customer, get_catalog_for_customer
+            _cust_vertical = get_vertical_for_customer(int(customer_id))
+            _cust_pillars, _ = get_catalog_for_customer(int(customer_id))
+            enabled_pillar_codes = list(_cust_pillars.keys())
+        except Exception:
+            _cust_vertical = None
+            enabled_pillar_codes = list(DC2S_PILLARS.keys())  # last-resort fallback
         try:
             cc = CustomerConfig.query.filter_by(customer_id=int(customer_id)).first()
             if cc and cc.dc2s_pillar_weights:
@@ -567,8 +582,11 @@ def get_dc2s_accounts():
             ).order_by(DC2SKPI.measured_at.desc()).first()
             latest_time = latest_row.measured_at if latest_row else None
 
-            # Phase 0.2: persist journey_phase on every health recalculation
-            _sync_journey_phase(account)
+            # Phase 0.2: persist journey_phase on every health recalculation.
+            # dc2_s-only — see get_dc2s_account_detail's fix below for why
+            # (journey_phase has no defined meaning for other verticals).
+            if _cust_vertical == 'dc2_s':
+                _sync_journey_phase(account)
 
             # Extract useful fields from profile_metadata for frontend
             meta = account.profile_metadata or {}
@@ -657,14 +675,37 @@ def get_dc2s_account_detail(account_id):
         # Calculate health (config-aware: uses CustomerConfig.dc2s_pillar_weights when set)
         overall_health, pillar_scores = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
 
-        # Phase 0.2: persist journey_phase on every health recalculation
-        _sync_journey_phase(account)
+        # Phase 0.2: persist journey_phase on every health recalculation.
+        # journey_phase (deployment/performance/excellence) is a DC2_S-specific
+        # lifecycle concept (verticals/dc2_s/vertical_config.py
+        # determine_customer_phase) — gated to dc2_s only so it doesn't
+        # mislabel other verticals' accounts. See get_dc2s_health_score's
+        # docstring in api_v1_generic_handlers.py for the same fix + finding.
+        try:
+            from utils.vertical_registry import get_vertical_for_customer
+            _acct_vertical = get_vertical_for_customer(int(customer_id))
+        except Exception:
+            _acct_vertical = None
+        if _acct_vertical == 'dc2_s':
+            _sync_journey_phase(account)
 
-        # Group KPIs by pillar (use trailing averaged values)
+        # Group KPIs by pillar (use trailing averaged values). Look up KPI
+        # metadata (name/target/unit/pillar) from the CUSTOMER'S OWN vertical
+        # catalog, not the hardcoded DC2S_KPIS dict — found live on customer
+        # 400 (datacenter_v1) during the 2026-08-22 cross-vertical-import
+        # cleanup: DC2S_KPIS has no P6-KPI* entries, so datacenter_v1's
+        # Facility & Power KPIs were silently dropped from kpis_by_pillar
+        # entirely (not shown as "Unknown" — just missing).
+        try:
+            from utils.vertical_registry import get_catalog_for_customer
+            _, _cust_kpi_catalog = get_catalog_for_customer(int(customer_id))
+        except Exception:
+            _cust_kpi_catalog = DC2S_KPIS  # last-resort fallback
+
         kpis_by_pillar = {}
         for kpi_code, value in trailing_kpis.items():
-            if kpi_code in DC2S_KPIS:
-                kpi_def = DC2S_KPIS[kpi_code]
+            if kpi_code in _cust_kpi_catalog:
+                kpi_def = _cust_kpi_catalog[kpi_code]
                 pillar = kpi_def.get('pillar', kpi_def.get('l1_category', 'Unknown'))
 
                 if pillar not in kpis_by_pillar:
@@ -1103,11 +1144,25 @@ def get_dc2s_alerts(account_id):
         for kpi in all_kpis:
             if kpi.kpi_code not in latest_kpis:
                 latest_kpis[kpi.kpi_code] = kpi
-        
+
+        # Look up KPI metadata (name/target) from the CUSTOMER'S OWN vertical
+        # catalog, not the hardcoded DC2S_KPIS dict — same bug class found
+        # live on customer 400 (datacenter_v1) in get_dc2s_accounts /
+        # get_dc2s_account_detail (2026-08-22 cross-vertical-import cleanup):
+        # DC2S_KPIS has no P6-KPI* entries, so datacenter_v1's Facility &
+        # Power KPIs had no `target`, and `target_value is None` skips alert
+        # generation entirely for them — silently zero alerts, no matter how
+        # critical the value, for any KPI outside DC2S's own catalog.
+        try:
+            from utils.vertical_registry import get_catalog_for_customer
+            _, _cust_kpi_catalog = get_catalog_for_customer(int(customer_id))
+        except Exception:
+            _cust_kpi_catalog = DC2S_KPIS  # last-resort fallback
+
         # Generate alerts based on KPI status
         alerts = []
         for kpi_code, kpi in latest_kpis.items():
-            kpi_def = DC2S_KPIS.get(kpi_code, {})
+            kpi_def = _cust_kpi_catalog.get(kpi_code, {})
             kpi_name = kpi_def.get('name', kpi_def.get('kpi_name', kpi_code))
             
             # Extract target value
@@ -1333,71 +1388,16 @@ def get_dc2s_health_score(account_id):
     """
     Get health score for a specific DC2_S account
     GET /api/dc2s/health-score/123?month=aggregate
+
+    Relocated to api_v1_generic_handlers.py (vertical-agnostic; confirmed no
+    DC2S-specific taxonomy coupling — Phase 5 cross-vertical-import cleanup,
+    2026-08-22). This thin wrapper keeps the legacy /api/dc2s/* alias route
+    working without duplicating logic. Deferred import (inside the function
+    body, not at module scope) avoids a load-time circular import, since
+    api_v1_generic_handlers imports helpers FROM this module at module scope.
     """
-    try:
-        customer_id = get_current_customer_id()
-        
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-        
-        # Verify account belongs to customer
-        account = Account.query.filter_by(
-            account_id=account_id,
-            customer_id=int(customer_id),
-        ).first()
-        
-        if not account:
-            return jsonify({'error': 'Account not found'}), 404
-        
-        # Get month parameter (for DC, we'll use 'aggregate' to show all KPIs)
-        month = request.args.get('month', 'aggregate')
-        is_aggregate = (month == 'aggregate')
-        
-        # Get all KPIs for this account
-        all_kpis = DC2SKPI.query.filter_by(
-            account_id=account_id
-        ).order_by(DC2SKPI.measured_at.desc()).all()
-        
-        # Group by kpi_code, keeping latest (DC KPIs don't have monthly data like SaaS)
-        latest_kpis = {}
-        for kpi in all_kpis:
-            if kpi.kpi_code not in latest_kpis:
-                latest_kpis[kpi.kpi_code] = kpi
-        
-        # Convert to dict for calculate_kpi_health function
-        kpi_values = {kpi_code: float(kpi.value) for kpi_code, kpi in latest_kpis.items()}
-        
-        # Calculate overall health score and pillar scores (config-aware)
-        overall_health, pillar_scores = calculate_kpi_health(kpi_values, customer_id=customer_id)
-
-        # Phase 0.2: persist journey_phase on every health recalculation
-        _sync_journey_phase(account)
-
-        health_status = ht.classify(overall_health)
-        
-        # Format category scores for frontend
-        category_scores = {}
-        for pillar, score in pillar_scores.items():
-            category_scores[pillar] = {
-                'score': score,
-                'weight': get_weights_for_customer(customer_id).get(pillar, {}).get('weight', 0.2)
-            }
-        
-        return jsonify({
-            'account_id': account_id,
-            'account_name': account.account_name,
-            'overall_score': round(overall_health, 2),
-            'health_status': health_status,
-            'category_scores': category_scores,
-            'kpi_count': len(latest_kpis),
-            'month': month if not is_aggregate else None,
-            'is_aggregate': is_aggregate,
-            'timestamp': datetime.utcnow().isoformat()
-        })
-        
-    except Exception as e:
-        logger.error(f"Error fetching DC2_S health score: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch health score'}), 500
+    from api_v1_generic_handlers import get_dc2s_health_score as _impl
+    return _impl(account_id)
 
 
 @dc2s_api.route('/health-summary', methods=['GET'])
@@ -1405,86 +1405,11 @@ def get_dc2s_health_summary():
     """
     Get health summary across all DC2_S accounts for current customer
     GET /api/dc2s/health-summary
+
+    Relocated to api_v1_generic_handlers.py — see get_dc2s_health_score above.
     """
-    try:
-        customer_id = get_current_customer_id()
-        
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-        
-        # Get all DC2_S accounts
-        accounts = Account.query.filter(
-            Account.customer_id == int(customer_id),
-        ).all()
-
-        # Apply user-level account filtering (contractors/restricted users)
-        accounts = _filter_user_accounts(accounts, key='account_id')
-
-        account_health = []  # list of (health_score, revenue)
-        healthy_count = 0
-        risk_count = 0
-        critical_count = 0
-
-        for account in accounts:
-            # Trailing 30-day weighted average for stable health scores
-            trailing_kpis = _get_trailing_kpi_values(account.account_id, days=30)
-
-            if trailing_kpis:
-                health, _ = calculate_kpi_health(trailing_kpis, customer_id=customer_id)
-                revenue = float(account.revenue) if account.revenue else 0
-                account_health.append((health, revenue))
-
-                if health >= ht.healthy_min():
-                    healthy_count += 1
-                elif health >= ht.at_risk_min():
-                    risk_count += 1
-                else:
-                    critical_count += 1
-
-        # L4: Revenue-weighted average of L3 account health scores
-        total_revenue = sum(rev for _, rev in account_health)
-        if total_revenue > 0:
-            avg_health = sum(h * r for h, r in account_health) / total_revenue
-        else:
-            avg_health = sum(h for h, _ in account_health) / len(account_health) if account_health else 0
-
-        # Also compute simple (unweighted) average for comparison
-        simple_avg = (
-            round(sum(h for h, _ in account_health) / len(account_health), 1)
-            if account_health else 0
-        )
-
-        # ARR Exposure = total ARR sitting in at-risk/critical accounts
-        arr_exposure = sum(
-            rev for h, rev in account_health
-            if h < ht.healthy_min()
-        )
-
-        return jsonify({
-            'total_accounts': len(accounts),
-            'average_health': round(avg_health, 1),
-            'avg_health_simple': simple_avg,
-            'health_avg_method': 'revenue_weighted' if total_revenue > 0 else 'simple',
-            'health_avg_method_label': (
-                'Revenue-weighted average' if total_revenue > 0
-                else 'Simple average (no revenue data)'
-            ),
-            'healthy_accounts': healthy_count,
-            'risk_accounts': risk_count,
-            'critical_accounts': critical_count,
-            'total_arr': round(total_revenue),
-            'arr_exposure': round(arr_exposure, 2),
-            'arr_exposure_label': 'Exposure (ARR in at-risk accounts)',
-            'health_distribution': {
-                'healthy': healthy_count,
-                'risk': risk_count,
-                'critical': critical_count
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Error fetching DC2_S health summary: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch health summary'}), 500
+    from api_v1_generic_handlers import get_dc2s_health_summary as _impl
+    return _impl()
 
 
 # ============================================================
@@ -2164,6 +2089,31 @@ def get_csm_daily_actions():
         if not customer_id:
             return jsonify({'error': 'Customer ID required'}), 400
 
+        # Resolve the customer's own vertical playbook catalog instead of
+        # always using DC2S's PLAYBOOK_CONFIG/should_trigger_playbook. Uses
+        # the same fail-closed-per-vertical helper already established
+        # earlier today in _ask_ai_helpers.py::_get_playbook_config (mirrors
+        # mcp_server/common.py and cs_pulse_mcp_server.py's fixed
+        # equivalents): dc2_s and saas_premium get their own native
+        # playbook catalog; any other vertical (e.g. datacenter_v1, which
+        # has no playbook catalog of its own yet) gets a safe no-op rather
+        # than silently borrowing DC2S's 6 playbooks and mis-firing their
+        # triggers against a foreign KPI taxonomy. Also resolves the KPI
+        # catalog used for trigger-description display names (was
+        # DC2S_KPIS.get(tk, {}) unconditionally — same bug class fixed in
+        # get_dc2s_accounts/get_dc2s_account_detail/get_dc2s_alerts above).
+        try:
+            from utils.vertical_registry import get_vertical_for_customer, get_kpis as _vr_get_kpis
+            from _ask_ai_helpers import _get_playbook_config
+            _cust_vertical_dact = get_vertical_for_customer(int(customer_id))
+        except Exception:
+            _cust_vertical_dact = 'dc2_s'  # legacy /api/dc2s/* alias fallback
+        _PB_CONFIG, _SHOULD_TRIGGER = _get_playbook_config(_cust_vertical_dact)
+        try:
+            _KPI_CATALOG_DACT = _vr_get_kpis(_cust_vertical_dact) or DC2S_KPIS
+        except Exception:
+            _KPI_CATALOG_DACT = DC2S_KPIS
+
         # Optional CSM name filter
         csm_name_filter = request.args.get('csm_name', None)
 
@@ -2341,9 +2291,13 @@ def get_csm_daily_actions():
             if exp_kpi is not None:
                 expansion_prob_val = max(expansion_prob_val, exp_kpi)
 
-            # 3. Evaluate all 6 playbook triggers
-            for pb_id, pb_cfg in PLAYBOOK_CONFIG.items():
-                if should_trigger_playbook(pb_id, normalized_kpis):
+            # 3. Evaluate playbook triggers for the CUSTOMER'S OWN vertical
+            # (_PB_CONFIG/_SHOULD_TRIGGER resolved once above via
+            # utils.vertical_registry + _ask_ai_helpers._get_playbook_config
+            # — empty dict + no-op for verticals without a native playbook
+            # catalog, instead of always evaluating DC2S's 6 playbooks).
+            for pb_id, pb_cfg in _PB_CONFIG.items():
+                if _SHOULD_TRIGGER(pb_id, normalized_kpis):
                     impact = _compute_impact_score(overall_health, churn_prob, expansion_prob_val, pillar_averages)
                     effort = _compute_effort_score(pb_cfg)
                     priority_index = round((impact * 0.6 * arr_weight) - (effort * 0.4), 1)
@@ -2356,7 +2310,7 @@ def get_csm_daily_actions():
                         if tk in normalized_kpis:
                             cond = pb_cfg.get('trigger_conditions', {}).get(tk, {})
                             threshold = cond.get('value', '?')
-                            kpi_name = DC2S_KPIS.get(tk, {}).get('name', tk)
+                            kpi_name = _KPI_CATALOG_DACT.get(tk, {}).get('name', tk)
                             trigger_details.append(f"{kpi_name}: {normalized_kpis[tk]:.1f} (threshold {threshold})")
 
                     description = '; '.join(trigger_details) if trigger_details else pb_cfg.get('estimated_impact', '')
@@ -2550,77 +2504,12 @@ def get_csm_daily_actions():
 def get_csm_scorecard_api():
     """GET /api/dc2s/csm-scorecard?csm_name=<optional>
     Returns per-CSM accounts managed, health delta, playbook success, revenue impact.
+
+    Relocated to api_v1_generic_handlers.py — see get_dc2s_health_score above
+    for why (vertical-agnostic, Phase 5 cross-vertical-import cleanup).
     """
-    try:
-        customer_id = get_current_customer_id()
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-
-        csm_name_filter = request.args.get('csm_name', None)
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-
-        # Group accounts by assigned CSM from profile metadata
-        csm_accounts = defaultdict(list)
-        for acct in accounts:
-            meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-            csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
-            if csm_name_filter and csm_name_filter.lower() not in csm.lower():
-                continue
-            csm_accounts[csm].append(acct)
-
-        scorecards = {}
-        for csm, accts in csm_accounts.items():
-            acct_ids = [a.account_id for a in accts]
-            total_arr = sum(float(a.revenue or 0) for a in accts)
-
-            # Health deltas from HealthScore table
-            health_deltas = []
-            for aid in acct_ids:
-                scores = (HealthScore.query
-                    .filter_by(account_id=aid)
-                    .order_by(HealthScore.measurement_month.asc())
-                    .all())
-                if len(scores) >= 2:
-                    delta = float(scores[-1].health_score or 0) - float(scores[0].health_score or 0)
-                    health_deltas.append(delta)
-
-            # Playbook executions on this CSM's accounts
-            try:
-                from models import PlaybookExecutionV2
-                execs = PlaybookExecutionV2.query.filter(
-                    PlaybookExecutionV2.account_id.in_(acct_ids),
-                    PlaybookExecutionV2.customer_id == int(customer_id),
-                ).all()
-            except Exception:
-                execs = []
-
-            resolved = sum(1 for e in execs if e.outcome == 'resolved')
-            rev_protected = sum(float(e.revenue_protected or 0) for e in execs)
-            rev_expanded = sum(float(e.revenue_expanded or 0) for e in execs)
-
-            scorecards[csm] = {
-                'csm_name': csm,
-                'accounts_managed': len(accts),
-                'total_arr': total_arr,
-                'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
-                'accounts_improving': sum(1 for d in health_deltas if d > 5),
-                'accounts_declining': sum(1 for d in health_deltas if d < -5),
-                'playbooks_executed': len(execs),
-                'playbooks_resolved': resolved,
-                'success_rate_pct': round(resolved / len(execs) * 100, 1) if execs else 0,
-                'revenue_protected': rev_protected,
-                'revenue_expanded': rev_expanded,
-                'total_revenue_impact': rev_protected + rev_expanded,
-            }
-
-        return jsonify({
-            'csm_count': len(scorecards),
-            'scorecards': scorecards,
-        })
-
-    except Exception as e:
-        logger.error(f"Error computing CSM scorecard: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to compute CSM scorecard'}), 500
+    from api_v1_generic_handlers import get_csm_scorecard_api as _impl
+    return _impl()
 
 
 # =============================================================================
@@ -2631,196 +2520,12 @@ def get_csm_scorecard_api():
 def get_team_capacity_api():
     """GET /api/dc2s/team-capacity
     Returns team capacity utilization, bottleneck detection, portfolio context.
+
+    Relocated to api_v1_generic_handlers.py — see get_dc2s_health_score above
+    for why (vertical-agnostic, Phase 5 cross-vertical-import cleanup).
     """
-    try:
-        customer_id = get_current_customer_id()
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-        total_arr = sum(float(a.revenue or 0) for a in accounts)
-
-        # Pre-load health scores for at-risk count
-        _health_map = {}
-        for acct in accounts:
-            h, _, _, _ = get_precalculated_scores(acct.account_id)
-            _health_map[acct.account_id] = h or 100
-        at_risk_count = sum(1 for a in accounts if _health_map.get(a.account_id, 100) < ht.healthy_min())
-
-        # Group accounts by CSM for real CSM count
-        csm_set = set()
-        for acct in accounts:
-            meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-            csm = meta.get('assigned_csm') or meta.get('csm_name')
-            if csm and csm != 'Unassigned':
-                csm_set.add(csm)
-        csm_count = max(len(csm_set), 1)
-        accounts_per_csm = round(len(accounts) / csm_count, 1)
-
-        # Active playbook executions
-        try:
-            from models import PlaybookExecutionV2
-            active_execs = PlaybookExecutionV2.query.filter_by(
-                customer_id=int(customer_id)
-            ).filter(
-                PlaybookExecutionV2.outcome.is_(None)
-            ).all()
-            recent_cutoff = datetime.utcnow() - timedelta(days=90)
-            recent_execs = PlaybookExecutionV2.query.filter(
-                PlaybookExecutionV2.customer_id == int(customer_id),
-                PlaybookExecutionV2.triggered_at >= recent_cutoff,
-            ).all()
-        except Exception:
-            active_execs = []
-            recent_execs = []
-
-        active_csm_hours = sum(float(e.csm_hours_planned or 0) for e in active_execs)
-        target_per_csm = 6
-
-        # ── Per-CSM capacity breakdown ──
-        per_csm_breakdown = []
-        acct_by_csm = {}
-        for acct in accounts:
-            meta = acct.profile_metadata if hasattr(acct, 'profile_metadata') and acct.profile_metadata else {}
-            csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
-            acct_by_csm.setdefault(csm, []).append(acct)
-
-        # Map active playbook executions to accounts for per-CSM aggregation
-        active_exec_by_acct = {}
-        for ex in active_execs:
-            active_exec_by_acct.setdefault(ex.account_id, []).append(ex)
-
-        hours_per_week = 40  # Standard CSM work week
-        for csm_name in sorted(acct_by_csm.keys()):
-            csm_accts = acct_by_csm[csm_name]
-            csm_acct_ids = {a.account_id for a in csm_accts}
-            csm_active_execs = [ex for aid in csm_acct_ids for ex in active_exec_by_acct.get(aid, [])]
-            hours_committed = sum(float(e.csm_hours_planned or 0) for e in csm_active_execs)
-            csm_arr = sum(float(a.revenue or 0) for a in csm_accts)
-            csm_at_risk = sum(1 for a in csm_accts if _health_map.get(a.account_id, 100) < ht.healthy_min())
-            per_csm_breakdown.append({
-                'csm_name': csm_name,
-                'accounts_managed': len(csm_accts),
-                'total_arr': csm_arr,
-                'active_playbooks': len(csm_active_execs),
-                'hours_committed': round(hours_committed, 1),
-                'hours_available': hours_per_week,
-                'utilization_pct': round(hours_committed / hours_per_week * 100, 1) if hours_per_week > 0 else 0,
-                'at_risk_accounts': csm_at_risk,
-            })
-
-        # ── Hours-based resource-pool view (mirrors MCP get_team_capacity) ──
-        # PR-29 (May 17 visual re-eval fix): the prior response exposed an
-        # account-count utilization (accounts_per_csm / target_per_csm) which
-        # always pinned at ~100% for any tenant with the target load. The buyer
-        # needs an HOURS-based utilization gauge anchored to a real resource
-        # pool with totals + bottleneck detection. We compute that here and
-        # keep the legacy account-count fields for backward compat.
-        resource_pool = None
-        hours_utilization_pct = {}
-        hours_feasible = True
-        bottleneck_roles: list = []
-        overflow_hours = 0.0
-        recommendation_text = ''
-        try:
-            import resource_capacity_model as rcm
-            resource_pool = rcm.get_resource_pool_summary()
-
-            # Roll planned hours across the 5 roles using the same heuristic
-            # as the MCP tool: CSM hours come from PlaybookExecutionV2; CS_OPS
-            # and PLATFORM are approximated as a fraction of CSM hours so the
-            # gauge reflects multi-role load, not just CSM.
-            hours_by_role = {
-                rcm.CSRole.CSM: 0.0,
-                rcm.CSRole.CS_OPS: 0.0,
-                rcm.CSRole.PRODUCT: 0.0,
-                rcm.CSRole.PLATFORM: 0.0,
-                rcm.CSRole.LEADERSHIP: 0.0,
-            }
-            for e in active_execs:
-                csm_hrs = float(getattr(e, 'csm_hours_planned', 0) or 0)
-                hours_by_role[rcm.CSRole.CSM] += csm_hrs
-                hours_by_role[rcm.CSRole.CS_OPS] += csm_hrs * 0.5
-                hours_by_role[rcm.CSRole.PLATFORM] += csm_hrs * 0.2
-
-            try:
-                cap = rcm.check_capacity(hours_by_role)
-                hours_feasible = cap.is_feasible
-                hours_utilization_pct = {r: round(u * 100, 1) for r, u in cap.utilization_by_role.items()}
-                bottleneck_roles = [cap.bottleneck_role] if cap.bottleneck_role and not cap.is_feasible else []
-                overflow_hours = float(cap.overflow_hours or 0.0)
-            except Exception:
-                hours_utilization_pct = {r.value: 0.0 for r in hours_by_role.keys()}
-
-            planned_hours_out = {r.value: round(h, 1) for r, h in hours_by_role.items()}
-
-            # Aggregate annual hours/cost across the pool
-            totals = (resource_pool or {}).get('totals', {}) or {}
-            total_hours_available = float(totals.get('total_hours', 0) or 0)
-            total_hours_planned = sum(planned_hours_out.values())
-            total_hours_utilization_pct = round(
-                (total_hours_planned / total_hours_available * 100), 1
-            ) if total_hours_available > 0 else 0.0
-
-            recommendation_text = (
-                f"Team is {'within' if hours_feasible else 'over'} capacity. "
-                + ("No bottlenecks." if not bottleneck_roles else f"Bottleneck roles: {', '.join(bottleneck_roles)}.")
-                + f" {at_risk_count} at-risk accounts need attention."
-            )
-        except Exception as _cap_err:
-            logger.debug("team-capacity hours rollup unavailable: %s", _cap_err)
-            planned_hours_out = {}
-            total_hours_available = 0.0
-            total_hours_planned = 0.0
-            total_hours_utilization_pct = 0.0
-
-        capacity_planning = {}
-        uncovered_at_risk = []
-        try:
-            from utils.vpcs_dashboard_helpers import (
-                build_capacity_planning,
-                build_uncovered_at_risk,
-            )
-            capacity_planning = build_capacity_planning(int(customer_id), accounts)
-            uncovered_at_risk = build_uncovered_at_risk(int(customer_id), accounts)
-        except Exception as _vpcs_err:
-            logger.debug("VPCS capacity planning unavailable: %s", _vpcs_err)
-
-        return jsonify({
-            # ── Legacy fields (preserved for callers that consume them) ──
-            'csm_count': csm_count,
-            'csm_names': sorted(csm_set),
-            'accounts_per_csm': accounts_per_csm,
-            'target_per_csm': target_per_csm,
-            'total_accounts': len(accounts),
-            'active_playbooks': len(active_execs),
-            'recent_playbooks_90d': len(recent_execs),
-            'active_csm_hours': round(active_csm_hours, 1),
-            'at_risk_accounts': at_risk_count,
-            'total_arr': total_arr,
-            # NOTE: this is the old account-count utilization; kept for
-            # back-compat. Frontend should prefer `hours_utilization_pct` /
-            # `total_hours_utilization_pct` below.
-            'utilization_pct': round(accounts_per_csm / target_per_csm * 100, 1),
-            'per_csm_breakdown': per_csm_breakdown,
-            # ── Hours-based resource view (new, mirrors MCP get_team_capacity) ──
-            'resource_pool': resource_pool,
-            'planned_hours': planned_hours_out,
-            'hours_utilization_pct': hours_utilization_pct,
-            'total_hours_available': total_hours_available,
-            'total_hours_planned': total_hours_planned,
-            'total_hours_utilization_pct': total_hours_utilization_pct,
-            'feasible': hours_feasible,
-            'bottleneck_roles': bottleneck_roles,
-            'overflow_hours': overflow_hours,
-            'recommendation': recommendation_text,
-            'capacity_planning': capacity_planning,
-            'uncovered_at_risk': uncovered_at_risk,
-        })
-
-    except Exception as e:
-        logger.error(f"Error computing team capacity: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to compute team capacity'}), 500
+    from api_v1_generic_handlers import get_team_capacity_api as _impl
+    return _impl()
 
 
 # =============================================================================
@@ -2832,85 +2537,12 @@ def get_renewals_api():
     """GET /api/dc2s/renewals?days=90
     Returns accounts with renewal_date within window, sorted by risk.
     Risk = health score × days until renewal.
+
+    Relocated to api_v1_generic_handlers.py — see get_dc2s_health_score above
+    for why (vertical-agnostic, Phase 5 cross-vertical-import cleanup).
     """
-    try:
-        customer_id = get_current_customer_id()
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-
-        days_window = int(request.args.get('days', 90))
-        accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-
-        from datetime import date as _date
-        today = _date.today()
-        renewals = []
-
-        for acct in accounts:
-            meta = acct.profile_metadata or {}
-            rd_str = meta.get('renewal_date') or meta.get('contract_renewal_date') or meta.get('contract_end')
-            if not rd_str:
-                continue
-            try:
-                rd = datetime.strptime(str(rd_str)[:10], '%Y-%m-%d').date()
-            except (ValueError, TypeError):
-                continue
-
-            days_until = (rd - today).days
-            if days_until < 0 or days_until > days_window:
-                continue
-
-            # Get health score
-            h, status, _, _ = get_precalculated_scores(acct.account_id)
-            health = h or 50
-
-            # Risk level based on health + days
-            if health < ht.at_risk_min() and days_until <= 30:
-                risk_level = 'critical'
-            elif health < ht.healthy_min() and days_until <= 60:
-                risk_level = 'high'
-            elif health < ht.healthy_min() or days_until <= 30:
-                risk_level = 'medium'
-            else:
-                risk_level = 'low'
-
-            csm = meta.get('assigned_csm') or meta.get('csm_name') or 'Unassigned'
-            champion = meta.get('primary_champion_name')
-
-            renewals.append({
-                'account_id': acct.account_id,
-                'account_name': acct.account_name,
-                'arr': float(acct.revenue or 0),
-                'health_score': round(health, 1),
-                'renewal_date': str(rd),
-                'days_until': days_until,
-                'risk_level': risk_level,
-                'csm_name': csm,
-                'champion_name': champion,
-                'industry': acct.industry,
-            })
-
-        # Sort: critical first, then by days_until ascending
-        risk_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-        renewals.sort(key=lambda r: (risk_order.get(r['risk_level'], 9), r['days_until']))
-
-        total_arr = sum(r['arr'] for r in renewals)
-        critical_count = sum(1 for r in renewals if r['risk_level'] in ('critical', 'high'))
-        critical_arr = sum(r['arr'] for r in renewals if r['risk_level'] in ('critical', 'high'))
-
-        return jsonify({
-            'renewals': renewals,
-            'summary': {
-                'total_count': len(renewals),
-                'total_arr': total_arr,
-                'critical_count': critical_count,
-                'critical_arr': critical_arr,
-                'days_window': days_window,
-            },
-        })
-
-    except Exception as e:
-        logger.error(f"Error computing renewals: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to compute renewals'}), 500
+    from api_v1_generic_handlers import get_renewals_api as _impl
+    return _impl()
 
 
 # =============================================================================
@@ -2921,72 +2553,12 @@ def get_renewals_api():
 def get_playbook_success_metrics_api():
     """GET /api/dc2s/playbook-success-metrics
     Returns per-playbook execution outcomes, success rates, and ROI.
+
+    Relocated to api_v1_generic_handlers.py — see get_dc2s_health_score above
+    for why (vertical-agnostic, Phase 5 cross-vertical-import cleanup).
     """
-    try:
-        customer_id = get_current_customer_id()
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-
-        try:
-            from models import PlaybookExecutionV2
-            execs = PlaybookExecutionV2.query.filter_by(customer_id=int(customer_id)).all()
-        except Exception:
-            execs = []
-
-        if not execs:
-            return jsonify({
-                'total_executions': 0,
-                'playbooks': {},
-                'portfolio_summary': {
-                    'total_runs': 0,
-                    'overall_success_rate_pct': 0,
-                    'total_revenue_impact': 0,
-                },
-            })
-
-        by_pb = defaultdict(list)
-        for e in execs:
-            by_pb[e.playbook_id].append(e)
-
-        playbooks = {}
-        total_resolved = 0
-        total_runs = 0
-        total_revenue = 0
-
-        for pb_id, pb_execs in by_pb.items():
-            n = len(pb_execs)
-            resolved = sum(1 for e in pb_execs if e.outcome == 'resolved')
-            rev_protected = sum(float(e.revenue_protected or 0) for e in pb_execs)
-            rev_expanded = sum(float(e.revenue_expanded or 0) for e in pb_execs)
-            health_deltas = [float(e.health_delta or 0) for e in pb_execs if e.health_delta]
-
-            playbooks[pb_id] = {
-                'playbook_id': pb_id,
-                'total_executions': n,
-                'resolved': resolved,
-                'success_rate_pct': round(resolved / n * 100, 1) if n else 0,
-                'avg_health_delta': round(sum(health_deltas) / len(health_deltas), 1) if health_deltas else 0,
-                'total_revenue_protected': rev_protected,
-                'total_revenue_expanded': rev_expanded,
-            }
-
-            total_resolved += resolved
-            total_runs += n
-            total_revenue += rev_protected + rev_expanded
-
-        return jsonify({
-            'total_executions': total_runs,
-            'playbooks': playbooks,
-            'portfolio_summary': {
-                'total_runs': total_runs,
-                'overall_success_rate_pct': round(total_resolved / total_runs * 100, 1) if total_runs else 0,
-                'total_revenue_impact': total_revenue,
-            },
-        })
-
-    except Exception as e:
-        logger.error(f"Error computing playbook success metrics: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to compute playbook success metrics'}), 500
+    from api_v1_generic_handlers import get_playbook_success_metrics_api as _impl
+    return _impl()
 
 
 # =============================================================================
@@ -2998,133 +2570,12 @@ def get_health_score_history_api():
     """GET /api/dc2s/health-score-history?account_id=<optional>&months=<optional>
     Returns monthly health score trajectory for portfolio (account_id=0 or omitted)
     or a single account.
+
+    Relocated to api_v1_generic_handlers.py — see get_dc2s_health_score above
+    for why (vertical-agnostic, Phase 5 cross-vertical-import cleanup).
     """
-    try:
-        customer_id = get_current_customer_id()
-        if not customer_id:
-            return jsonify({'error': 'Customer ID required'}), 400
-
-        account_id = request.args.get('account_id', 0, type=int)
-        months = min(max(request.args.get('months', 6, type=int), 1), 12)
-
-        cutoff = (datetime.utcnow() - timedelta(days=months * 31)).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0,
-        )
-
-        if account_id and account_id != 0:
-            accounts = [Account.query.filter_by(
-                account_id=account_id, customer_id=int(customer_id)
-            ).first()]
-            if not accounts[0]:
-                return jsonify({'error': f'Account {account_id} not found'}), 404
-        else:
-            accounts = Account.query.filter_by(customer_id=int(customer_id)).all()
-
-        if not accounts:
-            return jsonify({'error': 'No accounts found'}), 404
-
-        portfolio_history = []
-        transitions = []
-
-        for acct in accounts:
-            scores = (HealthScore.query
-                .filter(
-                    HealthScore.account_id == acct.account_id,
-                    HealthScore.measurement_month >= cutoff,
-                )
-                .order_by(HealthScore.measurement_month.asc())
-                .all())
-
-            if not scores:
-                continue
-
-            monthly = []
-            prev_status = None
-            for s in scores:
-                score_val = float(s.health_score) if s.health_score else 0
-                status = ht.classify(score_val)
-                change = float(s.change_from_last_month) if s.change_from_last_month else 0
-
-                entry = {
-                    'month': s.measurement_month.strftime('%Y-%m'),
-                    'health_score': round(score_val, 1),
-                    'status': status,
-                    'change': round(change, 1),
-                    'pillars': s.contributing_pillars or {},
-                }
-                monthly.append(entry)
-
-                if prev_status and prev_status != status:
-                    transitions.append({
-                        'account_id': acct.account_id,
-                        'account_name': acct.account_name,
-                        'month': s.measurement_month.strftime('%Y-%m'),
-                        'from_status': prev_status,
-                        'to_status': status,
-                        'score': round(score_val, 1),
-                        'arr': float(acct.revenue or 0),
-                    })
-                prev_status = status
-
-            if monthly:
-                first_score = monthly[0]['health_score']
-                last_score = monthly[-1]['health_score']
-                portfolio_history.append({
-                    'account_id': acct.account_id,
-                    'account_name': acct.account_name,
-                    'arr': float(acct.revenue or 0),
-                    'current_health': last_score,
-                    'current_status': monthly[-1]['status'],
-                    'starting_health': first_score,
-                    'net_change': round(last_score - first_score, 1),
-                    'trajectory': (
-                        'improving' if last_score - first_score > 5
-                        else 'declining' if last_score - first_score < -5
-                        else 'stable'
-                    ),
-                    'monthly_scores': monthly,
-                })
-
-        portfolio_history.sort(key=lambda x: x['net_change'])
-
-        improving = [a for a in portfolio_history if a['trajectory'] == 'improving']
-        declining = [a for a in portfolio_history if a['trajectory'] == 'declining']
-        stable = [a for a in portfolio_history if a['trajectory'] == 'stable']
-
-        turnarounds = [
-            {'account': a['account_name'], 'arr': a['arr'], 'change': a['net_change']}
-            for a in portfolio_history
-            if a.get('current_status') == 'healthy' and a['starting_health'] < ht.healthy_min()
-        ]
-        deteriorations = [
-            {'account': a['account_name'], 'arr': a['arr'], 'change': a['net_change']}
-            for a in portfolio_history
-            if a['current_health'] < ht.healthy_min() and a['starting_health'] >= ht.healthy_min()
-        ]
-
-        # Portfolio trajectory
-        total_arr = sum(a['arr'] for a in portfolio_history) or 1
-        portfolio_trajectory = {
-            'improving_count': len(improving),
-            'declining_count': len(declining),
-            'stable_count': len(stable),
-            'improving_arr_pct': round(sum(a['arr'] for a in improving) / total_arr * 100, 1),
-            'declining_arr_pct': round(sum(a['arr'] for a in declining) / total_arr * 100, 1),
-        }
-
-        return jsonify({
-            'months': months,
-            'account_count': len(portfolio_history),
-            'accounts': portfolio_history,
-            'transitions': transitions,
-            'turnarounds': turnarounds,
-            'deteriorations': deteriorations,
-            'portfolio_trajectory': portfolio_trajectory,
-        })
-
-    except Exception as e:
-        logger.error(f"Error computing health score history: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to compute health score history'}), 500
+    from api_v1_generic_handlers import get_health_score_history_api as _impl
+    return _impl()
 
 
 # Export blueprint

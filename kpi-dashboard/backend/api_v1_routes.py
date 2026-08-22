@@ -135,21 +135,21 @@ def v1_account_detail(account_id):
 @api_v1.route('/health-scores/<int:account_id>')
 def v1_health_score(account_id):
     """Health score for a single account — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_dc2s_health_score
+    from api_v1_generic_handlers import get_dc2s_health_score
     return _dispatch('health_score', get_dc2s_health_score, account_id=account_id)
 
 
 @api_v1.route('/health-summary')
 def v1_health_summary():
     """Portfolio health summary — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_dc2s_health_summary
+    from api_v1_generic_handlers import get_dc2s_health_summary
     return _dispatch('health_summary', get_dc2s_health_summary)
 
 
 @api_v1.route('/health-score-history')
 def v1_health_score_history():
     """Health score history — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_health_score_history_api
+    from api_v1_generic_handlers import get_health_score_history_api
     return _dispatch('health_score_history', get_health_score_history_api)
 
 
@@ -289,28 +289,28 @@ def v1_alerts(account_id):
 @api_v1.route('/team-capacity')
 def v1_team_capacity():
     """Team capacity — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_team_capacity_api
+    from api_v1_generic_handlers import get_team_capacity_api
     return _dispatch('team_capacity', get_team_capacity_api)
 
 
 @api_v1.route('/csm-scorecard')
 def v1_csm_scorecard():
     """CSM scorecard — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_csm_scorecard_api
+    from api_v1_generic_handlers import get_csm_scorecard_api
     return _dispatch('csm_scorecard', get_csm_scorecard_api)
 
 
 @api_v1.route('/playbook-success-metrics')
 def v1_playbook_success_metrics():
     """Playbook success metrics — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_playbook_success_metrics_api
+    from api_v1_generic_handlers import get_playbook_success_metrics_api
     return _dispatch('playbook_success_metrics', get_playbook_success_metrics_api)
 
 
 @api_v1.route('/renewals')
 def v1_renewals():
     """Renewal pipeline — vertical-agnostic."""
-    from verticals.dc2_s.api_routes import get_renewals_api
+    from api_v1_generic_handlers import get_renewals_api
     return _dispatch('renewals', get_renewals_api)
 
 

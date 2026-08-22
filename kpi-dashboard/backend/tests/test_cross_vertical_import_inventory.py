@@ -187,30 +187,79 @@ def _scan_violations():
 # all swapped for utils.vertical_registry.get_pillars/get_kpis. See
 # tests/test_phase5_import_inventory_fixes.py for the parity + behavioral
 # proofs (that new test file itself adds 1 legitimate ground-truth-import
-# site, same pattern as test_scorer_parity.py below). Net: 79 sites across
-# 44 files. playbook_cost_bridge.py's 2 sites
+# site, same pattern as test_scorer_parity.py below). Net after that pass:
+# 79 sites across 44 files. playbook_cost_bridge.py's 2 sites
 # (PLAYBOOK_CONFIG) were reviewed and deliberately left — no generic
 # registry accessor exists for playbook config (only KPI/pillar catalogs),
 # and the code already correctly if/elif-gates per vertical, mirroring the
 # canonical (out-of-scope) mcp_server/common.py::_get_playbook_config;
 # deferred to Phase 3 of the plan.
+#
+# Phase 5 update #2 (Aug 22 2026, api_v1_routes.py's 11 sites): audited each
+# of the 11 handler imports api_v1_routes.py pulled from
+# verticals.dc2_s.api_routes. 7 (get_csm_scorecard_api, get_dc2s_health_score,
+# get_dc2s_health_summary, get_health_score_history_api,
+# get_playbook_success_metrics_api, get_renewals_api, get_team_capacity_api)
+# had zero DC2S-specific taxonomy coupling in their bodies — confirmed by
+# reading each, not assumed — and were physically relocated to the new
+# api_v1_generic_handlers.py (a generic, non-vertical module), clearing
+# those 7 api_v1_routes.py entries outright. The relocated module still
+# imports 6 vertical-agnostic-in-behavior scoring/query helpers
+# (calculate_kpi_health, get_weights_for_customer, get_precalculated_scores,
+# _get_trailing_kpi_values, _filter_user_accounts, _sync_journey_phase) from
+# verticals.dc2_s.api_routes in a single statement — they're still
+# physically homed there (a separate, larger cleanup; see the existing
+# scripts/generate_context_graph_data.py, utils/vpcs_dashboard_helpers.py,
+# tests/test_account_health_convergence.py, tests/test_scorer_parity.py
+# entries below, which already reference the same helpers from the same
+# place) — recorded as ONE new baseline entry rather than silently
+# duplicating scoring logic in a second location.
+#
+# The remaining 4 (get_dc2s_accounts, get_dc2s_account_detail,
+# get_dc2s_alerts, get_csm_daily_actions) DID have real dc2_s coupling,
+# confirmed live against customer 400 (datacenter_v1, 6 pillars P1-P6) on
+# EC2: get_dc2s_accounts defaulted `enabled_pillars` to DC2S_PILLARS.keys()
+# (5 pillars) whenever no CustomerConfig.dc2s_pillar_weights override was
+# set, silently dropping P6; get_dc2s_account_detail and get_dc2s_alerts
+# looked KPI metadata up in the hardcoded DC2S_KPIS dict, which has no
+# P6-KPI* entries, so datacenter_v1's Facility & Power KPIs were silently
+# dropped from account-detail's kpis_by_pillar and never generated an
+# alert regardless of value; get_csm_daily_actions unconditionally used
+# DC2S's PLAYBOOK_CONFIG/should_trigger_playbook to evaluate playbook
+# triggers for every vertical. All 4 were fixed IN PLACE (not relocated —
+# they still need something vertical-specific, just resolved from the
+# customer's OWN vertical instead of DC2S's) by routing through
+# utils.vertical_registry.get_catalog_for_customer /
+# get_vertical_for_customer, and (for the playbook-trigger coupling) the
+# already-established _ask_ai_helpers.py::_get_playbook_config fail-closed
+# per-vertical helper (dc2_s/saas_premium native; safe no-op — no playbook
+# actions, not a misfire — for any other vertical). Their 4
+# api_v1_routes.py baseline entries below are therefore UNCHANGED (the
+# import site itself didn't move, only what happens inside the imported
+# function). Also found and fixed in passing: get_dc2s_health_score (now
+# relocated) and get_dc2s_accounts/get_dc2s_account_detail (still here)
+# unconditionally called `_sync_journey_phase()`, persisting a DC2S-only
+# lifecycle label into ANY vertical's Account.profile_metadata — gated to
+# dc2_s only. dc2_s (customer 398) and saas_premium (customer 399) parity
+# verified live alongside the datacenter_v1 (customer 400) fix — see
+# tests/test_phase5_api_v1_routes_fixes.py.
+#
+# Net: 79 - 7 (relocated) + 1 (api_v1_generic_handlers.py's new helper
+# import) + 2 (this Phase 5 pass's own verification test,
+# tests/test_phase5_api_v1_routes_fixes.py, which imports
+# verticals.dc2_s.api_routes locally in 2 of its test functions) = 75 sites
+# across 46 files.
 # ──────────────────────────────────────────────────────────────────────────
 BASELINE = {
     ('_ask_ai_helpers.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('_ask_ai_helpers.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('agents/signal_analyst_api.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
     ('agents/signal_converter.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
+    ('api_v1_generic_handlers.py', 'verticals.dc2_s.api_routes', ('calculate_kpi_health', 'get_weights_for_customer', 'get_precalculated_scores', '_get_trailing_kpi_values', '_filter_user_accounts', '_sync_journey_phase')): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_csm_daily_actions',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_csm_scorecard_api',)): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_account_detail',)): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_accounts',)): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_alerts',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_health_score',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_health_summary',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_health_score_history_api',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_playbook_success_metrics_api',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_renewals_api',)): 1,
-    ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_team_capacity_api',)): 1,
     ('app_v3_minimal.py', 'verticals.dc2_s.api_routes', ('dc2s_api',)): 1,
     ('app_v3_minimal.py', 'verticals.saas_premium.api_routes', ('saas_premium_api',)): 1,
     ('ask_ai_tools.py', 'verticals.dc2_s.api_routes', ('_normalize_kpi_code_for_health', '_compute_impact_score', '_compute_effort_score', '_determine_urgency', '_get_roi_context')): 1,
@@ -253,6 +302,12 @@ BASELINE = {
     ('tests/test_phase0_1_2.py', 'verticals.dc2_s.api_routes', ('_sync_journey_phase',)): 4,
     ('tests/test_phase0_1_2.py', 'verticals.dc2_s.api_routes', ('dc2s_api',)): 1,
     ('tests/test_phase0_1_2.py', 'verticals.dc2_s.vertical_config', ('determine_customer_phase',)): 4,
+    # Same pattern as test_scorer_parity.py below: imports the dc2_s module
+    # directly to call its (still dc2_s-homed) get_dc2s_accounts/
+    # get_dc2s_account_detail/get_dc2s_alerts/get_csm_daily_actions and
+    # inspect their source for the vertical_registry routing this Phase 5
+    # pass added — a verification tool, not a coupling bug.
+    ('tests/test_phase5_api_v1_routes_fixes.py', 'verticals.dc2_s.api_routes', ('dr',)): 2,
     ('tests/test_scorer_parity.py', 'verticals.dc2_s.api_routes', ('_score_kpi_value',)): 1,
     ('tests/test_scorer_parity.py', 'verticals.dc2_s.api_routes', ('calculate_kpi_health',)): 1,
     # Same pattern as test_scorer_parity.py above: a direct DC2S_PILLARS
@@ -272,7 +327,7 @@ BASELINE = {
     ('verticals/customer295-dc/services/bootstrap_weights_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
 }
 
-assert sum(BASELINE.values()) == 79, (
+assert sum(BASELINE.values()) == 75, (
     "BASELINE literal was hand-edited inconsistently with its own comment "
     "— fix the count or the entries."
 )

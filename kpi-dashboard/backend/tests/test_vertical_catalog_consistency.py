@@ -269,6 +269,10 @@ def test_partner_portal_gate_condition_matches_every_registered_vertical():
         'saas_premium': 'P4',
         'datacenter_v1': None,
         'healthcare_provider': None,
+        # manufacturing_iot (added 2026-08-22, pillar_roles registry
+        # validation test) has no channel/reseller motion by design — see
+        # config/manufacturing_iot_kpi_catalog.json's pillar_roles_notes.
+        'manufacturing_iot': None,
     }
 
     for vertical in sorted(SUPPORTED_VERTICALS):
