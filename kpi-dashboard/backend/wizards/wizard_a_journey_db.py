@@ -349,22 +349,45 @@ def _run_journey_generation(customer_id: int) -> dict:
                         db.session.add(arc_node)
                         db.session.flush()
 
-                        # Connect arc detection node to most recent observed customer signal
+                        # Connect arc detection node to most recent observed customer signal.
+                        # Routed through upsert_edge (WS-1.1, edge-provenance work,
+                        # Aug 2026) — the previous raw ContextEdge constructor here
+                        # wrote NO source_platform (724 NULL-source rows accumulated
+                        # Apr–Aug 2026) and only a free-text label, bypassing the
+                        # I1/I2/I4 pre-commit invariant gate the sibling path in
+                        # arc_edge_generator already goes through.
                         recent_signal = (ContextNode.query
                                          .filter_by(account_id=aid, node_type='SIGNAL',
                                                     source='observed')
                                          .order_by(ContextNode.occurred_at.desc())
                                          .first())
                         if recent_signal:
-                            db.session.add(ContextEdge(
+                            from utils.context_graph import upsert_edge  # noqa: PLC0415
+                            upsert_edge(
                                 from_node_id=recent_signal.node_id,
                                 to_node_id=arc_node.node_id,
                                 edge_type='TRIGGERED',
                                 confidence=arc_confidence,
                                 properties={
-                                    'label': f'Signal pattern triggered {pattern} arc classification'
+                                    'label': f'Signal pattern triggered {pattern} arc classification',
+                                    # Structured derivation, matching what
+                                    # arc_edge_generator writes — this is a
+                                    # health-slope trajectory match, not an
+                                    # arc-template slot fill.
+                                    'arc_type': pattern,
+                                    'arc_phase': phase,
+                                    'derivation': 'wizard_a.trajectory_pattern',
+                                    # confidence here is a rule-match fit score
+                                    # from _classify_trajectory_with_confidence,
+                                    # NOT an epistemic estimate of the causal
+                                    # claim — recorded so consumers stop reading
+                                    # it as calibrated (WS-1.2).
+                                    'confidence_semantics': 'trajectory_rule_match_score',
                                 },
-                            ))
+                                source_platform='wizard_a',
+                                created_by='wizard_a_journey',
+                                customer_id=customer_id,
+                            )
                         nested.commit()
                     except Exception:
                         nested.rollback()
