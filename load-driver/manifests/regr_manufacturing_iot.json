@@ -1,0 +1,94 @@
+{
+  "manifest_version": "1.0",
+  "customer": {
+    "name": "Regression Manufacturing Co",
+    "domain": "regr-mfg.example.com",
+    "vertical": "manufacturing_iot",
+    "admin_email": "admin@regr-mfg.example.com",
+    "admin_name": "Reg Tester",
+    "total_arr": 8000000,
+    "description": "Discrete manufacturing / factory IoT operator — acceptance test for the manufacturing_iot vertical (fifth-vertical registry proof point)."
+  },
+  "time_range": {
+    "start": "2025-10-01",
+    "end": "2026-03-31",
+    "frequency": "weekly",
+    "data_points_per_kpi": 26
+  },
+  "kpis": {
+    "selection": "all",
+    "count": 11,
+    "codes": [
+      "P1-KPI1", "P1-KPI2", "P1-KPI3",
+      "P2-KPI1", "P2-KPI2",
+      "P3-KPI1", "P3-KPI2",
+      "P4-KPI1", "P4-KPI2",
+      "P5-KPI1", "P5-KPI2"
+    ]
+  },
+  "context_graph": {
+    "stakeholders_per_account": [2, 3],
+    "events_per_account": [4, 6],
+    "include_decisions": true,
+    "include_outcomes": true,
+    "include_signal_edges": true,
+    "include_benchmarks": true
+  },
+  "accounts": [
+    {
+      "name": "Ironclad Fabrication",
+      "arr": 3200000,
+      "target_health": 74,
+      "classification": "healthy",
+      "story_arc": "stable",
+      "partner_tier": "direct",
+      "renewal_date": "2026-09-15",
+      "narrative": "Stable OEE, steady throughput. No major issues this quarter.",
+      "kpi_trajectory": "stable",
+      "decline_start_month": null,
+      "stakeholders": [
+        {
+          "name": "Maria Gonzalez",
+          "role": "champion",
+          "title": "Plant Manager",
+          "department": "Operations",
+          "influence_score": 8,
+          "sentiment": "positive",
+          "engagement_frequency": "biweekly"
+        }
+      ],
+      "key_signals": []
+    },
+    {
+      "name": "Summit Precision Parts",
+      "arr": 1850000,
+      "target_health": 52,
+      "classification": "at_risk",
+      "story_arc": "engagement_drop",
+      "partner_tier": "tier_1",
+      "renewal_date": "2026-06-01",
+      "narrative": "Defect rate climbing, unplanned downtime up. Safety audit flagged two findings in Q1.",
+      "kpi_trajectory": "declining",
+      "decline_start_month": 3,
+      "stakeholders": [
+        {
+          "name": "Tom Baker",
+          "role": "champion",
+          "title": "Director of Quality",
+          "department": "Quality",
+          "influence_score": 6,
+          "sentiment": "concerned",
+          "engagement_frequency": "weekly"
+        }
+      ],
+      "key_signals": [
+        {
+          "type": "quality_incident",
+          "date": "2026-02-10",
+          "content": "Defect rate crossed 3.5% threshold, up from 1.2% in Nov.",
+          "sentiment": "negative"
+        }
+      ]
+    }
+  ]
+}

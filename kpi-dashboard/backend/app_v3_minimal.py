@@ -796,9 +796,6 @@ def login():
         # for why this must stay a single shared function, not reimplemented per route.
         frontend_vertical, dashboard_family = _resolve_login_vertical_and_family(user, customer)
 
-        # Debug logging
-        print(f"🔍 Login vertical: DB='{user_vertical}' -> vertical='{frontend_vertical}', family='{dashboard_family}'")
-        
         # Log in user - Flask-Login creates secure session
         from flask_login import login_user
         login_user(user, remember=remember)

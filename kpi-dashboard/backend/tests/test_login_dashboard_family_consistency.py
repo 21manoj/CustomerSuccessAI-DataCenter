@@ -112,3 +112,54 @@ def test_customer_fallback_used_when_user_vertical_unset():
     frontend_vertical, family = resolve(user, customer=customer)
     assert frontend_vertical == 'datacenter_v1'
     assert family == 'datacenter'
+
+
+def _unresolved_names(func_name):
+    """Names loaded inside `func_name`'s body that aren't a local, a
+    parameter, an except-handler binding, an inline import, or a module
+    global/builtin -- i.e. would raise NameError the moment that line runs.
+
+    Would have caught the live incident (2026-08-22): the refactor to
+    _resolve_login_vertical_and_family() left a debug print in login()
+    referencing 'user_vertical', a name that only exists inside the helper
+    it was extracted from. login() itself never re-raised or was called by
+    the existing unit tests (they call the resolver directly), so /api/login
+    500'd on every real login until this was caught by an end-to-end
+    manifest run against the live server."""
+    import ast
+    import builtins
+    import inspect
+    import app_v3_minimal as app_module
+
+    tree = ast.parse(inspect.getsource(app_module))
+    target = next(
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == func_name
+    )
+
+    assigned = set()
+    for n in ast.walk(target):
+        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+            assigned.add(n.id)
+        elif isinstance(n, ast.arg):
+            assigned.add(n.arg)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            assigned.update((a.asname or a.name).split('.')[0] for a in n.names)
+        elif isinstance(n, ast.ExceptHandler) and n.name:
+            assigned.add(n.name)
+
+    loaded = {
+        n.id for n in ast.walk(target)
+        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
+    }
+    known = assigned | set(dir(app_module)) | set(dir(builtins))
+    return loaded - known
+
+
+def test_login_route_has_no_undefined_names():
+    """Static NameError guard for /api/login -- see _unresolved_names docstring."""
+    assert _unresolved_names('login') == set()
+
+
+def test_magic_link_route_has_no_undefined_names():
+    assert _unresolved_names('verify_magic_link') == set()
