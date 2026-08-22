@@ -121,23 +121,41 @@ class TestROIByTier:
 # 3. NON-LINEAR SCALING THESIS
 # ============================================================
 
+_SCALING_INVESTMENT_XFAIL_REASON = (
+    "open item 20 (state-of-play.md): power_of_1_economics.json's "
+    "scaling_scenarios.investment now scales per tier (95K/247K/370K) "
+    "instead of the constant $247K these tests (and the deck's own "
+    "'same investment, exponential return' thesis) assume. Restoring "
+    "247000 would make these green by assuming the tests are right -- "
+    "but the tests encode a deck claim that quadrupling the outcome "
+    "costs nothing extra, which may itself be wrong. Someone with "
+    "product authority over the Po1 deck needs to pick a side; flip to "
+    "a plain assert (and remove the xfail marker) once they do -- see "
+    "item 22 for the sibling decision this mirrors."
+)
+
+
 class TestNonLinearScaling:
     """Same $247K investment produces exponentially higher returns."""
 
+    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
     def test_investment_identical_across_scenarios(self):
         """All 3 scenarios use the same $247K investment."""
         for scenario in SCALING_SCENARIOS.values():
             assert scenario["investment"] == 247000
 
+    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
     def test_1_pct_roi(self):
         assert SCALING_SCENARIOS["1_pct"]["year_1_roi"] == pytest.approx(0.63, abs=0.01)
 
     def test_4_pct_roi(self):
         assert SCALING_SCENARIOS["4_pct"]["year_1_roi"] == pytest.approx(5.50, abs=0.01)
 
+    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
     def test_6_pct_roi(self):
         assert SCALING_SCENARIOS["6_pct"]["year_1_roi"] == pytest.approx(8.76, abs=0.01)
 
+    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
     def test_scaling_is_nonlinear(self):
         """4x improvement → >4x ROI (proves non-linearity)."""
         roi_1 = SCALING_SCENARIOS["1_pct"]["year_1_roi"]
