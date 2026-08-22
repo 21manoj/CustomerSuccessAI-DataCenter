@@ -646,6 +646,48 @@ def health_check():
     })
 
 
+# Verticals routed to the 'datacenter' dashboard shell (vs. 'saas'). Only
+# 2 shells exist in the frontend today, so every vertical is forced into
+# one of the two -- but the CHOICE must be made in exactly one place.
+DC_VERTICALS = {'dc2_s', 'dc2s', 'dc', 'datacenter', 'datacenter_v1'}
+
+
+def _resolve_login_vertical_and_family(user, customer=None):
+    """Resolve (frontend_vertical, dashboard_family) for a logged-in user.
+
+    Single source of truth for both password-login and magic-link-login --
+    these used to independently reimplement this classification and had
+    silently diverged (2026-08-22 vertical-registry audit): magic-link
+    defaulted an unset vertical to 'dc2_s' and used a crude
+    `'saas' in vertical.lower()` check that routed any non-SaaS-named
+    vertical (healthcare_provider, manufacturing_iot) to the 'datacenter'
+    family; password-login defaulted an unset vertical to 'saas_premium'
+    and only routed the known DC_VERTICALS aliases to 'datacenter'. The
+    same customer, logging in two different ways, could land on two
+    different dashboard shells.
+    """
+    user_vertical = getattr(user, 'vertical', None) if user else None
+    if not user_vertical:
+        try:
+            from models import CustomerConfig as _CC
+            customer_id = getattr(user, 'customer_id', None) if user else None
+            _cc = _CC.query.filter_by(customer_id=customer_id).first()
+            if _cc and _cc.vertical:
+                user_vertical = _cc.vertical
+        except Exception:
+            pass
+    if not user_vertical and customer is not None:
+        user_vertical = getattr(customer, 'vertical', None)
+
+    if user_vertical:
+        frontend_vertical = user_vertical.lower().replace('-', '_').replace(' ', '_')
+    else:
+        frontend_vertical = 'saas_premium'  # default for new users
+
+    dashboard_family = 'datacenter' if frontend_vertical in DC_VERTICALS else 'saas'
+    return frontend_vertical, dashboard_family
+
+
 @app.route('/api/login', methods=['POST'])
 def login():
     """
@@ -750,29 +792,9 @@ def login():
             customer = None
             db.session.rollback()  # Reset transaction
         
-        # Resolve vertical from DB — data-driven, no hardcoded whitelist.
-        # Returns raw vertical (e.g. 'dc2_s', 'saas_premium', 'msp') + dashboard_family ('datacenter' or 'saas')
-        # for frontend routing. New verticals work without code changes.
-        DC_VERTICALS = {'dc2_s', 'dc2s', 'dc', 'datacenter', 'datacenter_v1'}
-        # Prefer the user's vertical; fall back to the customer's config vertical so a
-        # datacenter_v1 tenant routes to the DC family even if user.vertical is unset.
-        user_vertical = user.vertical if hasattr(user, 'vertical') and user.vertical else None
-        if not user_vertical:
-            try:
-                from models import CustomerConfig as _CC
-                _cc = _CC.query.filter_by(customer_id=getattr(user, 'customer_id', None)).first()
-                if _cc and _cc.vertical:
-                    user_vertical = _cc.vertical
-            except Exception:
-                pass
-
-        if user_vertical:
-            user_vertical_normalized = user_vertical.lower().replace('-', '_').replace(' ', '_')
-        else:
-            user_vertical_normalized = 'saas_premium'  # default for new users
-
-        frontend_vertical = user_vertical_normalized
-        dashboard_family = 'datacenter' if user_vertical_normalized in DC_VERTICALS else 'saas'
+        # Resolve vertical + dashboard routing — see _resolve_login_vertical_and_family
+        # for why this must stay a single shared function, not reimplemented per route.
+        frontend_vertical, dashboard_family = _resolve_login_vertical_and_family(user, customer)
 
         # Debug logging
         print(f"🔍 Login vertical: DB='{user_vertical}' -> vertical='{frontend_vertical}', family='{dashboard_family}'")
@@ -1014,10 +1036,10 @@ def verify_magic_link():
     session['customer_id'] = user.customer_id
     session['email'] = user.email
 
-    # Resolve vertical + dashboard routing
+    # Resolve vertical + dashboard routing — see _resolve_login_vertical_and_family
+    # for why this must stay a single shared function, not reimplemented per route.
     customer = db.session.get(Customer, user.customer_id)
-    vertical = getattr(customer, 'vertical', 'dc2_s') or 'dc2_s'
-    dashboard_family = 'saas' if 'saas' in vertical.lower() else 'datacenter'
+    vertical, dashboard_family = _resolve_login_vertical_and_family(user, customer)
 
     return jsonify({
         'status': 'success',
