@@ -76,7 +76,7 @@ interface ROISummary {
   total_investment: number;
   total_impact: number;
   roi_pct: number;
-  payback_months: number;
+  payback_months: number | null;
   revenue_protected: number;
   revenue_expanded: number;
   cost_savings: number;
@@ -199,8 +199,22 @@ function MissionBanner({
   monthsOfData: number;
   dataSource: string;
 }) {
-  const isValidated = dataSource === 'pillar_scores' || dataSource === 'health_trends';
-  const confidenceLabel = isValidated ? 'Data-validated' : 'Benchmark-modeled';
+  // dataSource carries a value-provenance tier (see backend
+  // utils/value_provenance.py): measured/derived/benchmark are real
+  // customer data (differing only in whether it's read through the
+  // customer's own calibrated weights or generic benchmark weights);
+  // default/unavailable mean no real customer signal at all. Show the
+  // tier directly rather than collapsing it to a validated/not-validated
+  // boolean — 'benchmark' is real data, so folding it into a generic
+  // "not validated" bucket would contradict its own name.
+  const PROVENANCE_LABELS: Record<string, string> = {
+    measured: 'Measured',
+    derived: 'Derived',
+    benchmark: 'Benchmark-blended',
+    default: 'Default',
+    unavailable: 'Unavailable',
+  };
+  const confidenceLabel = PROVENANCE_LABELS[dataSource] ?? 'Benchmark-modeled';
 
   return (
     <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#0a1628] via-[#0f2318] to-[#0a1628] border border-emerald-500/20">

@@ -21,24 +21,102 @@ from auth_middleware import get_current_customer_id, get_current_user_id
 from extensions import db
 from models import (
     Account, HealthTrend, FeatureToggle as FeatureToggleModel, ROISnapshot,
-    QualitativeSignal, PlaybookExecution, KPIScore, PillarScore,
+    QualitativeSignal, PlaybookExecution, KPIScore, HealthScore,
     DC2SKPI, CustomerConfig,
 )
 from resolve_identifier import resolve_customer_id
 import utils.health_thresholds as ht
+import utils.value_provenance as vp
 
 outcome_roi_api = Blueprint('outcome_roi_api', __name__)
 
-# PillarScore → Power-of-1 metric mapping (DC2S vertical)
-# Used by _extract_historical_actuals, _extract_current_values, _extract_accounts_at_risk
-DC2S_PILLAR_METRIC_MAP = {
-    'P1': 'TTFV',                    # Deployment Velocity → Time-to-First-Value
-    'P2': 'ticket_resolution_time',  # Operational Stability → Support metric
-    'P3': 'product_adoption',        # AI Workload Perf → Adoption
-    'P4': 'GRR',                     # Channel & Partner → Gross Revenue Retention
-    'P5': 'expansion_rate',          # Expansion Readiness → Expansion Rate
+# Pillar code → Power-of-1 metric mapping, per vertical.
+# Used by _extract_historical_actuals, _extract_current_values, _extract_accounts_at_risk,
+# _compute_pillar_changes — the HealthScore.contributing_pillars data path (DC2SKPI's
+# Path 0 is dc2_s-only; every other vertical resolves its pillar scores through here).
+# Each entry pairs a pillar_metric_map (pillar_code → Power-of-1 metric_id) with an
+# optional nrr_synthesis (which two pillars combine into a synthetic NRR reading,
+# when NRR isn't already covered directly).
+POWER_OF_1_PILLAR_MAPS = {
+    'dc2_s': {
+        'pillar_metric_map': {
+            'P1': 'TTFV',                    # Deployment Velocity → Time-to-First-Value
+            'P2': 'ticket_resolution_time',  # Operational Stability → Support metric
+            'P3': 'product_adoption',        # AI Workload Perf → Adoption
+            'P4': 'GRR',                     # Channel & Partner → Gross Revenue Retention
+            'P5': 'expansion_rate',          # Expansion Readiness → Expansion Rate
+        },
+        'nrr_synthesis': {'retention_pillar': 'P4', 'retention_weight': 0.4,
+                           'expansion_pillar': 'P5', 'expansion_weight': 0.6},
+    },
+    'saas_premium': {
+        'pillar_metric_map': {
+            'P1': 'product_adoption',        # Product Adoption & Usage → Adoption
+            'P2': 'TTFV',                    # Customer Engagement → Time-to-First-Value
+            'P3': 'ticket_resolution_time',  # Customer Sentiment & Support → Support metric
+            'P4': 'GRR',                     # Partner & Ecosystem Health → Gross Revenue Retention
+            'P5': 'expansion_rate',          # Revenue & Growth → Expansion Rate
+        },
+        'nrr_synthesis': {'retention_pillar': 'P4', 'retention_weight': 0.4,
+                           'expansion_pillar': 'P5', 'expansion_weight': 0.6},
+    },
+    'datacenter_v1': {
+        'pillar_metric_map': {
+            'P1': 'NRR',                     # Revenue & Unit Economics → Net Revenue Retention
+            'P2': 'product_adoption',        # Fleet Utilization & Goodput → Adoption
+            'P3': 'ticket_resolution_time',  # Reliability & SLA Delivery → Support metric
+            'P4': 'GRR',                     # Power & Facility → Gross Revenue Retention
+            'P5': 'expansion_rate',          # Commercial & Expansion → Expansion Rate
+            'P6': 'TTFV',                    # Provisioning Velocity → Time-to-First-Value
+        },
+        'nrr_synthesis': None,  # NRR already covered directly by P1 above
+    },
 }
-# NRR synthesized from P4 (retention) + P5 (expansion) weighted average
+
+# Fallback for verticals with no entry above: assign each of the vertical's own
+# pillar codes a distinct real Power-of-1 metric_id, cycling through this fixed
+# order. Never re-uses dc2_s's pillar semantics (e.g. "Deployment Velocity")
+# mislabeled onto an unrelated pillar — see historical bug where every non-dc2_s
+# vertical inherited DC2S_PILLAR_METRIC_MAP unconditionally.
+_GENERIC_METRIC_FALLBACK_ORDER = [
+    'product_adoption', 'ticket_resolution_time', 'GRR', 'expansion_rate', 'TTFV', 'NRR',
+]
+
+
+def _get_pillar_metric_map(vertical):
+    """Return (pillar_metric_map, nrr_synthesis) for a vertical.
+
+    pillar_metric_map: dict of pillar_code -> Power-of-1 metric_id.
+    nrr_synthesis: {'retention_pillar', 'retention_weight', 'expansion_pillar',
+        'expansion_weight'} or None if the vertical's map already covers NRR directly.
+    """
+    entry = POWER_OF_1_PILLAR_MAPS.get(vertical)
+    if entry:
+        return entry['pillar_metric_map'], entry['nrr_synthesis']
+
+    from utils.vertical_registry import get_pillars
+    try:
+        pillar_codes = sorted(get_pillars(vertical).keys())
+    except Exception:
+        pillar_codes = []
+    generic_map = {
+        code: _GENERIC_METRIC_FALLBACK_ORDER[i % len(_GENERIC_METRIC_FALLBACK_ORDER)]
+        for i, code in enumerate(pillar_codes)
+    }
+    return generic_map, None
+
+
+def _resolve_vertical(customer_id):
+    """Resolve a customer's vertical, defaulting to dc2_s when customer_id is unknown."""
+    if customer_id is None:
+        return 'dc2_s'
+    from utils.vertical_registry import get_vertical_for_customer
+    return get_vertical_for_customer(customer_id)
+
+
+def _pillar_metric_map_for_customer(customer_id):
+    """Resolve a customer's vertical and return its pillar→metric map."""
+    return _get_pillar_metric_map(_resolve_vertical(customer_id))
 
 
 # ============================================================
@@ -625,11 +703,31 @@ def _is_calibrated(customer_id):
     return bool(cfg and cfg.dc2s_kpi_weights)
 
 
+def _tag_real_data_source(detail_prefix, *, calibrated, stable_tag=''):
+    """Build the `data_source` value for a real-data extraction path
+    (kpi_actuals / health_trends / health_score_pillars).
+
+    Tier follows Wizard-C calibration state (see
+    utils.value_provenance.calibration_tier): calibrated customers get
+    DERIVED (their own learned weights applied to real data), everyone
+    else gets BENCHMARK (real data read through default/benchmark
+    weights because Wizard C hasn't run yet). `detail_prefix` and
+    `stable_tag` are preserved verbatim in `.detail` as the granular
+    breadcrumb — this is what the pre-retrofit ad-hoc strings
+    (`kpi_actuals_benchmark`, `health_trends_calibrated`, etc.) used to
+    be, still available via `.detail` for logging/audit trail.
+    """
+    tier = vp.calibration_tier(calibrated=calibrated)
+    cal_suffix = '_calibrated' if calibrated else '_benchmark'
+    return vp.tag(tier, f'{detail_prefix}{cal_suffix}{stable_tag}')
+
+
 def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstable_months=0):
     """
     Extract historical metric actuals from DB.
 
-    Priority: DC2SKPI (actual measurements) → HealthTrend (SaaS) → PillarScore → baseline.
+    Priority: DC2SKPI (actual measurements, dc2_s only) → HealthTrend (SaaS)
+    → HealthScore.contributing_pillars (generic scorer, every vertical) → baseline.
     Falls back to demo data only if no path has sufficient data.
 
     Args:
@@ -644,25 +742,33 @@ def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstabl
             on freshly-loaded synthetic tenants (decline → recovery arcs).
 
     Returns:
-        tuple: (metric_actuals dict, data_source string)
+        tuple: (metric_actuals dict, data_source ValueProvenance) — see
+            utils.value_provenance; behaves as a plain str equal to its
+            tier (measured/derived/benchmark/default/unavailable).
     """
     from power_of_1_model import POWER_OF_1_METRICS
 
     if not accounts:
-        return _get_baseline_actuals(), 'baseline_defaults'
+        return _get_baseline_actuals(), vp.tag(vp.DEFAULT, 'baseline_defaults')
 
     account_ids = [a.account_id for a in accounts]
     calibrated = _is_calibrated(customer_id)
-    cal_suffix = "_calibrated" if calibrated else "_benchmark"
     skip_n = max(0, int(skip_unstable_months or 0))
+    vertical = _resolve_vertical(customer_id)
 
     # ── Path 0: DC2SKPI (actual KPI measurements) ──
-    from models import DC2SKPI as _DC2SKPI
-    cutoff_dt = datetime.now() - timedelta(days=months * 30)
-    kpi_rows = _DC2SKPI.query.filter(
-        _DC2SKPI.account_id.in_(account_ids),
-        _DC2SKPI.measured_at >= cutoff_dt,
-    ).all()
+    # linked_kpi_codes in power_of_1_economics.json are dc2_s-specific KPI
+    # codes with no per-vertical equivalent yet, so this path only applies
+    # to dc2_s — other verticals fall through to Path 1/Path 2 below, which
+    # resolve metrics through the vertical-aware pillar_metric_map instead.
+    kpi_rows = []
+    if vertical == 'dc2_s':
+        from models import DC2SKPI as _DC2SKPI
+        cutoff_dt = datetime.now() - timedelta(days=months * 30)
+        kpi_rows = _DC2SKPI.query.filter(
+            _DC2SKPI.account_id.in_(account_ids),
+            _DC2SKPI.measured_at >= cutoff_dt,
+        ).all()
 
     if len(kpi_rows) >= 2:
         # Build {kpi_code: [(measured_at, value), ...]} and collect targets
@@ -757,7 +863,9 @@ def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstabl
                         "current": POWER_OF_1_METRICS[metric_id].baseline,
                     }
             stable_tag = f"_stable_skip{skip_n}" if skip_n > 0 else ""
-            return metric_actuals, f'kpi_actuals{cal_suffix}{stable_tag}'
+            return metric_actuals, _tag_real_data_source(
+                'kpi_actuals', calibrated=calibrated, stable_tag=stable_tag,
+            )
 
     # ── Path 1: HealthTrend (SaaS customers) ──
     trends = HealthTrend.query.filter(
@@ -826,28 +934,35 @@ def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstabl
                     }
 
             stable_tag = f"_stable_skip{skip_n}" if skip_n > 0 else ""
-            return metric_actuals, f'health_trends{cal_suffix}{stable_tag}'
+            return metric_actuals, _tag_real_data_source(
+                'health_trends', calibrated=calibrated, stable_tag=stable_tag,
+            )
 
-    # ── Path 2: PillarScore (DC2S customers) ──
+    # ── Path 2: HealthScore.contributing_pillars (generic scorer, every vertical) ──
+    # PillarScore (the table this path used to read) is dead — confirmed zero
+    # rows platform-wide, for every customer and every vertical, as of the
+    # generic-scorer migration. contributing_pillars is the live equivalent:
+    # a per-account, per-month JSON {"P1": score, ...} written by every
+    # process_data run regardless of vertical.
     cutoff = datetime.now() - timedelta(days=months * 30)
 
     # Build the set of distinct months in the window so we can apply
     # Option-A stable-window skip without losing the trailing-window cutoff.
     distinct_months_rows = db.session.query(
-        PillarScore.measurement_month
+        HealthScore.measurement_month
     ).filter(
-        PillarScore.account_id.in_(account_ids),
-        PillarScore.measurement_month >= cutoff,
-    ).distinct().order_by(PillarScore.measurement_month.asc()).all()
+        HealthScore.account_id.in_(account_ids),
+        HealthScore.measurement_month >= cutoff,
+    ).distinct().order_by(HealthScore.measurement_month.asc()).all()
     distinct_months = [r[0] for r in distinct_months_rows]
 
     # Fallback: use all available data if none in window
     if not distinct_months:
         distinct_months_rows = db.session.query(
-            PillarScore.measurement_month
+            HealthScore.measurement_month
         ).filter(
-            PillarScore.account_id.in_(account_ids),
-        ).distinct().order_by(PillarScore.measurement_month.asc()).all()
+            HealthScore.account_id.in_(account_ids),
+        ).distinct().order_by(HealthScore.measurement_month.asc()).all()
         distinct_months = [r[0] for r in distinct_months_rows]
 
     if skip_n > 0 and len(distinct_months) > skip_n + 1:
@@ -857,39 +972,39 @@ def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstabl
     latest_month = distinct_months[-1] if distinct_months else None
 
     if not earliest_month or not latest_month:
-        return _get_baseline_actuals(), 'baseline_defaults'
+        return _get_baseline_actuals(), vp.tag(vp.DEFAULT, 'baseline_defaults')
 
-    # Average pillar scores across all accounts for earliest and latest months
-    earliest_scores = PillarScore.query.filter(
-        PillarScore.account_id.in_(account_ids),
-        PillarScore.measurement_month == earliest_month,
+    # Average contributing_pillars across all accounts for earliest and latest months
+    earliest_scores = HealthScore.query.filter(
+        HealthScore.account_id.in_(account_ids),
+        HealthScore.measurement_month == earliest_month,
     ).all()
 
-    latest_scores = PillarScore.query.filter(
-        PillarScore.account_id.in_(account_ids),
-        PillarScore.measurement_month == latest_month,
+    latest_scores = HealthScore.query.filter(
+        HealthScore.account_id.in_(account_ids),
+        HealthScore.measurement_month == latest_month,
     ).all()
 
     if not earliest_scores or not latest_scores:
-        return _get_baseline_actuals(), 'baseline_defaults'
+        return _get_baseline_actuals(), vp.tag(vp.DEFAULT, 'baseline_defaults')
 
     def _avg_by_pillar(scores):
-        """Average pillar scores across accounts."""
+        """Average contributing_pillars scores across accounts."""
         totals = {}
         counts = {}
-        for ps in scores:
-            code = ps.pillar_code
-            val = float(ps.pillar_score) if ps.pillar_score else 0
-            totals[code] = totals.get(code, 0) + val
-            counts[code] = counts.get(code, 0) + 1
+        for hs in scores:
+            for code, val in (hs.contributing_pillars or {}).items():
+                totals[code] = totals.get(code, 0) + float(val)
+                counts[code] = counts.get(code, 0) + 1
         return {code: totals[code] / counts[code] for code in totals}
 
     early_avg = _avg_by_pillar(earliest_scores)
     late_avg = _avg_by_pillar(latest_scores)
 
     metric_actuals = {}
+    pillar_metric_map, nrr_synthesis = _get_pillar_metric_map(vertical)
 
-    for pillar_code, metric_id in DC2S_PILLAR_METRIC_MAP.items():
+    for pillar_code, metric_id in pillar_metric_map.items():
         metric = POWER_OF_1_METRICS.get(metric_id)
         if not metric:
             continue
@@ -915,17 +1030,18 @@ def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstabl
             "current": round(current_derived, 2),
         }
 
-    # Synthesize NRR from P4 (GRR/retention) + P5 (expansion) weighted average
+    # Synthesize NRR from the vertical's retention + expansion pillars (weighted average)
     nrr_metric = POWER_OF_1_METRICS.get('NRR')
-    if nrr_metric:
-        p4_early = early_avg.get('P4', 50.0)
-        p4_late = late_avg.get('P4', 50.0)
-        p5_early = early_avg.get('P5', 50.0)
-        p5_late = late_avg.get('P5', 50.0)
+    if nrr_metric and nrr_synthesis:
+        r_code, r_w = nrr_synthesis['retention_pillar'], nrr_synthesis['retention_weight']
+        e_code, e_w = nrr_synthesis['expansion_pillar'], nrr_synthesis['expansion_weight']
+        r_early = early_avg.get(r_code, 50.0)
+        r_late = late_avg.get(r_code, 50.0)
+        e_early = early_avg.get(e_code, 50.0)
+        e_late = late_avg.get(e_code, 50.0)
 
-        # NRR = retention + expansion; weight P5 slightly higher
-        combined_early = p4_early * 0.4 + p5_early * 0.6
-        combined_late = p4_late * 0.4 + p5_late * 0.6
+        combined_early = r_early * r_w + e_early * e_w
+        combined_late = r_late * r_w + e_late * e_w
 
         nrr_baseline = nrr_metric.baseline + (nrr_metric.one_pct_move * (combined_early - 50) / 10.0)
         nrr_current = nrr_metric.baseline + (nrr_metric.one_pct_move * (combined_late - 50) / 10.0)
@@ -944,7 +1060,9 @@ def _extract_historical_actuals(accounts, months, customer_id=None, skip_unstabl
             }
 
     stable_tag = f"_stable_skip{skip_n}" if skip_n > 0 else ""
-    return metric_actuals, f'pillar_scores{cal_suffix}{stable_tag}'
+    return metric_actuals, _tag_real_data_source(
+        'health_score_pillars', calibrated=calibrated, stable_tag=stable_tag,
+    )
 
 
 # ── Pillar velocity map: pillar_code → ROI metric_id ──
@@ -977,14 +1095,15 @@ def _extract_pillar_velocities(accounts, months=6):
         months: historical lookback period
 
     Returns:
-        tuple: (velocities dict, data_source string)
+        tuple: (velocities dict, data_source ValueProvenance) — see
+            utils.value_provenance.
             velocities: {metric_id: {velocity, current, headroom, projected_pct, pillar_code}}
     """
     import math
     from power_of_1_model import POWER_OF_1_METRICS
 
     if not accounts:
-        return {}, 'no_data'
+        return {}, vp.tag(vp.UNAVAILABLE, 'no_data')
 
     account_ids = [a.account_id for a in accounts]
 
@@ -994,7 +1113,7 @@ def _extract_pillar_velocities(accounts, months=6):
     ).order_by(HealthTrend.year, HealthTrend.month).all()
 
     if len(trends) < 2:
-        return {}, 'insufficient_data'
+        return {}, vp.tag(vp.UNAVAILABLE, 'insufficient_data')
 
     from collections import defaultdict
     month_buckets = defaultdict(list)
@@ -1003,7 +1122,7 @@ def _extract_pillar_velocities(accounts, months=6):
 
     sorted_months = sorted(month_buckets.keys())
     if len(sorted_months) < 2:
-        return {}, 'insufficient_data'
+        return {}, vp.tag(vp.UNAVAILABLE, 'insufficient_data')
 
     earliest_key = sorted_months[0]
     latest_key = sorted_months[-1]
@@ -1065,34 +1184,42 @@ def _extract_pillar_velocities(accounts, months=6):
             'projected_pct': round(projected_pct, 2),
         }
 
-    return velocities, 'health_trends'
+    # DERIVED (not calibration-gated like _tag_real_data_source): velocity
+    # is computed purely from real HealthTrend rows via a fixed pillar->
+    # metric map, with no dc2s_kpi_weights/benchmark blending involved.
+    return velocities, vp.tag(vp.DERIVED, 'health_trends_velocity')
 
 
 def _extract_current_values(accounts, customer_id=None):
     """
     Extract current metric values from latest health data.
 
-    Tries DC2SKPI (actual measurements) first, then HealthTrend (SaaS), then PillarScore (DC2S).
+    Tries DC2SKPI (actual measurements, dc2_s only) first, then HealthTrend (SaaS),
+    then HealthScore.contributing_pillars (generic scorer, every vertical).
 
     Returns:
-        tuple: (current_values dict, data_source string)
+        tuple: (current_values dict, data_source ValueProvenance) — see
+            utils.value_provenance.
     """
     from power_of_1_model import POWER_OF_1_METRICS
 
     if not accounts:
-        return _get_baseline_current_values(), 'baseline_defaults'
+        return _get_baseline_current_values(), vp.tag(vp.DEFAULT, 'baseline_defaults')
 
     account_ids = [a.account_id for a in accounts]
     calibrated = _is_calibrated(customer_id)
-    cal_suffix = "_calibrated" if calibrated else "_benchmark"
+    vertical = _resolve_vertical(customer_id)
 
     # ── Path 0: DC2SKPI (actual KPI measurements — latest values) ──
-    from models import DC2SKPI as _DC2SKPI
+    # dc2_s only — see the matching comment in _extract_historical_actuals.
     from collections import defaultdict
-    # Get most recent measurement per kpi_code per account
-    latest_kpis = _DC2SKPI.query.filter(
-        _DC2SKPI.account_id.in_(account_ids),
-    ).order_by(_DC2SKPI.measured_at.desc()).all()
+    latest_kpis = []
+    if vertical == 'dc2_s':
+        from models import DC2SKPI as _DC2SKPI
+        # Get most recent measurement per kpi_code per account
+        latest_kpis = _DC2SKPI.query.filter(
+            _DC2SKPI.account_id.in_(account_ids),
+        ).order_by(_DC2SKPI.measured_at.desc()).all()
 
     if latest_kpis:
         # Keep only the latest measurement per (account_id, kpi_code) + targets
@@ -1141,7 +1268,7 @@ def _extract_current_values(accounts, customer_id=None):
             for metric_id in POWER_OF_1_METRICS:
                 if metric_id not in current_values:
                     current_values[metric_id] = POWER_OF_1_METRICS[metric_id].baseline
-            return current_values, f'kpi_actuals{cal_suffix}'
+            return current_values, _tag_real_data_source('kpi_actuals', calibrated=calibrated)
 
     # ── Path 1: HealthTrend (SaaS) ──
     latest_trend = HealthTrend.query.filter(
@@ -1181,36 +1308,39 @@ def _extract_current_values(accounts, customer_id=None):
             if metric_id not in current_values:
                 current_values[metric_id] = POWER_OF_1_METRICS[metric_id].baseline
 
-        return current_values, f'health_trends{cal_suffix}'
+        return current_values, _tag_real_data_source('health_trends', calibrated=calibrated)
 
-    # ── Path 2: PillarScore (DC2S) ──
+    # ── Path 2: HealthScore.contributing_pillars (generic scorer, every vertical) ──
+    # PillarScore (the table this path used to read) is dead — see the matching
+    # comment in _extract_historical_actuals.
     latest_month = db.session.query(
-        db.func.max(PillarScore.measurement_month)
-    ).filter(PillarScore.account_id.in_(account_ids)).scalar()
+        db.func.max(HealthScore.measurement_month)
+    ).filter(HealthScore.account_id.in_(account_ids)).scalar()
 
     if not latest_month:
-        return _get_baseline_current_values(), 'baseline_defaults'
+        return _get_baseline_current_values(), vp.tag(vp.DEFAULT, 'baseline_defaults')
 
-    latest_scores = PillarScore.query.filter(
-        PillarScore.account_id.in_(account_ids),
-        PillarScore.measurement_month == latest_month,
+    latest_scores = HealthScore.query.filter(
+        HealthScore.account_id.in_(account_ids),
+        HealthScore.measurement_month == latest_month,
     ).all()
 
     if not latest_scores:
-        return _get_baseline_current_values(), 'baseline_defaults'
+        return _get_baseline_current_values(), vp.tag(vp.DEFAULT, 'baseline_defaults')
 
-    # Average pillar scores across accounts
+    # Average contributing_pillars across accounts
     totals = {}
     counts = {}
-    for ps in latest_scores:
-        code = ps.pillar_code
-        val = float(ps.pillar_score) if ps.pillar_score else 0
-        totals[code] = totals.get(code, 0) + val
-        counts[code] = counts.get(code, 0) + 1
+    for hs in latest_scores:
+        for code, val in (hs.contributing_pillars or {}).items():
+            totals[code] = totals.get(code, 0) + float(val)
+            counts[code] = counts.get(code, 0) + 1
     pillar_avgs = {code: totals[code] / counts[code] for code in totals}
 
+    pillar_metric_map, nrr_synthesis = _get_pillar_metric_map(vertical)
+
     current_values = {}
-    for pillar_code, metric_id in DC2S_PILLAR_METRIC_MAP.items():
+    for pillar_code, metric_id in pillar_metric_map.items():
         metric = POWER_OF_1_METRICS.get(metric_id)
         if not metric:
             continue
@@ -1227,10 +1357,12 @@ def _extract_current_values(accounts, customer_id=None):
                 metric.baseline + (metric.one_pct_move * pct_from_center), 2
             )
 
-    # Synthesize NRR from P4 + P5
+    # Synthesize NRR from the vertical's retention + expansion pillars
     nrr_metric = POWER_OF_1_METRICS.get('NRR')
-    if nrr_metric:
-        combined = pillar_avgs.get('P4', 50.0) * 0.4 + pillar_avgs.get('P5', 50.0) * 0.6
+    if nrr_metric and nrr_synthesis:
+        r_code, r_w = nrr_synthesis['retention_pillar'], nrr_synthesis['retention_weight']
+        e_code, e_w = nrr_synthesis['expansion_pillar'], nrr_synthesis['expansion_weight']
+        combined = pillar_avgs.get(r_code, 50.0) * r_w + pillar_avgs.get(e_code, 50.0) * e_w
         pct = (combined - 50) / 10.0
         current_values['NRR'] = round(
             nrr_metric.baseline + (nrr_metric.one_pct_move * pct), 2
@@ -1240,14 +1372,15 @@ def _extract_current_values(accounts, customer_id=None):
         if metric_id not in current_values:
             current_values[metric_id] = POWER_OF_1_METRICS[metric_id].baseline
 
-    return current_values, f'pillar_scores{cal_suffix}'
+    return current_values, _tag_real_data_source('health_score_pillars', calibrated=calibrated)
 
 
 def _extract_accounts_at_risk(accounts, customer_id=None):
     """
     Identify which specific accounts need attention for each Power of 1 metric.
 
-    Uses HealthTrend (SaaS) first, then falls back to PillarScore (DC2S).
+    Uses HealthTrend (SaaS) first, then falls back to HealthScore.contributing_pillars
+    (generic scorer, every vertical).
     Accounts with NO health data at all are skipped (not assumed at-risk).
     When context graph is enabled, enriches each at-risk entry with graph revenue data.
 
@@ -1268,9 +1401,15 @@ def _extract_accounts_at_risk(accounts, customer_id=None):
         'relationship_strength_score': 'expansion_rate',
     }
 
-    # PillarScore code → Power of 1 metric mapping (DC2S fallback)
-    # Uses shared constant; P1→TTFV, NRR synthesized from P4+P5
-    pillar_metric_map = DC2S_PILLAR_METRIC_MAP
+    # PillarScore code → Power of 1 metric mapping, resolved per the account's
+    # own vertical (falls back to dc2_s only when customer_id is unavailable).
+    pillar_metric_map, _nrr_synthesis = _pillar_metric_map_for_customer(customer_id)
+
+    # Real-data tier for every account below that gets a score at all —
+    # DERIVED/BENCHMARK per Wizard-C calibration state, same convention as
+    # _tag_real_data_source. Accounts with no data are simply absent from
+    # `at_risk` output (never a fabricated UNAVAILABLE entry).
+    account_data_tier = vp.calibration_tier(calibrated=_is_calibrated(customer_id))
 
     # Get latest health scores per account
     account_scores = {}  # account_id → {metric_id → score}
@@ -1295,21 +1434,19 @@ def _extract_accounts_at_risk(accounts, customer_id=None):
             account_scores[aid] = scores
             continue
 
-        # Fallback: PillarScore (DC2S customers)
-        latest_pillars = PillarScore.query.filter_by(
+        # Fallback: HealthScore.contributing_pillars (generic scorer, every
+        # vertical). PillarScore, the table this used to read, is dead — see
+        # the matching comment in _extract_historical_actuals.
+        latest_health_score = HealthScore.query.filter_by(
             account_id=aid
-        ).order_by(PillarScore.measurement_month.desc()).all()
+        ).order_by(HealthScore.measurement_month.desc()).first()
 
-        if latest_pillars:
-            # Get the latest month's pillar scores
-            latest_month = latest_pillars[0].measurement_month
+        if latest_health_score and latest_health_score.contributing_pillars:
             scores = {}
-            for p in latest_pillars:
-                if p.measurement_month != latest_month:
-                    break
-                metric_id = pillar_metric_map.get(p.pillar_code)
+            for pillar_code, val in latest_health_score.contributing_pillars.items():
+                metric_id = pillar_metric_map.get(pillar_code)
                 if metric_id:
-                    scores[metric_id] = float(p.pillar_score) if p.pillar_score else 0
+                    scores[metric_id] = float(val) if val else 0
             if scores:
                 account_scores[aid] = scores
                 continue
@@ -1337,6 +1474,7 @@ def _extract_accounts_at_risk(accounts, customer_id=None):
                     'score': round(score, 1),
                     'status': status,
                     'revenue': float(acct.revenue) if acct.revenue else 0,
+                    'value_provenance': account_data_tier,
                 })
 
         # Sort by score ascending (worst first), then by revenue descending (highest value at risk)
@@ -1357,6 +1495,7 @@ def _extract_accounts_at_risk(accounts, customer_id=None):
                 'score': round(avg_score, 1),
                 'status': status,
                 'revenue': float(acct.revenue) if acct.revenue else 0,
+                'value_provenance': account_data_tier,
             })
     ttfv_accounts.sort(key=lambda x: (x['score'], -x['revenue']))
     at_risk['TTFV'] = ttfv_accounts
@@ -1514,24 +1653,28 @@ def _compute_pillar_changes(account_id, cutoff_date):
     Compute pillar score changes for an account within the period.
     Falls back to all available data if no data exists after cutoff.
     Returns list of {pillar_code, start_score, end_score, delta}.
+
+    Reads HealthScore.contributing_pillars (generic scorer, every vertical).
+    PillarScore, the table this used to read, is dead — see the matching
+    comment in _extract_historical_actuals.
     """
     earliest_month = db.session.query(
-        db.func.min(PillarScore.measurement_month)
+        db.func.min(HealthScore.measurement_month)
     ).filter(
-        PillarScore.account_id == account_id,
-        PillarScore.measurement_month >= cutoff_date,
+        HealthScore.account_id == account_id,
+        HealthScore.measurement_month >= cutoff_date,
     ).scalar()
 
     # Fallback: no data after cutoff → use all available data
     if not earliest_month:
         earliest_month = db.session.query(
-            db.func.min(PillarScore.measurement_month)
-        ).filter(PillarScore.account_id == account_id).scalar()
+            db.func.min(HealthScore.measurement_month)
+        ).filter(HealthScore.account_id == account_id).scalar()
 
     latest_month = db.session.query(
-        db.func.max(PillarScore.measurement_month)
+        db.func.max(HealthScore.measurement_month)
     ).filter(
-        PillarScore.account_id == account_id,
+        HealthScore.account_id == account_id,
     ).scalar()
 
     if not earliest_month or not latest_month:
@@ -1539,12 +1682,12 @@ def _compute_pillar_changes(account_id, cutoff_date):
 
     # Single month: show current pillar scores as snapshot
     if earliest_month == latest_month:
-        latest_pillars = PillarScore.query.filter_by(
+        latest_score = HealthScore.query.filter_by(
             account_id=account_id,
             measurement_month=latest_month,
-        ).all()
+        ).first()
 
-        l_map = {p.pillar_code: float(p.pillar_score) if p.pillar_score else 0 for p in latest_pillars}
+        l_map = {code: float(val) if val else 0 for code, val in (latest_score.contributing_pillars or {}).items()} if latest_score else {}
         changes = []
         for code in sorted(l_map.keys()):
             changes.append({
@@ -1557,18 +1700,18 @@ def _compute_pillar_changes(account_id, cutoff_date):
         return changes, health_end, health_end  # start=end for single month
 
     # Multiple months: compute delta
-    earliest_pillars = PillarScore.query.filter_by(
+    earliest_score = HealthScore.query.filter_by(
         account_id=account_id,
         measurement_month=earliest_month,
-    ).all()
+    ).first()
 
-    latest_pillars = PillarScore.query.filter_by(
+    latest_score = HealthScore.query.filter_by(
         account_id=account_id,
         measurement_month=latest_month,
-    ).all()
+    ).first()
 
-    e_map = {p.pillar_code: float(p.pillar_score) if p.pillar_score else 0 for p in earliest_pillars}
-    l_map = {p.pillar_code: float(p.pillar_score) if p.pillar_score else 0 for p in latest_pillars}
+    e_map = {code: float(val) if val else 0 for code, val in (earliest_score.contributing_pillars or {}).items()} if earliest_score else {}
+    l_map = {code: float(val) if val else 0 for code, val in (latest_score.contributing_pillars or {}).items()} if latest_score else {}
 
     changes = []
     for code in sorted(set(list(e_map.keys()) + list(l_map.keys()))):
@@ -1672,6 +1815,10 @@ def get_historical_details():
                 'health_score_start': health_start,
                 'health_score_end': health_end,
                 'health_delta': health_delta,
+                # No data path produced a pillar-score snapshot for this
+                # account/window: literal UNAVAILABLE, never a silent
+                # default masquerading as a real health score.
+                'health_score_provenance': vp.DERIVED if health_end is not None else vp.UNAVAILABLE,
                 'expansion_signals': [_serialize_signal(s) for s in expansion_signals[:5]],
                 'churn_signals': [_serialize_signal(s) for s in churn_signals[:5]],
                 'signal_summary': {

@@ -37,7 +37,7 @@ interface ROISummary {
   cost_savings: number;
   compounding_effect: number;
   roi_pct: number;
-  payback_months: number;
+  payback_months: number | null;
   improvement_pct_avg: number;
 }
 
@@ -467,7 +467,7 @@ const OutcomePanel: React.FC<{
         {/* Investment vs payback */}
         <div className="mt-4 flex items-center justify-between text-xs text-gray-500 bg-gray-50 rounded-lg px-4 py-2.5">
           <span>Investment: {fmtDollar(s.total_investment)}</span>
-          <span>Payback: {s.payback_months < 100 ? `${s.payback_months.toFixed(1)} months` : 'N/A'}</span>
+          <span>Payback: {s.payback_months != null && s.payback_months < 100 ? `${s.payback_months.toFixed(1)} months` : 'N/A'}</span>
           <span>Avg improvement: {s.improvement_pct_avg.toFixed(1)}%</span>
         </div>
       </div>

@@ -374,7 +374,7 @@ class ROISummary:
     cost_savings: float
     compounding_effect: float
     roi_pct: float
-    payback_months: float
+    payback_months: Optional[float]  # None when there's no realized/projected impact to divide by (not Infinity — not valid JSON)
     improvement_pct_avg: float
 
 
@@ -548,7 +548,7 @@ def calculate_historical_roi(
 
     # ROI
     roi_pct = ((total_impact - investment) / investment * 100) if investment > 0 else 0
-    payback_months = (investment / (total_impact / 12)) if total_impact > 0 else float('inf')
+    payback_months = (investment / (total_impact / 12)) if total_impact > 0 else None
     avg_improvement = sum(improvement_pcts) / len(improvement_pcts) if improvement_pcts else 0
 
     # Sort by dollar impact for top outcomes
@@ -572,7 +572,7 @@ def calculate_historical_roi(
         cost_savings=round(total_cost_savings, 2),
         compounding_effect=round(compounding, 2),
         roi_pct=round(roi_pct, 1),
-        payback_months=round(payback_months, 1),
+        payback_months=round(payback_months, 1) if payback_months is not None else None,
         improvement_pct_avg=round(avg_improvement, 2),
     )
 
@@ -836,11 +836,29 @@ def calculate_forward_roi(
         cs_pct = total_cs / (total_cs + total_plat) if (total_cs + total_plat) > 0 else 0.80
         plat_pct = 1 - cs_pct
 
-    # ── ARR-proportional investment cap (1.5% max) ──
+    # ── ARR-proportional investment cap (1.5% of $10M baseline, sub-linear) ──
     # CS investment should be 1–2.5% of ARR per industry benchmarks.
-    # Cap at 1.5% to show realistic ROI (not inflated costs).
+    # Cap at 1.5% of a $10M account to show realistic ROI (not inflated costs).
+    #
+    # NOTE: this cap binds for essentially every real account (the benchmark
+    # investment estimate above is consistently several times higher than any
+    # ARR-proportional ceiling), so whatever shape this cap uses effectively
+    # *becomes* the investment figure. A pure `account_arr * 0.015` cap is
+    # exactly linear in ARR — and since dollar impact (above) is also exactly
+    # linear in ARR (`arr_scale = account_arr / 10_000_000`), a linear cap
+    # cancels perfectly against a linear impact: roi_pct = (impact -
+    # investment) / investment collapses to a single ARR-independent constant
+    # for every account, no matter how different their ARR. That is precisely
+    # the "forward-projected ROI% is a constant across all accounts" bug
+    # (tracer finding, Aug 2026: 2577.6% for every account, $900K-$12.5M ARR).
+    #
+    # Use the same sub-linear sqrt(ARR) scaling as the uncapped benchmark
+    # estimate above (inv_arr_scale) so capped and uncapped investment share
+    # one consistent shape, and so capping no longer erases per-account ROI
+    # differentiation. Anchored so the cap is unchanged at the $10M baseline.
     if account_arr and account_arr > 0:
-        max_investment = account_arr * 0.015
+        cap_arr_scale = (account_arr / 10_000_000) ** 0.5
+        max_investment = 150_000 * cap_arr_scale
         if investment > max_investment:
             investment = max_investment
 
@@ -850,7 +868,7 @@ def calculate_forward_roi(
 
     # ROI
     roi_pct = ((total_impact - investment) / investment * 100) if investment > 0 else 0
-    payback_months = (investment / (total_impact / (projection_months))) if total_impact > 0 else float('inf')
+    payback_months = (investment / (total_impact / (projection_months))) if total_impact > 0 else None
     all_pcts = list(improvement_pcts_map.values())
     avg_improvement = sum(all_pcts) / len(all_pcts) if all_pcts else 0
 
@@ -876,7 +894,7 @@ def calculate_forward_roi(
         cost_savings=round(total_cost_savings, 2),
         compounding_effect=round(compounding, 2),
         roi_pct=round(roi_pct, 1),
-        payback_months=round(payback_months, 1),
+        payback_months=round(payback_months, 1) if payback_months is not None else None,
         improvement_pct_avg=round(avg_improvement, 2),
     )
 
