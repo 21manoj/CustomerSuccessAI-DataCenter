@@ -163,10 +163,36 @@ DC2S_PILLAR_NAMES = set(DC2S_PILLARS.keys())  # {'P1', 'P2', 'P3', 'P4', 'P5'}
 ALL_DC2S_KPI_CODES = list(DC2S_KPIS.keys())  # 38 KPIs
 
 
-def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
+def _get_valid_pillar_names(vertical: str) -> Tuple[Optional[set], Optional[str]]:
+    """Fail-closed lookup of a vertical's valid pillar codes via vertical_registry.
+
+    Returns (pillar_names_set, None) on success, or (None, error_message) if the
+    vertical's catalog can't be loaded. Never silently falls back to dc2_s.
+    """
+    try:
+        from utils.vertical_registry import get_pillars
+        return (set(get_pillars(vertical).keys()), None)
+    except Exception as e:
+        return (None, f"could not load pillar catalog for vertical '{vertical}': {e}")
+
+
+def _get_valid_kpi_codes(vertical: str) -> Tuple[Optional[dict], Optional[str]]:
+    """Fail-closed lookup of a vertical's valid KPI codes via vertical_registry.
+
+    Returns (kpis_dict, None) on success, or (None, error_message) if the
+    vertical's catalog can't be loaded. Never silently falls back to dc2_s.
+    """
+    try:
+        from utils.vertical_registry import get_kpis
+        return (get_kpis(vertical), None)
+    except Exception as e:
+        return (None, f"could not load KPI catalog for vertical '{vertical}': {e}")
+
+
+def validate_dc2s_pillar_weights(weights: dict, vertical: str = 'dc2_s') -> Tuple[bool, Optional[str]]:
     """
     Validate custom pillar weights for /complete request.
-    Checks: sum to 1.0, valid pillar names, non-negative.
+    Checks: sum to 1.0, valid pillar names for the given vertical, non-negative.
     Supports partial pillar sets (e.g., 3 pillars for a new customer).
     Returns (True, None) if valid, (False, error_message) otherwise.
     """
@@ -174,13 +200,16 @@ def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
         return (True, None)
     if not isinstance(weights, dict):
         return (False, "weights must be a dict")
+    valid_pillar_names, err = _get_valid_pillar_names(vertical)
+    if err:
+        return (False, err)
     total = sum(float(v) for v in weights.values())
     if abs(total - 1.0) > 0.01:
         return (False, f"weights sum to {total:.4f}, expected 1.0")
-    # Allow subset of pillars, but all must be valid pillar names
-    extra = set(weights.keys()) - DC2S_PILLAR_NAMES
+    # Allow subset of pillars, but all must be valid pillar names for this vertical
+    extra = set(weights.keys()) - valid_pillar_names
     if extra:
-        return (False, f"unknown pillar names: {extra}; valid pillars are {DC2S_PILLAR_NAMES}")
+        return (False, f"unknown pillar names: {extra}; valid pillars for vertical '{vertical}' are {valid_pillar_names}")
     if len(weights) < 1:
         return (False, "at least 1 pillar weight required")
     if any(float(v) < 0 for v in weights.values()):
@@ -188,20 +217,24 @@ def validate_dc2s_pillar_weights(weights: dict) -> Tuple[bool, Optional[str]]:
     return (True, None)
 
 
-def validate_dc2s_kpi_weights(kpi_weights: dict) -> Tuple[bool, Optional[str]]:
+def validate_dc2s_kpi_weights(kpi_weights: dict, vertical: str = 'dc2_s') -> Tuple[bool, Optional[str]]:
     """
     Validate custom KPI-level (L1) weights for /complete request.
     Expected format: {"P1": {"P1-KPI1": 0.20, "P1-KPI2": 0.15, ...}, "P2": {...}, ...}
-    Each pillar's KPI weights should sum to ~1.0.
+    Each pillar's KPI weights should sum to ~1.0. Pillar/KPI codes are validated
+    against the given vertical's catalog (not a hardcoded dc2_s list).
     Returns (True, None) if valid, (False, error_message) otherwise.
     """
     if not kpi_weights:
         return (True, None)
     if not isinstance(kpi_weights, dict):
         return (False, "kpi_weights must be a dict")
+    valid_pillar_names, err = _get_valid_pillar_names(vertical)
+    if err:
+        return (False, err)
     for pillar_key, kpi_map in kpi_weights.items():
-        if pillar_key not in DC2S_PILLAR_NAMES:
-            return (False, f"unknown pillar '{pillar_key}' in kpi_weights; valid: {DC2S_PILLAR_NAMES}")
+        if pillar_key not in valid_pillar_names:
+            return (False, f"unknown pillar '{pillar_key}' in kpi_weights; valid for vertical '{vertical}': {valid_pillar_names}")
         if not isinstance(kpi_map, dict):
             return (False, f"kpi_weights['{pillar_key}'] must be a dict of kpi_code -> weight")
         if not kpi_map:
@@ -1700,13 +1733,18 @@ def complete_onboarding():
         return jsonify({"error": "customer_name required"}), 400
     
     # GAP 1.6: Validate custom weights before proceeding
+    # Validated against the REQUESTED vertical's own pillar/KPI catalog (via
+    # vertical_registry), not a hardcoded dc2_s list — see Aug 21 2026
+    # vertical-coupling audit. A non-dc2_s customer (saas_premium,
+    # datacenter_v1, healthcare_provider) submitting valid weights for their
+    # own vertical must not be rejected as "unknown pillar/KPI code".
     if custom_weights:
-        ok, err = validate_dc2s_pillar_weights(custom_weights)
+        ok, err = validate_dc2s_pillar_weights(custom_weights, vertical)
         if not ok:
             return jsonify({"error": f"Invalid pillar weights: {err}"}), 400
 
     if custom_kpi_weights:
-        ok, err = validate_dc2s_kpi_weights(custom_kpi_weights)
+        ok, err = validate_dc2s_kpi_weights(custom_kpi_weights, vertical)
         if not ok:
             return jsonify({"error": f"Invalid KPI weights: {err}"}), 400
 
@@ -1714,9 +1752,12 @@ def complete_onboarding():
     if enabled_pillars:
         if not isinstance(enabled_pillars, list):
             return jsonify({"error": "enabled_pillars must be a list of pillar codes (e.g. ['P1', 'P3', 'P5'])"}), 400
-        invalid = set(enabled_pillars) - DC2S_PILLAR_NAMES
+        valid_pillar_names, pillar_catalog_err = _get_valid_pillar_names(vertical)
+        if pillar_catalog_err:
+            return jsonify({"error": pillar_catalog_err}), 400
+        invalid = set(enabled_pillars) - valid_pillar_names
         if invalid:
-            return jsonify({"error": f"Unknown pillars: {invalid}; valid: {sorted(DC2S_PILLAR_NAMES)}"}), 400
+            return jsonify({"error": f"Unknown pillars: {invalid}; valid for vertical '{vertical}': {sorted(valid_pillar_names)}"}), 400
         if len(enabled_pillars) < 1:
             return jsonify({"error": "At least 1 pillar required in enabled_pillars"}), 400
 
@@ -1724,7 +1765,10 @@ def complete_onboarding():
     if enabled_kpis_input:
         if not isinstance(enabled_kpis_input, list):
             return jsonify({"error": "enabled_kpis must be a list of KPI codes (e.g. ['P1-KPI1', 'P1-KPI2'])"}), 400
-        invalid_kpis = [k for k in enabled_kpis_input if k not in DC2S_KPIS]
+        valid_kpis, kpi_catalog_err = _get_valid_kpi_codes(vertical)
+        if kpi_catalog_err:
+            return jsonify({"error": kpi_catalog_err}), 400
+        invalid_kpis = [k for k in enabled_kpis_input if k not in valid_kpis]
         if invalid_kpis:
             return jsonify({"error": f"Unknown KPI codes: {invalid_kpis}; see KPI catalog for valid codes"}), 400
         if len(enabled_kpis_input) < 1:
@@ -2145,7 +2189,7 @@ def complete_onboarding():
 
         if onboarding_mode != 'custom' and generator_script.exists():
             # Build command for new config-aware generator
-            data_dir = Path(f'verticals/customer{customer_id}-dc2_s/data')
+            data_dir = Path(f'verticals/customer{customer_id}-{vertical}/data')
             cmd = [
                 'python3',
                 str(generator_script),
@@ -2174,7 +2218,7 @@ def complete_onboarding():
                 csv_files_generated = True
                 current_app.logger.info(f"✅ Generated CSV files for customer {customer_id}")
                 # Verify CSV files were created with correct account IDs
-                data_dir = Path(f'verticals/customer{customer_id}-dc2_s/data')
+                data_dir = Path(f'verticals/customer{customer_id}-{vertical}/data')
                 kpi_file = data_dir / 'kpi_measurements.csv'
                 if kpi_file.exists():
                     import pandas as pd
