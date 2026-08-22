@@ -119,6 +119,19 @@ def _load_playbook_config_for_vertical(vertical: str):
     module level so callers without the MCP module loaded (HTTP routes,
     background jobs) get the same routing. Falls back to DC2S only when
     nothing matches — never silently for `saas_premium`.
+
+    NOTE (vertical-registry Phase 5 audit, Aug 22 2026): the two
+    per-vertical PLAYBOOK_CONFIG imports below are flagged by
+    tests/test_cross_vertical_import_inventory.py's baseline and were
+    deliberately left as direct imports rather than routed through
+    utils.vertical_registry — that registry only has accessors for
+    KPI/pillar catalogs and pillar_roles, not playbook config, and the
+    existing mcp_server/common.py::_get_playbook_config (out of scope for
+    this phase) is the canonical version of this exact dispatch. Building a
+    shared registry accessor here would risk diverging from that canonical
+    copy rather than converging on it — deferred to Phase 3 of the plan
+    ("Retire POWER_OF_1_PILLAR_MAPS/Path-0 ad-hoc maps"), which is scoped to
+    resolve this class of duplication properly.
     """
     from utils.vertical_registry import normalize_vertical
     v = normalize_vertical(vertical or 'dc2_s')

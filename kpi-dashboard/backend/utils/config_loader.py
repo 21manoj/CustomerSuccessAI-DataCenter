@@ -30,11 +30,17 @@ class ConfigLoader:
                 Path(__file__).parent.parent / 'verticals/dc2_s/kpi_definitions.py',
             ]
             
-            # For now, we'll use the kpi_definitions.py approach
-            # Import the DC2_S KPI definitions
+            # For now, we'll use the kpi_definitions.py approach.
+            # This loader is DC2_S-only (see module docstring), so the
+            # literal 'dc2_s' arg is correct. Routed through
+            # utils.vertical_registry rather than a direct
+            # verticals.dc2_s.kpi_definitions import — parity verified
+            # (get_pillars/get_kpis('dc2_s') == DC2S_PILLARS/DC2S_KPIS).
             try:
-                from verticals.dc2_s.kpi_definitions import DC2S_KPIS, DC2S_PILLARS
-                
+                from utils.vertical_registry import get_pillars, get_kpis
+                DC2S_PILLARS = get_pillars('dc2_s')
+                DC2S_KPIS = get_kpis('dc2_s')
+
                 # Convert to expected format
                 self._vertical_definition = {
                     'pillars': [
@@ -61,7 +67,7 @@ class ConfigLoader:
                         for kpi_code, kpi_info in DC2S_KPIS.items()
                     ]
                 }
-            except ImportError:
+            except Exception:
                 # Fallback to defaults if import fails
                 self._vertical_definition = {
                     'pillars': [
@@ -116,9 +122,11 @@ class ConfigLoader:
         # If no pillar weights found from config, use canonical defaults
         if len(weights) == 0:
             try:
-                from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-                weights = {p: v.get('weight_l2', 0.20) for p, v in DC2S_PILLARS.items()}
-            except ImportError:
+                # Loader is DC2_S-only (see module docstring); routed through
+                # vertical_registry instead of a direct verticals.dc2_s import.
+                from utils.vertical_registry import get_pillars
+                weights = {p: v.get('weight_l2', 0.20) for p, v in get_pillars('dc2_s').items()}
+            except Exception:
                 weights = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
         # Note: partial pillar sets (e.g., 3 pillars) are valid — don't override
         

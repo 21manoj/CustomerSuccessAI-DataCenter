@@ -177,10 +177,23 @@ def _scan_violations():
 # ──────────────────────────────────────────────────────────────────────────
 # Baseline: the exact current inventory, captured 2026-08-21 by running the
 # scan above against this branch (feat/vertical-datacenter-v1) after the
-# day's fixes (commits 3d85e74f2..6bad52072) had already landed. 85 sites
-# across 44 files. This is a snapshot, not a target — Phase 5 clears it
-# incrementally; entries disappearing (a site got fixed) never fails this
-# test, only NEW entries do.
+# day's fixes (commits 3d85e74f2..6bad52072) had already landed. Originally
+# 85 sites across 44 files. This is a snapshot, not a target — Phase 5
+# clears it incrementally; entries disappearing (a site got fixed) never
+# fails this test, only NEW entries do.
+#
+# Phase 5 update (Aug 22 2026): 7 sites cleared — dc2s_config_api.py (3),
+# utils/config_loader.py (2), wizards/wizard_c_weight_calibrator_db.py (2) —
+# all swapped for utils.vertical_registry.get_pillars/get_kpis. See
+# tests/test_phase5_import_inventory_fixes.py for the parity + behavioral
+# proofs (that new test file itself adds 1 legitimate ground-truth-import
+# site, same pattern as test_scorer_parity.py below). Net: 79 sites across
+# 44 files. playbook_cost_bridge.py's 2 sites
+# (PLAYBOOK_CONFIG) were reviewed and deliberately left — no generic
+# registry accessor exists for playbook config (only KPI/pillar catalogs),
+# and the code already correctly if/elif-gates per vertical, mirroring the
+# canonical (out-of-scope) mcp_server/common.py::_get_playbook_config;
+# deferred to Phase 3 of the plan.
 # ──────────────────────────────────────────────────────────────────────────
 BASELINE = {
     ('_ask_ai_helpers.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
@@ -203,8 +216,6 @@ BASELINE = {
     ('ask_ai_tools.py', 'verticals.dc2_s.api_routes', ('_normalize_kpi_code_for_health', '_compute_impact_score', '_compute_effort_score', '_determine_urgency', '_get_roi_context')): 1,
     ('customer_playbook_api.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
     ('data_quality_api.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
-    ('dc2s_config_api.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 2,
-    ('dc2s_config_api.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
     ('debug_import.py', 'verticals.dc2_s', ('DC2S_KPIS',)): 1,
     ('journey_api_dynamic.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
     ('mcp_server/common.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
@@ -244,11 +255,13 @@ BASELINE = {
     ('tests/test_phase0_1_2.py', 'verticals.dc2_s.vertical_config', ('determine_customer_phase',)): 4,
     ('tests/test_scorer_parity.py', 'verticals.dc2_s.api_routes', ('_score_kpi_value',)): 1,
     ('tests/test_scorer_parity.py', 'verticals.dc2_s.api_routes', ('calculate_kpi_health',)): 1,
+    # Same pattern as test_scorer_parity.py above: a direct DC2S_PILLARS
+    # import used as the ground-truth comparator to PROVE the Phase 5 fix
+    # (get_pillars('dc2_s')) is byte-identical — not a coupling bug.
+    ('tests/test_phase5_import_inventory_fixes.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
     ('tests/test_vertical_playbook_routing.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG',)): 2,
     ('tests/test_vertical_playbook_routing.py', 'verticals.saas_premium.vertical_config', ('should_trigger_playbook',)): 1,
     ('utils/account_config_manager.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS', 'DC2S_PILLARS')): 1,
-    ('utils/config_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS', 'DC2S_PILLARS')): 1,
-    ('utils/config_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
     ('utils/playbook_lifecycle.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
     ('utils/story_arc_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
     ('utils/vertical_playbook_routing.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
@@ -257,11 +270,9 @@ BASELINE = {
     ('utils/vpcs_dashboard_helpers.py', 'verticals.dc2_s.api_routes', ('get_precalculated_scores',)): 1,
     ('verticals/_template/services/bootstrap_weights_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
     ('verticals/customer295-dc/services/bootstrap_weights_loader.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
-    ('wizards/wizard_c_weight_calibrator_db.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_KPIS',)): 1,
-    ('wizards/wizard_c_weight_calibrator_db.py', 'verticals.dc2_s.kpi_definitions', ('DC2S_PILLARS',)): 1,
 }
 
-assert sum(BASELINE.values()) == 85, (
+assert sum(BASELINE.values()) == 79, (
     "BASELINE literal was hand-edited inconsistently with its own comment "
     "— fix the count or the entries."
 )

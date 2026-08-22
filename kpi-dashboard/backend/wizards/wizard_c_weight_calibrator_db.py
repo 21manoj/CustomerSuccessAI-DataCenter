@@ -38,10 +38,16 @@ def run_wizard_c(customer_id: int) -> dict:
     try:
         from mcp_server.common import get_kpi_definitions
     except ImportError:
-        # Fallback: load directly from vertical module
+        # Fallback: load via the vertical registry (not a direct
+        # verticals.dc2_s import) so this fallback resolves the CALLER's
+        # vertical correctly instead of always returning DC2S_KPIS
+        # regardless of the `vertical` argument — the previous version
+        # silently mis-served non-dc2_s customers whenever this rare
+        # ImportError path was hit. Parity for dc2_s is unaffected
+        # (get_kpis('dc2_s') == DC2S_KPIS).
         def get_kpi_definitions(vertical):
-            from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-            return DC2S_KPIS
+            from utils.vertical_registry import get_kpis
+            return get_kpis(vertical)
 
     # ------------------------------------------------------------------
     # 0. Resolve vertical and load base weights from kpi_definitions
@@ -67,13 +73,20 @@ def run_wizard_c(customer_id: int) -> dict:
     pillar_codes = sorted(set(kpi_to_pillar.values()))
     try:
         if vertical == 'dc2_s':
-            from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+            # Routed through vertical_registry instead of a direct
+            # verticals.dc2_s.kpi_definitions import. Behavior-preserving:
+            # only the dc2_s branch is touched, and get_pillars('dc2_s') is
+            # verified equal to DC2S_PILLARS. The non-dc2_s branch
+            # (equal-weight fallback, including saas_premium) is left exactly
+            # as-is — extending catalog-based weights to other verticals here
+            # would be a behavior change out of scope for this fix.
+            from utils.vertical_registry import get_pillars
             base_l2 = {pid: info.get('weight_l2', info.get('weight', 0.2))
-                       for pid, info in DC2S_PILLARS.items()}
+                       for pid, info in get_pillars('dc2_s').items()}
         else:
             # Equal weights as fallback
             base_l2 = {p: 1.0 / len(pillar_codes) for p in pillar_codes}
-    except ImportError:
+    except Exception:
         base_l2 = {p: 1.0 / len(pillar_codes) for p in pillar_codes}
 
     # ------------------------------------------------------------------

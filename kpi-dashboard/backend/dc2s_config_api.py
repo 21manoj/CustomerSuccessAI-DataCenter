@@ -28,14 +28,19 @@ BOOTSTRAP_PILLAR_TO_CODE = {
     'P1': 'P1', 'P2': 'P2', 'P3': 'P3', 'P4': 'P4', 'P5': 'P5',
 }
 
-# Load canonical pillar weights from kpi_definitions (single source of truth)
+# Load canonical pillar weights from kpi_definitions (single source of truth).
+# Routed through utils.vertical_registry rather than importing
+# verticals.dc2_s.kpi_definitions directly — this blueprint is scoped to the
+# dc2_s vertical only (url_prefix='/api/dc2s/config'), so the literal 'dc2_s'
+# argument is correct, not a hardcoded fallback. Parity with the direct
+# DC2S_PILLARS import verified: get_pillars('dc2_s') == DC2S_PILLARS.
 try:
-    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+    from utils.vertical_registry import get_pillars
     DEFAULT_PILLAR_WEIGHTS = {
         pid: info.get('weight_l2', 0.20)
-        for pid, info in DC2S_PILLARS.items()
+        for pid, info in get_pillars('dc2_s').items()
     }
-except ImportError:
+except Exception:
     DEFAULT_PILLAR_WEIGHTS = {"P1": 0.15, "P2": 0.20, "P3": 0.25, "P4": 0.15, "P5": 0.25}
 
 
@@ -119,8 +124,12 @@ def get_config():
     kpi_definitions = config.dc2s_kpi_definitions or {}
     if not kpi_definitions:
         try:
-            from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-            for kpi_code, kpi_info in DC2S_KPIS.items():
+            # This branch is only reached once config.vertical == 'dc2_s' is
+            # confirmed above, so the literal 'dc2_s' arg is correct — not a
+            # hardcoded default. Routed through vertical_registry rather than
+            # a direct verticals.dc2_s.kpi_definitions import.
+            from utils.vertical_registry import get_kpis
+            for kpi_code, kpi_info in get_kpis('dc2_s').items():
                 pillar = kpi_info.get('pillar', '')
                 target = kpi_info.get('target', {})
                 kpi_definitions[kpi_code] = {
@@ -179,8 +188,12 @@ def get_dc2s_kpi_ranges():
     (legacy SaaS table) for DC2_S.
     """
     try:
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    except ImportError as e:
+        # This endpoint is explicitly DC2_S-only (see docstring above), so
+        # the literal 'dc2_s' arg is correct. Routed through vertical_registry
+        # rather than a direct verticals.dc2_s.kpi_definitions import.
+        from utils.vertical_registry import get_kpis
+        DC2S_KPIS = get_kpis('dc2_s')
+    except Exception as e:
         logger.error(f"DC2_S KPI definitions not available: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
