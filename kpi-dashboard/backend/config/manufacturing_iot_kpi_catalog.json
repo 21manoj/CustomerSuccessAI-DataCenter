@@ -1,4 +1,5 @@
 {
+  "vertical": "manufacturing_iot",
   "pillars": {
     "P1": { "name": "Equipment Uptime & Reliability", "weight_l2": 0.25 },
     "P2": { "name": "Production Throughput", "weight_l2": 0.2 },

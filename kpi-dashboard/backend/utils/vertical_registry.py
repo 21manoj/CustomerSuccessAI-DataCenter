@@ -215,13 +215,10 @@ def _load_from_json_catalog(vertical: str) -> Optional[Tuple[Dict, Dict]]:
     """
     path = _find_json_catalog_path(vertical)
     if path:
-        try:
-            from utils.generic_scorer import load_catalog_from_json
-            kpis, pillars = load_catalog_from_json(path)
-            log.info(f"vertical_registry: loaded {vertical} from JSON catalog: {path} ({len(kpis)} KPIs)")
-            return kpis, pillars
-        except Exception as e:
-            log.warning(f"vertical_registry: failed to load JSON catalog {path}: {e}")
+        from utils.generic_scorer import load_catalog_from_json
+        kpis, pillars = load_catalog_from_json(path, expected_vertical=vertical)
+        log.info(f"vertical_registry: loaded {vertical} from JSON catalog: {path} ({len(kpis)} KPIs)")
+        return kpis, pillars
     return None
 
 

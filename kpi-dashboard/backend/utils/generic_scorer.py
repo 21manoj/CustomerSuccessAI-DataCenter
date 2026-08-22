@@ -199,12 +199,13 @@ def score_account_health(
     return overall_health, pillar_averages
 
 
-def load_catalog_from_json(json_path: str) -> tuple:
+def load_catalog_from_json(json_path: str, expected_vertical: str = None) -> tuple:
     """
     Load KPI and pillar catalogs from a JSON file.
 
     Expected JSON structure:
     {
+        "vertical": "datacenter_v1",
         "pillars": {"P1": {"name": "...", "weight_l2": 0.15}, ...},
         "kpis": {"P1-KPI1": {"name": "...", "pillar": "P1", "weight_l1": 0.2, "ranges": {...}}, ...}
     }
@@ -212,12 +213,34 @@ def load_catalog_from_json(json_path: str) -> tuple:
     Also supports flat KPI-only format (pillar defs extracted from KPIs):
     {"P1-KPI1": {"pillar": "P1", "weight_l1": 0.2, ...}, ...}
 
+    Args:
+        expected_vertical: if given and the file declares a "vertical" field,
+            they must match. Catches a catalog file being copied to a new
+            vertical's filename without its content actually being updated
+            for that vertical — the general form of the Aug 21 2026
+            vertical-coupling audit's Finding 1 (get_kpi_catalog serving
+            dc2_s's content while reporting its own vertical as
+            datacenter_v1). The path itself is already name-derived
+            (utils.vertical_registry._find_json_catalog_path), so this is a
+            second, independent check on the content, not the filename.
+            No-op for files with no "vertical" field (not every catalog
+            declares one) or when expected_vertical isn't given.
+
     Returns:
         (kpi_catalog, pillar_catalog) tuple of dicts
     """
     import json
     with open(json_path, 'r') as f:
         data = json.load(f)
+
+    declared_vertical = data.get('vertical') if isinstance(data, dict) else None
+    if expected_vertical is not None and declared_vertical is not None \
+            and declared_vertical != expected_vertical:
+        raise ValueError(
+            f"Catalog file {json_path} declares vertical={declared_vertical!r} "
+            f"but was loaded to resolve vertical={expected_vertical!r} — "
+            f"refusing to serve mismatched content under the wrong vertical's name."
+        )
 
     if 'kpis' in data and 'pillars' in data:
         return data['kpis'], data['pillars']
