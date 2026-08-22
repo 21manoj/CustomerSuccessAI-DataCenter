@@ -57,7 +57,65 @@ VERTICAL_CONTEXT = {
         'pillars': 'P1 Product Adoption & Usage, P2 Customer Engagement, P3 Customer Sentiment & Support, P4 Partner & Ecosystem Health, P5 Revenue & Growth',
         'key_terms': 'DAU, feature adoption, onboarding, NPS, CSAT, churn, expansion, upsell, seats',
     },
+    # Aug 21 2026 vertical-coupling audit (Bug 2): sourced from
+    # config/datacenter_v1_kpi_catalog.json's own 'description'/pillars/KPIs —
+    # not hand-guessed — so a datacenter_v1 tenant's signals stop being
+    # enriched against dc2_s's rack/thermal/colocation framing.
+    'datacenter_v1': {
+        'name': 'GPU-Rental Neocloud',
+        'description': 'GPU-rental neocloud — rent NVIDIA GPUs hourly / reserved clusters; '
+                        'health optimized for realized revenue x utilization x goodput x sellable power',
+        'pillars': 'P1 Revenue & Unit Economics, P2 Fleet Utilization & Goodput, '
+                   'P3 Reliability & SLA Delivery, P4 Power & Facility, '
+                   'P5 Commercial & Expansion, P6 Provisioning Velocity',
+        'key_terms': 'GPU-hour, utilization, goodput, reserved cluster, SLA attainment, '
+                     'fabric error rate, stranded power, PUE, time-to-first-job, silicon refresh',
+    },
+    # Sourced from config/healthcare_provider_kpi_catalog.json's own pillars/KPIs.
+    'healthcare_provider': {
+        'name': 'Healthcare Provider',
+        'description': 'Patient care delivery, clinical operations, provider satisfaction, '
+                        'regulatory compliance',
+        'pillars': 'P1 Patient Outcomes, P2 Operational Efficiency, '
+                   'P3 Provider Satisfaction, P4 Compliance & Risk',
+        'key_terms': 'patient satisfaction, readmission rate, treatment adherence, '
+                     'bed utilization, wait time, staff-to-patient ratio, provider NPS, '
+                     'EHR uptime, HIPAA compliance, incident response',
+    },
 }
+
+
+def _build_generic_vertical_context(vertical: str) -> Dict:
+    """Fail-closed fallback for a registered vertical with no curated
+    VERTICAL_CONTEXT entry yet — derives context from the vertical's own
+    KPI catalog (via vertical_registry) instead of silently borrowing
+    dc2_s's rack/GPU-hardware framing (Aug 21 2026 vertical-coupling audit,
+    Bug 2). If the catalog itself can't be loaded, returns a neutral,
+    vertical-agnostic stub — never dc2_s's context.
+    """
+    try:
+        from utils.vertical_registry import get_pillars, get_kpis
+        pillars = get_pillars(vertical) or {}
+        kpis = get_kpis(vertical) or {}
+        pillar_str = ', '.join(
+            f"{pid} {pdef.get('name', pid)}" for pid, pdef in sorted(pillars.items())
+        ) or '(no pillars registered)'
+        kpi_names = [kdef.get('name') for kdef in kpis.values() if kdef.get('name')]
+        terms_str = ', '.join(kpi_names[:12]) or '(no KPIs registered)'
+        return {
+            'name': vertical.replace('_', ' ').title(),
+            'description': f'{vertical} vertical (auto-derived from its KPI catalog)',
+            'pillars': pillar_str,
+            'key_terms': terms_str,
+        }
+    except Exception as e:
+        logger.warning("QSIM enrichment: could not derive vertical context for %r: %s", vertical, e)
+        return {
+            'name': vertical or 'Unknown Vertical',
+            'description': 'No vertical-specific context available',
+            'pillars': '(unavailable)',
+            'key_terms': '(unavailable)',
+        }
 
 ENRICHMENT_PROMPT = """You are a B2B Customer Success signal extraction engine for the {vertical_name} vertical.
 
@@ -288,7 +346,10 @@ def enrich_signal(
     )
 
     # Step 2: Build vertical-aware prompt WITH Qdrant context
-    v_ctx = VERTICAL_CONTEXT.get(vertical, VERTICAL_CONTEXT['dc2_s'])
+    # Aug 21 2026 vertical-coupling audit (Bug 2): used to fall back to
+    # dc2_s's context for ANY unrecognized vertical — now derives a real
+    # context from that vertical's own KPI catalog instead.
+    v_ctx = VERTICAL_CONTEXT.get(vertical) or _build_generic_vertical_context(vertical)
     prompt = ENRICHMENT_PROMPT.format(
         vertical_name=v_ctx['name'],
         vertical_description=v_ctx['description'],
