@@ -120,6 +120,17 @@ with app.app_context():
     except Exception as _e:
         print(f"   ⚠️  qualitative_signals migration skipped: {_e}")
 
+    # Idempotent migration: tenant-deletion cascade FKs. Customer deletion
+    # never cascaded to the context graph (or most tenant tables) — that's
+    # how 60% of context_edges became orphans of deleted customers before
+    # the 2026-08-24 cleanup. DB-level ON DELETE CASCADE governs every
+    # deletion path, including ad-hoc scripts that bypass the ORM.
+    try:
+        from migrations.add_tenant_cascade_fks import run_migration as _run_cascade_migration
+        _run_cascade_migration()
+    except Exception as _e:
+        print(f"   ⚠️  tenant-cascade-FK migration skipped: {_e}")
+
 # Initialize Flask-Session (database-backed sessions)
 app.config['SESSION_TYPE'] = 'sqlalchemy'
 app.config['SESSION_SQLALCHEMY'] = db
