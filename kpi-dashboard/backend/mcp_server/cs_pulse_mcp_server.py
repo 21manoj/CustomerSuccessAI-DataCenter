@@ -531,17 +531,28 @@ def get_kpi_catalog(customer_id: int = 0) -> dict:
     No authentication required.
     """
     _check_mcp_enabled()
-    from mcp_server.auth import require_read_key
-    require_read_key('get_kpi_catalog')
+    from mcp_server.auth import require_read_key, require_scoped_read
     app = _get_flask_app()
 
     with app.app_context():
         if customer_id and int(customer_id) > 0:
+            # A customer_id was passed → this is a tenant-scoped read, and it
+            # MUST go through the tenant-isolation gate. require_read_key alone
+            # (which only checks "some valid key exists") let a key scoped to
+            # customer A read customer B's catalog — it's documented as being
+            # for discovery tools with NO customer_id, which this branch is not
+            # (tenant-scoping leak, 2026-08-24 gate sweep; get_kpi_catalog was
+            # the one LEAK in a 28-tool enforcement matrix).
+            require_scoped_read('get_kpi_catalog', int(customer_id))
             # Explicit customer_id: resolution failure must surface, not
             # silently serve DC2S's catalog under this customer's name.
             vertical = _resolve_customer_vertical(int(customer_id))
         else:
-            # No customer context given — DC2S platform defaults per docstring.
+            # No customer context — genuine discovery flow (prospect asking
+            # "what does dc2_s support"). Light gate: some valid key must
+            # exist, but no tenant to scope to.
+            require_read_key('get_kpi_catalog')
+            # DC2S platform defaults per docstring.
             vertical = 'dc2_s'
 
         kpi_defs = _get_kpi_definitions(vertical)

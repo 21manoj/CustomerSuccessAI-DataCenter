@@ -402,6 +402,22 @@ def require_read_key(tool_name: str, _api_key: str = None):
     )
 
 
+def require_scoped_read(tool_name: str, customer_id: int, _api_key: str = None):
+    """Tenant-isolation gate for a read tool that DOES take a customer_id.
+
+    The correct gate for any tool that reads one tenant's data by
+    customer_id — delegates to _resolve_key (the same path the 21
+    already-correct dashboard/list tools use), which rejects a key scoped
+    to a different customer and lets the server-level key through.
+
+    Distinct from require_read_key, which only checks that *some* valid key
+    exists and is for parameterless discovery tools. Using require_read_key
+    on a customer_id-taking tool was the get_kpi_catalog leak (2026-08-24
+    gate sweep): a key scoped to customer A could read customer B's catalog.
+    """
+    return _resolve_key(customer_id, 'read', _api_key=_api_key)
+
+
 def require_cross_customer_auth(tool_name: str, _api_key: str = None):
     """Enforce SERVER-LEVEL key auth for tools that read across customers
     (portfolio tools: list_portfolio_customers,
