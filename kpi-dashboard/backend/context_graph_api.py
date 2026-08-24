@@ -477,6 +477,7 @@ def graph_portfolio_revenue():
             'revenue_protected': revenue['revenue_protected'],
             'expansion_pipeline': revenue['expansion_pipeline'],
             'node_count': revenue['node_count'],
+            'outcome_node_count': revenue.get('outcome_node_count', revenue['node_count']),
             'contributing_signals': signal_count,
         })
 

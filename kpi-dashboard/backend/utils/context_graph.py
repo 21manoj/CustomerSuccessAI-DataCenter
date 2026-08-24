@@ -477,7 +477,18 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     expansion  = _deduplicate_outcome_amounts(outcome_buckets['expansion'])
     lost       = _deduplicate_outcome_amounts(outcome_buckets['lost'])
 
-    node_count = len(outcome_nodes) + (1 if at_risk > 0 else 0)
+    # node_count is NOT a pure node count — the +1 marks the health-derived
+    # at_risk contribution (which comes from _calculate_at_risk_from_health,
+    # not a node). It is LOAD-BEARING: three call sites gate on
+    # `node_count > 0` to mean "does this account have any revenue signal"
+    # (outcome_roi_api.py, portfolio_api.py, outcome_roi_engine.py), and a
+    # freshly-onboarded account has health-at_risk but zero OUTCOME nodes —
+    # dropping the +1 would flip those gates for the new-account case. So it
+    # stays. The reviewer's "7 vs 5" complaint (2026-08-24 item 27) is that
+    # the *name* implies a node count; fixed by exposing the honest deduped
+    # node count separately as outcome_node_count, which the UI renders.
+    outcome_node_count = len(outcome_nodes)
+    node_count = outcome_node_count + (1 if at_risk > 0 else 0)
 
     return {
         'at_risk':    round(at_risk, 2),
@@ -485,7 +496,11 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         'expansion':  round(expansion, 2),
         'lost':       round(lost, 2),
         'net_impact': round(protected + expansion - lost, 2),
+        # Has-revenue-signal indicator (nodes + health at_risk marker) — keep
+        # for the `> 0` gates. Not a node count; see outcome_node_count.
         'node_count': node_count,
+        # Honest count of contributing OUTCOME nodes (deduped). Render this.
+        'outcome_node_count': outcome_node_count,
     }
 
 
@@ -548,7 +563,11 @@ def aggregate_revenue_across_accounts(
         'revenue_at_risk': round(at_risk, 2),
         'revenue_protected': round(protected, 2),
         'expansion_pipeline': round(expansion, 2),
+        # Here node_count IS the deduped OUTCOME node count (this rollup has
+        # no health-derived at_risk marker). outcome_node_count mirrors it so
+        # both revenue APIs expose the same honest field name.
         'node_count': len(outcome_nodes),
+        'outcome_node_count': len(outcome_nodes),
     }
 
 
