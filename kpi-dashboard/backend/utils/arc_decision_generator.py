@@ -118,14 +118,17 @@ def generate_decision_nodes(
     else:
         base_date = datetime.utcnow() - timedelta(days=180)
 
-    # Delete existing wizard_a DECISION nodes for this account (idempotent)
+    # Delete existing template DECISION nodes for this account (idempotent).
+    # Covers both the legacy non-canonical 'wizard_a' source literal and the
+    # canonical 'synthetic' now written — re-running the wizard self-heals
+    # legacy rows the same way the journey builder's edges do.
     deleted = (
         ContextNode.query
-        .filter_by(
-            customer_id=customer_id,
-            account_id=account_id,
-            node_type='DECISION',
-            source='wizard_a',
+        .filter(
+            ContextNode.customer_id == customer_id,
+            ContextNode.account_id == account_id,
+            ContextNode.node_type == 'DECISION',
+            ContextNode.source.in_(['wizard_a', 'synthetic']),
         )
         .delete(synchronize_session='fetch')
     )
@@ -165,13 +168,20 @@ def generate_decision_nodes(
         # Temporal placement: base_date + week offset
         occurred_at = base_date + timedelta(weeks=week)
 
-        # Build properties from manifest decision data
+        # Build properties from manifest decision data.
+        # Node-evidence-gap review (2026-08-24): the template's citations used
+        # to be written under 'evidence_refs' — a key that reads as
+        # corroboration. They are invented narrative ("Reference call: similar
+        # customer achieved...") and manufactured corroboration defeats
+        # exactly the audit a reviewer would run: it doesn't look like a gap,
+        # it looks like diligence. Renamed to narrative_refs; nothing may
+        # ever surface these as evidence.
         properties = {
             'arc_type': resolved_type,
             'arc_phase_id': decision_phase_id,
             'decision_id': decision_id,
             'decision_maker_role': decision.get('decision_maker_role', ''),
-            'evidence_refs': decision.get('evidence_refs', []),
+            'narrative_refs': decision.get('evidence_refs', []),
             'generated_by': 'wizard_a_arc_template',
         }
 
@@ -187,15 +197,18 @@ def generate_decision_nodes(
         if outcome_desc:
             properties['outcome_description'] = outcome_desc
 
-        # Revenue impact
-        revenue_impact = decision.get('revenue_impact')
-        if revenue_impact and revenue_impact > 0:
-            revenue_impact_type = 'at_risk'
-        elif revenue_impact and revenue_impact < 0:
-            revenue_impact_type = 'lost'
-        else:
-            revenue_impact_type = None
-            revenue_impact = None
+        # Revenue: template decisions carry NO revenue_impact (node-evidence-
+        # gap review, 2026-08-24). A DECISION holding revenue_impact is a
+        # category error — an outcome has realized revenue, a decision has a
+        # proposal — and the old code compounded it with a sign error
+        # (positive expansion money typed 'at_risk' unconditionally) and
+        # intra-arc double-counting (the same $5.2M stamped on phase-2 AND
+        # phase-3 of one arc; 22 of 103 live rows repeated an amount already
+        # counted in the same account). The manifest's figure is preserved as
+        # proposal metadata that no aggregator sums.
+        manifest_amount = decision.get('revenue_impact')
+        if manifest_amount:
+            properties['proposed_value'] = manifest_amount
 
         # Enrich title with account name for readability
         enriched_title = f"{title} — {account_name}" if account_name else title
@@ -205,13 +218,15 @@ def generate_decision_nodes(
             account_id=account_id,
             node_type='DECISION',
             node_subtype=subtype,
-            source='wizard_a',
-            tier=1,  # Decisions are permanent
+            # 'synthetic' is the canonical vocabulary for template fabrication
+            # (utils/provenance.py) — the old 'wizard_a' literal was the 5th
+            # non-canonical source found, and it slipped every allow-list.
+            source='synthetic',
+            tier=2,  # template scaffolding, same as the journey arc nodes
             title=enriched_title,
             properties=properties,
-            revenue_impact=revenue_impact,
-            revenue_impact_type=revenue_impact_type,
-            confidence=0.85,
+            # No confidence: 0.85 was a typed constant, not an estimate.
+            confidence=None,
             source_platform='wizard_a',
             source_event_id=f'wizard_a_dec_{resolved_type}_{decision_id}_{account_id}',
             occurred_at=occurred_at,

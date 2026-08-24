@@ -61,7 +61,14 @@ def normalize(value: str | None) -> str:
         return OBSERVED
     if value == 'system':
         return INFERRED
-    return value or OBSERVED
+    # FAIL-CLOSED (node-evidence-gap review, 2026-08-24): this used to be
+    # `return value or OBSERVED` — a NULL source normalized to 'observed',
+    # i.e. trusted by default. That fail-open is how
+    # count_trustworthy_causal_edges admitted every edge for its entire
+    # life: it read `edge.source`, an attribute ContextEdge doesn't even
+    # have, got None, and None became observed. A missing value must never
+    # become the most-trusted value.
+    return value
 
 
 def is_trustworthy(source: str | None) -> bool:
@@ -167,8 +174,19 @@ def count_trustworthy_causal_edges(
     dropped_low_conf = 0
     trustworthy = 0
 
+    # Synthetic-class edge writers per the signed WS-2 adjudication matrix
+    # (cells 4-6: wizard_a template/trajectory edges are inferred-from-
+    # nothing-observed — the class this stat exists to exclude). A NULL
+    # source_platform is also untrusted: fail-closed.
+    #
+    # This block used to read `getattr(e, 'source', None)` — an attribute
+    # ContextEdge does not have — so every edge got None, None normalized
+    # to 'observed', and dropped_synthetic was structurally ALWAYS ZERO:
+    # a guard that could never fire (node-evidence-gap review, 2026-08-24).
+    synthetic_platforms = {'wizard_a'}
     for e in edges:
-        if not is_trustworthy(getattr(e, 'source', None)):
+        sp = getattr(e, 'source_platform', None)
+        if sp is None or sp in synthetic_platforms:
             dropped_synthetic += 1
             continue
         if not is_trustworthy_edge(e, min_confidence=min_confidence):

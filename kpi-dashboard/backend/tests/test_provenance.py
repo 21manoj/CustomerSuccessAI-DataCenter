@@ -51,8 +51,12 @@ class TestNormalize:
         assert normalize(INFERRED) == INFERRED
         assert normalize(SYNTHETIC) == SYNTHETIC
 
-    def test_none_defaults_to_observed(self):
-        assert normalize(None) == OBSERVED
+    def test_none_stays_none_fail_closed(self):
+        # Was `normalize(None) == OBSERVED` — a NULL source trusted by
+        # default. That fail-open let count_trustworthy_causal_edges admit
+        # every edge forever (it read edge.source, an attribute edges don't
+        # have). A missing value must never become the most-trusted value.
+        assert normalize(None) is None
 
     def test_unknown_passes_through(self):
         # So readers can detect drift / new values appearing.
@@ -80,7 +84,8 @@ class TestIsTrustworthy:
 
     def test_none_is_trustworthy(self):
         # None defaults to 'observed' which is trustworthy.
-        assert is_trustworthy(None) is True
+        # Fail-closed (2026-08-24): a missing source is NOT trustworthy.
+        assert is_trustworthy(None) is False
 
 
 class TestTrustworthySources:
@@ -166,7 +171,7 @@ class TestCountTrustworthyCausalEdges:
             type('E', (), {'source': 'inferred', 'confidence': 0.5})(),  # low_conf
             type('E', (), {'source': 'synthetic', 'confidence': 0.95})(),  # synth
             type('E', (), {'source': 'synthetic', 'confidence': 0.5})(),  # synth
-            type('E', (), {'source': None, 'confidence': None})(),  # null → trust
+            type('E', (), {'source': None, 'confidence': None})(),  # null → UNTRUSTED (fail-closed, 2026-08-24)
         ]
         trustworthy = sum(
             1 for e in edges
@@ -179,8 +184,11 @@ class TestCountTrustworthyCausalEdges:
             1 for e in edges
             if is_trustworthy(e.source) and not is_trustworthy_edge(e)
         )
-        assert trustworthy == 3   # observed/0.9, inferred/0.8, null/null
-        assert dropped_synth == 2
+        # Fail-closed (2026-08-24): a NULL source is untrusted. The old
+        # expectation (null -> trusted, trustworthy == 3) encoded the exact
+        # fail-open that let count_trustworthy_causal_edges admit every edge.
+        assert trustworthy == 2   # observed/0.9, inferred/0.8
+        assert dropped_synth == 3  # 2 synthetic + 1 null
         assert dropped_low == 1
         assert trustworthy + dropped_synth + dropped_low == len(edges)
 

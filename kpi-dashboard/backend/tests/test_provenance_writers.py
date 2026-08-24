@@ -59,6 +59,10 @@ def _relative(p: Path) -> str:
 KNOWN_CONTEXT_GRAPH_WRITERS = (
     'wizards/wizard_a_journey_db.py',
     'utils/arc_edge_generator.py',
+    # Added 2026-08-24 after the node-evidence-gap review found it writing
+    # source='wizard_a' — the 5th non-canonical literal, invisible to this
+    # guard purely because the file wasn't in this list.
+    'utils/arc_decision_generator.py',
     'utils/signal_analyst.py',
     'utils/urgent_signal_scanner.py',
     'utils/playbook_lifecycle.py',

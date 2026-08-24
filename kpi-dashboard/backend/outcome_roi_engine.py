@@ -1667,8 +1667,14 @@ def build_historical_timeline(
             elif n.node_type == 'STAKEHOLDER':
                 stakeholder_count += 1
 
-            # Accumulate revenue by type
-            if n.revenue_impact:
+            # Accumulate revenue by type — OUTCOME nodes ONLY. This sum used
+            # to include every node type, which let template DECISION nodes'
+            # fabricated revenue_impact (typed 'at_risk' by a sign error)
+            # render on the timeline: $20.8M on tenant 400, $27.7M on 398
+            # (node-evidence-gap review, 2026-08-24). The headline aggregators
+            # (aggregate_revenue_across_accounts etc.) were already
+            # OUTCOME-constrained; this was the one revenue sum that wasn't.
+            if n.revenue_impact and n.node_type == 'OUTCOME':
                 impact = float(n.revenue_impact) * float(n.confidence or 1.0)
                 bucket = n.revenue_impact_type or 'at_risk'
                 if bucket == 'expansion':
