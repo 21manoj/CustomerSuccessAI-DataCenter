@@ -1642,6 +1642,25 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     outcomes_path = data_dir / 'context_graph' / 'outcomes.csv'
                 if outcomes_path.exists() and not _skip_cg_reload:
                     df_o = pd.read_csv(str(outcomes_path))
+                    # Write-time duplicate guard (2026-08-24): this loop did a
+                    # raw INSERT per row with no idempotency — source_event_id
+                    # is degenerate ('outcome:<type>', shared across rows), so a
+                    # re-run of process_data or a CSV with repeated rows
+                    # accumulated identical OUTCOME nodes (customer 391: 4×, 63
+                    # excess rows, inflating the CFO rollup past ARR). Pre-load
+                    # existing OUTCOME identities for this customer and skip
+                    # exact matches. Read-path dedup (_dedupe_exact_outcome_nodes)
+                    # is the belt; this is the suspenders — stops accumulation.
+                    _existing_outcomes = set()
+                    for _n in ContextNode.query.filter(
+                        ContextNode.customer_id == customer_id,
+                        ContextNode.node_type == 'OUTCOME',
+                    ).all():
+                        _existing_outcomes.add(
+                            (_n.account_id, _n.title,
+                             ("%.2f" % float(_n.revenue_impact)) if _n.revenue_impact is not None else 'None',
+                             _n.revenue_impact_type)
+                        )
                     for _, row in df_o.iterrows():
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
@@ -1661,12 +1680,19 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         # Parse outcome_date for correct timeline ordering
                         raw_out_date = row.get('outcome_date')
                         out_occurred_at = pd.to_datetime(raw_out_date) if raw_out_date and str(raw_out_date) != 'nan' else _dt.utcnow()
+                        _o_title = str(row.get('title', row.get('outcome_name', '')))
+                        _o_key = (acct_id, _o_title,
+                                  ("%.2f" % rev_impact) if rev_impact is not None else 'None',
+                                  outcome_type)
+                        if _o_key in _existing_outcomes:
+                            continue  # exact duplicate already present — skip
+                        _existing_outcomes.add(_o_key)
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
                             source='observed',
                             node_subtype=outcome_type,
-                            title=str(row.get('title', row.get('outcome_name', ''))),
+                            title=_o_title,
                             revenue_impact=rev_impact,
                             revenue_impact_type=outcome_type,
                             properties={'evidence': str(row.get('evidence', '')),

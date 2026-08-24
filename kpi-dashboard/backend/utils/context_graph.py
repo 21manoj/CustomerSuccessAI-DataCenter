@@ -283,6 +283,32 @@ def _get_all_edges_for_node(node_id: int, edge_types: Optional[List[str]] = None
 
 # ─── Revenue / ROI Aggregations ─────────────────────────────────────────────
 
+def _dedupe_exact_outcome_nodes(nodes):
+    """Collapse byte-identical duplicate OUTCOME nodes to one.
+
+    Distinct from _deduplicate_outcome_amounts (a fuzzy same-economic-event
+    AMOUNT collapse used per-account). This removes LITERAL duplicate nodes —
+    same account, title, revenue_impact, type, and occurred_at but different
+    node_ids — which a re-ingested CSV produces (found 2026-08-24: customer
+    391's outcomes were ingested 4×, 63 excess rows, inflating the
+    non-deduping CFO rollup's revenue_at_risk to $39.84M = 111% of its $35.9M
+    ARR — an impossible number). Keeps the lowest node_id of each group.
+
+    The account-level get_revenue_at_risk masked this via its amount-dedup;
+    the cross-account rollups summed raw. Applying this in both rollups makes
+    a literal duplicate impossible to double-count regardless of the ingest
+    bug, which is the forward fix; the 391 residue is cleaned separately.
+    """
+    seen = {}
+    for n in nodes:
+        key = (n.account_id, n.title, str(n.revenue_impact),
+               n.revenue_impact_type, n.occurred_at)
+        prev = seen.get(key)
+        if prev is None or n.node_id < prev.node_id:
+            seen[key] = n
+    return list(seen.values())
+
+
 def _deduplicate_outcome_amounts(amounts: List[float], threshold: float = 0.20) -> float:
     """
     Cluster outcome amounts that are within *threshold* of each other —
@@ -500,6 +526,11 @@ def aggregate_revenue_across_accounts(
         .all()
     )
 
+    # Exact-duplicate collapse before summing — this rollup used to sum raw
+    # (unlike the account-level path), so re-ingested duplicate nodes
+    # inflated the total past ARR. See _dedupe_exact_outcome_nodes.
+    outcome_nodes = _dedupe_exact_outcome_nodes(outcome_nodes)
+
     at_risk = 0.0
     protected = 0.0
     expansion = 0.0
@@ -602,6 +633,10 @@ def aggregate_revenue_with_provenance(
         )
         .all()
     )
+
+    # Same exact-duplicate collapse the base totals use, so the trace
+    # samples don't show 4 identical rows for one economic event.
+    outcome_nodes = _dedupe_exact_outcome_nodes(outcome_nodes)
 
     samples = {'at_risk': [], 'protected': [], 'expansion': []}
     for node in outcome_nodes:
