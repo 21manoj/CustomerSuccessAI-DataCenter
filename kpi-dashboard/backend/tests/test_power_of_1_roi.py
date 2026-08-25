@@ -118,50 +118,57 @@ class TestROIByTier:
 
 
 # ============================================================
-# 3. NON-LINEAR SCALING THESIS
+# 3. PER-TIER INVESTMENT SCALING  (owner decision, item 20, 2026-08-24)
 # ============================================================
-
-_SCALING_INVESTMENT_XFAIL_REASON = (
-    "open item 20 (state-of-play.md): power_of_1_economics.json's "
-    "scaling_scenarios.investment now scales per tier (95K/247K/370K) "
-    "instead of the constant $247K these tests (and the deck's own "
-    "'same investment, exponential return' thesis) assume. Restoring "
-    "247000 would make these green by assuming the tests are right -- "
-    "but the tests encode a deck claim that quadrupling the outcome "
-    "costs nothing extra, which may itself be wrong. Someone with "
-    "product authority over the Po1 deck needs to pick a side; flip to "
-    "a plain assert (and remove the xfail marker) once they do -- see "
-    "item 22 for the sibling decision this mirrors."
-)
+# The deck's original thesis was "same $247K investment → exponentially higher
+# returns." Owner decision 2026-08-24: that is the LESS accurate model, not the
+# more convenient one — a $5M-ARR and a $50M-ARR CS program genuinely don't cost
+# the same, and the product's own data contradicts a single flat number (390's
+# real cs_investment was $331K, 392's $600K, 398's $600K). So the config's
+# per-tier scaling (95K/247K/370K) is canonical and the DECK is being updated to
+# present $247K as the mid-tier reference point ("typical; scales $95K–$370K by
+# portfolio size"), not a flat commitment. These tests now assert the per-tier
+# model — the old constant-$247K / super-linear-at-constant-cost assertions
+# encoded the retired thesis.
 
 
-class TestNonLinearScaling:
-    """Same $247K investment produces exponentially higher returns."""
+class TestPerTierInvestmentScaling:
+    """Investment scales with the improvement tier; ROI stays in a healthy band
+    rather than exploding at constant cost."""
 
-    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
-    def test_investment_identical_across_scenarios(self):
-        """All 3 scenarios use the same $247K investment."""
-        for scenario in SCALING_SCENARIOS.values():
-            assert scenario["investment"] == 247000
+    def test_investment_scales_per_tier(self):
+        assert SCALING_SCENARIOS["1_pct"]["investment"] == 95000
+        assert SCALING_SCENARIOS["4_pct"]["investment"] == 247000
+        assert SCALING_SCENARIOS["6_pct"]["investment"] == 370000
 
-    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
+    def test_investment_is_monotonic_in_improvement(self):
+        inv = [SCALING_SCENARIOS[k]["investment"] for k in ("1_pct", "4_pct", "6_pct")]
+        assert inv == sorted(inv) and len(set(inv)) == 3
+
     def test_1_pct_roi(self):
-        assert SCALING_SCENARIOS["1_pct"]["year_1_roi"] == pytest.approx(0.63, abs=0.01)
+        assert SCALING_SCENARIOS["1_pct"]["year_1_roi"] == pytest.approx(3.23, abs=0.01)
 
     def test_4_pct_roi(self):
         assert SCALING_SCENARIOS["4_pct"]["year_1_roi"] == pytest.approx(5.50, abs=0.01)
 
-    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
     def test_6_pct_roi(self):
-        assert SCALING_SCENARIOS["6_pct"]["year_1_roi"] == pytest.approx(8.76, abs=0.01)
+        assert SCALING_SCENARIOS["6_pct"]["year_1_roi"] == pytest.approx(5.51, abs=0.01)
 
-    @pytest.mark.xfail(reason=_SCALING_INVESTMENT_XFAIL_REASON, strict=True)
-    def test_scaling_is_nonlinear(self):
-        """4x improvement → >4x ROI (proves non-linearity)."""
+    def test_roi_reconciles_to_total_impact_over_investment(self):
+        """year_1_roi must be total_impact/investment − 1 on every tier — the
+        ROI is a consequence of the per-tier investment, not a free parameter."""
+        for k in ("1_pct", "4_pct", "6_pct"):
+            s = SCALING_SCENARIOS[k]
+            assert s["year_1_roi"] == pytest.approx(
+                s["total_impact"] / s["investment"] - 1, abs=0.02
+            )
+
+    def test_roi_is_not_super_linear_at_constant_cost(self):
+        """The retired thesis claimed 4× improvement → >4× ROI at the SAME cost.
+        With per-tier investment, ROI does NOT quadruple — that's the point."""
         roi_1 = SCALING_SCENARIOS["1_pct"]["year_1_roi"]
         roi_4 = SCALING_SCENARIOS["4_pct"]["year_1_roi"]
-        # 4% improvement should yield >4x the ROI of 1%
-        assert roi_4 / roi_1 > 4, "Scaling should be super-linear"
+        assert roi_4 / roi_1 < 4
 
     def test_portfolio_impact_at_4_pct(self):
         """Portfolio calculation at 4% should match deck's $1.397M direct."""

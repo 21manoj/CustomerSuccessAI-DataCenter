@@ -1283,29 +1283,14 @@ def cfo_dashboard():
         # datacenter_v1's 6) silently lost its extra pillar's $ entirely.
         vertical_pillars = get_pillars(vertical)
         pillar_codes = sorted(vertical_pillars.keys())
-        pillar_metric_map, pillar_weights = _cfo_pillar_investment_config(vertical, pillar_codes)
-        po1_by_metric = {m['metric_id']: m.get('dollar_impact', 0) for m in power_of_1_metrics}
+        _pillar_metric_map, pillar_weights = _cfo_pillar_investment_config(vertical, pillar_codes)
 
-        pillar_investments = []
-        for pcode in pillar_codes:
-            # Impact: sum of Power-of-1 dollar impacts for metrics in this pillar
-            mapped_metrics = pillar_metric_map.get(pcode, [])
-            pillar_impact = sum(po1_by_metric.get(m, 0) for m in mapped_metrics)
-            weight = pillar_weights.get(pcode, 0)
-            if pillar_impact == 0 and effective_investment > 0:
-                # Fallback: allocate by weight
-                pillar_impact = round(roi_impact * weight, 2)
-
-            pillar_investment = round(effective_investment * weight, 2)
-            pillar_roi = round(pillar_impact / pillar_investment, 1) if pillar_investment > 0 else 0
-
-            pillar_investments.append({
-                'pillar': pcode,
-                'name': vertical_pillars.get(pcode, {}).get('name', pcode),
-                'investment': pillar_investment,
-                'impact': round(pillar_impact, 2),
-                'roi': pillar_roi,
-            })
+        # Item 22: allocate the single canonical value/spend by pillar weight —
+        # no rival second value source (see _build_pillar_investments).
+        pillar_investments = _build_pillar_investments(
+            pillar_codes, pillar_weights, vertical_pillars,
+            roi_impact, effective_investment,
+        )
 
         # ── Investment timeline (last 6 months) ──
         investment_timeline = []
@@ -1698,6 +1683,41 @@ def _build_layered_story(proof_data, total_arr, wf_protectable, wf_expandable, w
     }
 
 
+def _build_pillar_investments(pillar_codes, pillar_weights, vertical_pillars,
+                              roi_impact, effective_investment):
+    """Allocate the SINGLE canonical program value + spend across pillars.
+
+    Item 22 (state-of-play.md, owner decision 2026-08-24): pillar impacts used
+    to sum the raw per-metric ``dollar_impact`` values, which double-counts any
+    metric mapped to more than one pillar and produced a *second, larger*
+    program-value figure than the canonical deduped total — 1,746,250 vs
+    1,331,250 on customer 393, an implied 5.3× ROI competing with the 4.0×
+    headline (``roi_impact`` / ``effective_investment``). Decision: there is
+    exactly one modeled value per program; the pillar table is an ALLOCATION of
+    it, never an independent second source. So both value and spend are split by
+    pillar weight from the canonical ``roi_impact`` / ``effective_investment``,
+    and ``sum(impact) == roi_impact`` by construction. Per-pillar ROI is
+    therefore the headline ROI — this is an allocation view, not a claim of
+    differentiated per-pillar returns (the metric→pillar map still drives the
+    Power-of-1 cards, just not a rival headline value here).
+    """
+    total_weight = sum(pillar_weights.get(p, 0) for p in pillar_codes) or 1.0
+    rows = []
+    for pcode in pillar_codes:
+        wshare = pillar_weights.get(pcode, 0) / total_weight
+        pillar_impact = round(roi_impact * wshare, 2)
+        pillar_investment = round(effective_investment * wshare, 2)
+        pillar_roi = round(pillar_impact / pillar_investment, 1) if pillar_investment > 0 else 0
+        rows.append({
+            'pillar': pcode,
+            'name': vertical_pillars.get(pcode, {}).get('name', pcode),
+            'investment': pillar_investment,
+            'impact': pillar_impact,
+            'roi': pillar_roi,
+        })
+    return rows
+
+
 def _build_cfo_account_details(customer_id, accounts, total_investment, total_impact):
     """Build per-account investment/impact breakdown for CFO drill-down."""
     if not accounts:
@@ -1709,6 +1729,26 @@ def _build_cfo_account_details(customer_id, accounts, total_investment, total_im
 
     latest_scores = _get_latest_health_scores(customer_id, [a.account_id for a in accounts])
     healthy_min_val = ht.healthy_min()
+
+    # ── benchmark impact allocation weights (health-adjusted) ────────────────
+    # Item 6 fix: the old benchmark branch scaled BOTH investment and impact by
+    # the same arr_share, so it cancelled in the ROI ratio and every account
+    # reported the identical portfolio ROI (302% on 390) regardless of health —
+    # a constant column that read as measured. Investment tracks account size
+    # (ARR ≈ CS servicing effort); impact tracks *recoverable* revenue, which
+    # the platform already models as ARR × churn_pct(health) (the sanctioned
+    # 40/20/5 band, single source in context_graph.churn_pct_for_health). So
+    # allocate impact by that weight and renormalize to preserve the portfolio
+    # total — ROI now varies by health (worse accounts protect more revenue per
+    # servicing dollar) while per-account impact still sums to total_impact.
+    from utils.context_graph import churn_pct_for_health
+    impact_weights = {}
+    for acct in accounts:
+        arr = _safe_float(acct.revenue)
+        hs = latest_scores.get(acct.account_id)
+        score = float(hs.health_score) if hs else 0
+        impact_weights[acct.account_id] = arr * churn_pct_for_health(score)
+    total_impact_weight = sum(impact_weights.values())
 
     result = []
     for acct in accounts:
@@ -1729,13 +1769,22 @@ def _build_cfo_account_details(customer_id, accounts, total_investment, total_im
                 source = 'actual'
                 playbook_runs = len(ae_records)
             else:
+                # cost ∝ account size; impact ∝ recoverable revenue (health-band).
+                impact_share = (
+                    impact_weights[acct.account_id] / total_impact_weight
+                    if total_impact_weight > 0 else arr_share
+                )
                 acct_investment = round(total_investment * arr_share, 2)
-                acct_impact = round(total_impact * arr_share, 2)
+                acct_impact = round(total_impact * impact_share, 2)
                 source = 'benchmark'
                 playbook_runs = 0
         except Exception:
+            impact_share = (
+                impact_weights.get(acct.account_id, 0) / total_impact_weight
+                if total_impact_weight > 0 else arr_share
+            )
             acct_investment = round(total_investment * arr_share, 2)
-            acct_impact = round(total_impact * arr_share, 2)
+            acct_impact = round(total_impact * impact_share, 2)
             source = 'benchmark'
             playbook_runs = 0
 

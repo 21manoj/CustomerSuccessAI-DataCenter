@@ -340,6 +340,25 @@ def _deduplicate_outcome_amounts(amounts: List[float], threshold: float = 0.20) 
     return total
 
 
+def churn_pct_for_health(health: float) -> float:
+    """Sanctioned health→churn-probability band (single source of the model).
+
+    Churn-probability bands (aligned with health thresholds):
+      - Critical (health < 50):  40 % of ARR at risk
+      - At-risk  (50 ≤ h < 70): 20 % of ARR at risk
+      - Healthy  (h ≥ 70):       5 % of ARR at risk
+
+    Kept as one function so the 40/20/5 bands have exactly one definition —
+    both ``_calculate_at_risk_from_health`` (revenue-at-risk) and the CFO
+    per-account impact allocation read from here, never a second copy.
+    """
+    if health < 50:
+        return 0.40
+    elif health < 70:
+        return 0.20
+    return 0.05
+
+
 def _calculate_at_risk_from_health(account_id: int) -> float:
     """
     Derive at-risk revenue from the account's health score and ARR.
@@ -379,14 +398,7 @@ def _calculate_at_risk_from_health(account_id: int) -> float:
     )
     health = float(latest_hs.health_score) if latest_hs and latest_hs.health_score else 50.0
 
-    if health < 50:
-        churn_pct = 0.40
-    elif health < 70:
-        churn_pct = 0.20
-    else:
-        churn_pct = 0.05
-
-    return round(arr * churn_pct, 2)
+    return round(arr * churn_pct_for_health(health), 2)
 
 
 def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
