@@ -646,7 +646,15 @@ def power_of_1_slider(portfolio_id):
 def portfolio_scaling_curves(portfolio_id):
     """
     Non-linear scaling curves per company + combined portfolio.
-    Shows the exponential ROI thesis visually.
+
+    Both 'total_impact' and 'investment' scale with improvement_pct (via
+    calculate_portfolio_impact's cost_scale) — ROI is not exponential at
+    constant cost. Owner decision, item 20 (state-of-play.md, 2026-08-24):
+    the "same investment, exponential return" framing was the retired
+    thesis; the data here already reflects the per-tier scaling model.
+    No frontend caller found for this route as of 2026-08-24 (the wrapping
+    getScalingCurves() in portfolioApi.ts has zero callers) — dead
+    server-side endpoint, safe to remove/wire up, out of scope of this doc fix.
     """
     customer_id = _get_authenticated_customer_id()
     if not customer_id:

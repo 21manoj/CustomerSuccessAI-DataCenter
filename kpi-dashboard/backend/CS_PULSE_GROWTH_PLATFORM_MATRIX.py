@@ -186,7 +186,11 @@ REVENUE_INTELLIGENCE_ENGINES: List[Dict[str, Any]] = [
             "Non-linear scaling curves (1 % → 6 %)",
             "Portfolio-wide composite impact",
             "Work-package-level cost attribution (5 roles)",
-            "Investment constant at $247K across all scenarios",
+            # Owner decision, item 20 (state-of-play.md, 2026-08-24): investment
+            # scales per improvement tier (95K/247K/370K), not a flat $247K
+            # across scenarios — that was the retired thesis. $247K is the
+            # baseline-tier (10M-ARR, 4% improvement) reference figure.
+            "Investment scales per improvement tier (95K / 247K / 370K)",
         ],
         "api_endpoints": [
             "GET /api/financial-projections/scaling-curves",

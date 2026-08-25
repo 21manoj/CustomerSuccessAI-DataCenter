@@ -118,7 +118,13 @@ def calculate_financial_impact(kpi_category, current_score, projected_score, acc
 def _power_of_1_financial_impact(score_key, current_score, projected_score, account_arr):
     """
     Convert a health-score improvement into Power of 1 dollar impact.
-    Uses non-linear scaling — same investment, exponentially higher returns.
+
+    Uses non-linear scaling: impact grows compoundingly with improvement_pct.
+    Investment is NOT held constant across improvement levels (owner decision,
+    item 20, state-of-play.md 2026-08-24) — it scales per tier via
+    calculate_portfolio_impact's cost_scale; this function only returns dollar
+    impact, no investment figure, so it was never itself wrong, but its old
+    docstring repeated the retired "same investment" framing.
     """
     try:
         from power_of_1_model import calculate_power_of_1_impact, POWER_OF_1_METRICS
@@ -427,8 +433,14 @@ def get_corporate_financial_projections():
 def get_scaling_curves():
     """
     Return non-linear ROI scaling curves for the Power of 1 model.
-    Shows how the SAME $247K investment yields exponentially higher returns
-    at higher improvement percentages.
+
+    Investment scales WITH improvement_pct here (calculate_portfolio_impact's
+    cost_scale, ~+50% of the base per 1% improvement) — not a fixed $247K.
+    Owner decision, item 20 (state-of-play.md, 2026-08-24): a flat investment
+    across every improvement tier was the retired thesis; $247K is the
+    baseline-tier reference figure (10M-ARR, 4% improvement), not a constant.
+    No frontend caller found for this route as of 2026-08-24 (dead server-side
+    endpoint) — safe to remove/wire up, but out of scope of this doc fix.
     """
     customer_id = get_current_customer_id()
     if not customer_id:
