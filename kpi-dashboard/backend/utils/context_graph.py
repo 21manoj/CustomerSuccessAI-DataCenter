@@ -394,36 +394,42 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     Aggregate revenue impact across all active nodes for an account.
     This is the primary CRO/CFO metric.
 
-    Revenue-counting rules (prevents double-counting across the causal chain):
-      - **at_risk**:   Derived from health-score × ARR × churn-probability.
-                        SIGNAL nodes do NOT carry revenue_impact (those were
-                        stale / cumulative estimates, not real events).
-      - **protected**: Only OUTCOME nodes with revenue_impact_type='protected'.
-      - **expansion**: Only OUTCOME nodes with revenue_impact_type='expansion'.
-      - **lost**:      Only OUTCOME nodes with revenue_impact_type='lost'.
-      - DECISION nodes are *excluded* — they are intermediate steps whose
-        value is realised through downstream OUTCOME nodes.
+    Revenue-counting rules (item 26 Model C, 2026-08-24 — buckets via the
+    canonical _outcome_revenue_bucket_and_amount, shared with the
+    cross-account rollup so the two never disagree):
+      - **at_risk**:   NODE-EVIDENCED risk-trajectory OUTCOMEs (revenue_at_risk,
+                        renewal_uncertainty, capacity_constraint, ...). Matches
+                        the CFO summary's revenue_at_risk. (Was the health
+                        heuristic — that is now modeled_churn_exposure.)
+      - **modeled_churn_exposure**: health-score × ARR band (40/20/5%). A
+                        modeled estimate, kept separate and clearly labeled;
+                        never summed into at_risk.
+      - **protected**: OUTCOME nodes classified protected.
+      - **expansion**: OUTCOME nodes classified expansion.
+      - **lost**:      REALIZED losses only (churn_lost, contraction, ...).
+                        ~$0 until a tenant actually churns.
+      - DECISION nodes are *excluded*.
 
     Outcome de-duplication:
-      Within each bucket, outcome amounts that are within 20 % of each other
-      are treated as the same economic event; only the largest is kept.
+      Within each bucket, outcome amounts within 20% are treated as the same
+      economic event; only the largest is kept.
 
-    Returns:
-        {
-            'at_risk': total ARR currently at risk,
-            'protected': total ARR protected by interventions,
-            'expansion': expansion revenue (de-duplicated),
-            'lost': confirmed lost ARR,
-            'net_impact': protected + expansion - lost,
-            'node_count': number of revenue-contributing nodes
-        }
+    Returns dict with: at_risk, modeled_churn_exposure, protected, expansion,
+    lost, net_impact, node_count (has-signal gate), outcome_node_count.
     """
     now = datetime.utcnow()
 
-    # ── at_risk: health-score × ARR (no longer from signal nodes) ──
-    at_risk = _calculate_at_risk_from_health(account_id)
+    # ── modeled_churn_exposure: health-band heuristic (40/20/5% of ARR) ──
+    # Item 26 Model C (2026-08-24): this was returned as `at_risk`, which
+    # conflicted with the CFO summary's node-evidenced `revenue_at_risk` —
+    # two screens, contradictory numbers under one label. It is now a
+    # separate, clearly-labeled modeled field; account-level `at_risk` below
+    # is the node-evidenced figure, matching the CFO. (Named to align with
+    # the existing cost_of_inaction.annual_churn_exposure vocabulary, not a
+    # third `*_at_risk` — reviewer caveat 1.)
+    modeled_churn_exposure = _calculate_at_risk_from_health(account_id)
 
-    # ── protected / expansion / lost: OUTCOME nodes only ──
+    # ── at_risk / protected / expansion / lost: OUTCOME nodes only ──
     # I3' filter: exclude unearned nodes (confidence < 0.5). Nodes that were
     # written without evidence got clamped to 0.3 by the pre-commit hook; we
     # don't want those contributing to CFO/CRO revenue claims. Nodes with
@@ -443,36 +449,24 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
         ),
     ).all()
 
+    # Bucket via the SAME canonical classifier the cross-account rollup uses
+    # (_outcome_revenue_bucket_and_amount), so the two paths can never assign
+    # a node to different buckets (item 26 Model C). Amount is still
+    # confidence-weighted here — the account-level path's existing policy;
+    # on current data all risk nodes carry confidence 1.0, so this account
+    # at_risk equals the CFO revenue_at_risk to the dollar.
     outcome_buckets: Dict[str, List[float]] = {
-        'protected': [], 'expansion': [], 'lost': [],
-    }
-    # Normalize revenue_impact_type → bucket name
-    # close_playbook writes 'revenue_protected', data generator writes 'protected'
-    _BUCKET_ALIASES = {
-        # Protected bucket
-        'revenue_protected': 'protected', 'churn_averted': 'protected',
-        'renewal_secured': 'protected', 'engagement_recovery': 'protected',
-        'intervention_outcome': 'protected', 'playbook_outcome': 'protected',
-        'renewal_confirmed': 'protected',
-        # Lost bucket
-        'revenue_at_risk': 'lost', 'revenue_lost': 'lost',
-        'engagement_decline': 'lost', 'renewal_uncertainty': 'lost',
-        'capacity_constraint': 'lost', 'churn_risk': 'lost',
-        'churn_lost': 'lost', 'contraction': 'lost',
-        'partial_recovery': 'lost', 'partner_friction': 'lost',
-        # Expansion bucket
-        'expansion_closed': 'expansion', 'revenue_expanded': 'expansion',
-        'expansion_approved': 'expansion', 'expansion_opportunity': 'expansion',
-        'revenue_growth': 'expansion', 'new_logo': 'expansion',
+        'at_risk': [], 'protected': [], 'expansion': [], 'lost': [],
     }
     for n in outcome_nodes:
-        impact = abs(float(n.revenue_impact) * float(n.confidence or 1.0))
-        raw_type = n.revenue_impact_type or 'expansion'
-        bucket = _BUCKET_ALIASES.get(raw_type, raw_type)
-        if bucket in outcome_buckets:
-            outcome_buckets[bucket].append(impact)
+        bucket, _unweighted = _outcome_revenue_bucket_and_amount(n)
+        if bucket not in outcome_buckets:
+            continue
+        weighted = abs(float(n.revenue_impact) * float(n.confidence or 1.0))
+        outcome_buckets[bucket].append(weighted)
 
     # De-duplicate within each bucket (same economic event → keep largest)
+    at_risk    = _deduplicate_outcome_amounts(outcome_buckets['at_risk'])
     protected  = _deduplicate_outcome_amounts(outcome_buckets['protected'])
     expansion  = _deduplicate_outcome_amounts(outcome_buckets['expansion'])
     lost       = _deduplicate_outcome_amounts(outcome_buckets['lost'])
@@ -488,16 +482,26 @@ def get_revenue_at_risk(account_id: int) -> Dict[str, Any]:
     # the *name* implies a node count; fixed by exposing the honest deduped
     # node count separately as outcome_node_count, which the UI renders.
     outcome_node_count = len(outcome_nodes)
-    node_count = outcome_node_count + (1 if at_risk > 0 else 0)
+    # The +1 now marks the modeled_churn_exposure contribution (renamed from
+    # at_risk under Model C) — a new-account with health exposure but zero
+    # OUTCOME nodes still trips the `node_count > 0` has-revenue-signal gates.
+    node_count = outcome_node_count + (1 if modeled_churn_exposure > 0 else 0)
 
     return {
+        # at_risk is now NODE-EVIDENCED (Model C) — matches the CFO summary's
+        # revenue_at_risk, resolving the same-label-different-number split.
         'at_risk':    round(at_risk, 2),
+        # modeled_churn_exposure: the health-band heuristic (was `at_risk`).
+        # Kept for callers/UI that want the modeled figure; never conflated
+        # with the node-evidenced at_risk above.
+        'modeled_churn_exposure': round(modeled_churn_exposure, 2),
         'protected':  round(protected, 2),
         'expansion':  round(expansion, 2),
+        # lost is REALIZED loss only now — ~$0 until a tenant actually churns.
         'lost':       round(lost, 2),
         'net_impact': round(protected + expansion - lost, 2),
-        # Has-revenue-signal indicator (nodes + health at_risk marker) — keep
-        # for the `> 0` gates. Not a node count; see outcome_node_count.
+        # Has-revenue-signal indicator (nodes + modeled-exposure marker) —
+        # keep for the `> 0` gates. Not a node count; see outcome_node_count.
         'node_count': node_count,
         # Honest count of contributing OUTCOME nodes (deduped). Render this.
         'outcome_node_count': outcome_node_count,
@@ -549,11 +553,14 @@ def aggregate_revenue_across_accounts(
     at_risk = 0.0
     protected = 0.0
     expansion = 0.0
+    lost = 0.0
 
     for node in outcome_nodes:
         bucket, amount = _outcome_revenue_bucket_and_amount(node)
         if bucket == 'at_risk':
             at_risk += amount
+        elif bucket == 'lost':
+            lost += amount
         elif bucket == 'expansion':
             expansion += amount
         elif bucket == 'protected':
@@ -563,6 +570,12 @@ def aggregate_revenue_across_accounts(
         'revenue_at_risk': round(at_risk, 2),
         'revenue_protected': round(protected, 2),
         'expansion_pipeline': round(expansion, 2),
+        # revenue_lost: REALIZED losses only (item 26 Model C). Additive —
+        # existing consumers that don't read it are unaffected; ~$0 until a
+        # tenant actually churns. revenue_at_risk now excludes realized-loss
+        # subtypes, but those have no live nodes, so this total is unchanged
+        # on current data.
+        'revenue_lost': round(lost, 2),
         # Here node_count IS the deduped OUTCOME node count (this rollup has
         # no health-derived at_risk marker). outcome_node_count mirrors it so
         # both revenue APIs expose the same honest field name.
@@ -571,12 +584,27 @@ def aggregate_revenue_across_accounts(
     }
 
 
-# Classify OUTCOME revenue_impact into dashboard buckets (shared with provenance).
-_OUTCOME_RISK_TYPES = {
-    'at_risk', 'lost', 'revenue_at_risk', 'churn_lost', 'churn_risk',
-    'engagement_decline', 'renewal_uncertainty', 'capacity_constraint',
-    'partner_friction', 'partial_recovery',
+# Canonical OUTCOME subtype → bucket classification, shared by BOTH the
+# account-level get_revenue_at_risk and the cross-account rollups so the two
+# surfaces can never disagree on which bucket a node lands in (item 26,
+# Model C, signed off 2026-08-24).
+#
+# at_risk vs lost is the semantic split the two paths used to disagree on:
+#   at_risk = risk TRAJECTORY — money in jeopardy, not yet realized. Its
+#             subtype names say so (revenue_at_risk, *_uncertainty, *_decline).
+#   lost    = REALIZED loss — the account actually churned/contracted.
+# On today's data _OUTCOME_LOST_TYPES has zero live nodes (demo tenants are
+# mid-story; nothing has churned), so lost reads ~$0 — correct, not a bug.
+_OUTCOME_AT_RISK_TYPES = {
+    'at_risk', 'revenue_at_risk', 'churn_risk', 'engagement_decline',
+    'renewal_uncertainty', 'capacity_constraint', 'partner_friction',
+    'partial_recovery',  # decision 2: recovery-in-progress is risk, not loss
 }
+_OUTCOME_LOST_TYPES = {
+    'lost', 'churn_lost', 'contraction', 'revenue_lost',
+}
+# Back-compat alias — some callers still reference the old union.
+_OUTCOME_RISK_TYPES = _OUTCOME_AT_RISK_TYPES | _OUTCOME_LOST_TYPES
 _OUTCOME_PROTECTED_TYPES = {
     'protected', 'revenue_protected', 'churn_averted', 'renewal_secured',
     'revenue_saved', 'engagement_recovery', 'escalation_resolved', 'intervention_outcome',
@@ -597,12 +625,16 @@ def _outcome_revenue_bucket_and_amount(node: ContextNode):
     impact_type = (node.revenue_impact_type or '').lower()
     subtype = (node.node_subtype or '').lower()
 
-    if impact_type in _OUTCOME_RISK_TYPES or subtype in _OUTCOME_RISK_TYPES:
+    if impact_type in _OUTCOME_AT_RISK_TYPES or subtype in _OUTCOME_AT_RISK_TYPES:
         return 'at_risk', abs(raw)
+    if impact_type in _OUTCOME_LOST_TYPES or subtype in _OUTCOME_LOST_TYPES:
+        return 'lost', abs(raw)
     if impact_type in _OUTCOME_EXPANSION_TYPES or subtype in _OUTCOME_EXPANSION_TYPES:
         return 'expansion', abs(raw)
     if impact_type in _OUTCOME_PROTECTED_TYPES or subtype in _OUTCOME_PROTECTED_TYPES:
         return 'protected', abs(raw)
+    # Unknown sign fallback: a negative of unknown type is risk (not yet
+    # realized), not confirmed loss — conservative for a "lost" claim.
     if raw < 0:
         return 'at_risk', abs(raw)
     if raw > 0:
