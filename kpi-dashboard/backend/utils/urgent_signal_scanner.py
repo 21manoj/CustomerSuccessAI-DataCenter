@@ -28,6 +28,13 @@ import utils.push_intelligence_config as pic
 
 logger = logging.getLogger(__name__)
 
+# Single source of the urgent-alert node's provenance value. The dedup reader
+# and the writer MUST use the same literal or dedup silently never fires — the
+# exact bug this constant fixes (item 23 / N1, 2026-08-24): the reader filtered
+# on the retired value while the writer wrote the current one, so no existing
+# alert was ever found and duplicate critical notifications fired on every run.
+_ALERT_NODE_SOURCE = 'inferred'
+
 
 def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
     """
@@ -98,7 +105,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                 ContextNode.account_id == account_id,
                 ContextNode.customer_id == customer_id,
                 ContextNode.node_subtype == 'urgent_alert',
-                ContextNode.source == 'system',
+                ContextNode.source == _ALERT_NODE_SOURCE,
             )
             .all()
         )
@@ -202,7 +209,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                         account_id=account_id,
                         customer_id=customer_id,
                         node_type='SIGNAL',
-                        source='inferred',
+                        source=_ALERT_NODE_SOURCE,
                         node_subtype='urgent_alert',
                         title=f'Urgent Alert: ${abs(revenue_impact):,.0f} revenue at risk',
                         properties={
