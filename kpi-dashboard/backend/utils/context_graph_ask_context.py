@@ -151,12 +151,14 @@ Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{
 
     revenue_data = aggregate_revenue_across_accounts(customer_id, account_ids)
     ctx_parts.append(
-        f"""\n=== REVENUE INTELLIGENCE (Context Graph — authoritative for $ at risk / protected / expansion) ===
-Revenue at Risk: ${revenue_data['revenue_at_risk']:,.0f} (OUTCOME nodes, engine: aggregate_revenue_across_accounts)
-Revenue Protected: ${revenue_data['revenue_protected']:,.0f}
+        f"""\n=== REVENUE INTELLIGENCE (Context Graph — canonical source for $ at risk / protected / expansion) ===
+Risk Exposure: ${revenue_data['revenue_at_risk']:,.0f} (OUTCOME nodes, engine: aggregate_revenue_across_accounts — node-evidenced, NOT independently verified)
+Customer-Reported Saves: ${revenue_data['revenue_protected']:,.0f} (from customer-uploaded outcome data, NOT independently verified — never call this "confirmed")
 Expansion Pipeline: ${revenue_data['expansion_pipeline']:,.0f}
 Outcome nodes counted: {revenue_data['node_count']}
-RULE: When answering revenue-at-risk questions, cite these totals — not critical-account ARR alone."""
+RULE: When answering revenue-at-risk questions, cite these totals — not critical-account ARR alone.
+RULE: Never describe Risk Exposure or Customer-Reported Saves as "confirmed" or "verified" — they are
+sourced from customer-uploaded data taken at face value, not an independent audit trail."""
     )
 
     signals = [n for n in ctx_nodes if n.node_type == 'SIGNAL'][:max_signals]

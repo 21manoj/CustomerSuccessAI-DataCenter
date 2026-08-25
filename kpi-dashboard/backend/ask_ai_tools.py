@@ -1385,7 +1385,12 @@ def extract_artifacts(tool_name: str, tool_result: dict) -> list:
                     'title': 'Portfolio ROI Summary',
                     'metrics': [
                         {'label': 'Historical ROI', 'value': f"{hist.get('roi_pct', 0):.0f}%", 'color': 'green'},
-                        {'label': 'Revenue Protected', 'value': f"${hist.get('revenue_protected', 0):,.0f}", 'color': 'blue'},
+                        # NOT the context-graph OUTCOME rollup (that one is
+                        # customer-reported/unverified — see executive_dashboard_api.py).
+                        # This is calculate_historical_roi()'s figure: real
+                        # measured KPI improvement run through the Po1 benchmark
+                        # $-per-point rate — the KPI move is real, the $ conversion is modeled.
+                        {'label': 'Revenue Protected (Modeled from KPI Actuals)', 'value': f"${hist.get('revenue_protected', 0):,.0f}", 'color': 'blue'},
                         {'label': 'Projected Impact', 'value': f"${proj.get('projected_impact', 0):,.0f}", 'color': 'cyan'},
                     ],
                 })

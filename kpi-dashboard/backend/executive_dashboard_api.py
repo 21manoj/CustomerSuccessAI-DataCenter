@@ -1055,12 +1055,19 @@ def cro_dashboard():
             'status': 'success',
             'period': period_param,
             'period_meta': period_meta,
-            # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
+            # Revenue Intelligence — Risk Exposure (node-evidenced, from Context Graph)
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
             'expansion_pipeline': revenue_data['expansion_pipeline'],
-            'revenue_risk_type': 'confirmed',
-            'revenue_risk_label': 'Confirmed Risk (Context Graph)',
+            # Relabeled 2026-08-25: 'Confirmed' overclaimed — these OUTCOME
+            # nodes are node-evidenced (item 26's at_risk bucket) but not
+            # independently verified (same customer-CSV provenance as
+            # revenue_protected). Distinct from the health-derived
+            # arr_exposure/cost_of_inaction figures elsewhere in this payload
+            # — do not fold "health-scored" into this label, it would
+            # misattribute a node-based number to the health model.
+            'revenue_risk_type': 'node_evidenced',
+            'revenue_risk_label': 'Risk Exposure (Context Graph)',
             'context_graph_provenance': context_graph_provenance,
             # ARR Exposure — surface-level risk (health-score based)
             'arr_exposure': round(arr_exposure, 2),
@@ -1512,14 +1519,21 @@ def cfo_dashboard():
             'wizard_b_nrr': wizard_b_nrr,
             # ── PREDICTOR v3: forward point forecast (per-account aggregated) ──
             'predictor_v3_portfolio_nrr': predictor_v3_portfolio_nrr,
-            # Revenue Intelligence — Confirmed Risk (causal, from Context Graph)
+            # Revenue Intelligence — Risk Exposure (node-evidenced, from Context Graph)
             # graph_* totals match CRO dashboard (aggregate_revenue_across_accounts).
             # Distinct from proof_data.revenue_protected (playbook executions).
             'revenue_at_risk': revenue_data['revenue_at_risk'],
             'revenue_protected': revenue_data['revenue_protected'],
             'expansion_pipeline': revenue_data['expansion_pipeline'],
-            'revenue_risk_type': 'confirmed',
-            'revenue_risk_label': 'Confirmed Risk (Context Graph)',
+            # Relabeled 2026-08-25: 'Confirmed' overclaimed — these OUTCOME
+            # nodes are node-evidenced (item 26's at_risk bucket) but not
+            # independently verified (same customer-CSV provenance as
+            # revenue_protected). Distinct from the health-derived
+            # arr_exposure/cost_of_inaction figures elsewhere in this payload
+            # — do not fold "health-scored" into this label, it would
+            # misattribute a node-based number to the health model.
+            'revenue_risk_type': 'node_evidenced',
+            'revenue_risk_label': 'Risk Exposure (Context Graph)',
             'context_graph_provenance': context_graph_provenance,
             # Cost of Inaction
             'cost_of_inaction': {
@@ -1846,7 +1860,11 @@ def ceo_dashboard():
         accounts = Account.query.filter_by(customer_id=customer_id).all()
         account_ids = [a.account_id for a in accounts]
         num_accounts = len(accounts)
-        total_arr = sum(a.revenue or 0 for a in accounts)
+        # float(), not the raw DB Numeric/Decimal — Decimal propagates into
+        # _get_po1_benchmark_investment/_get_po1_benchmark_metrics below and
+        # crashes their `float / Decimal` arithmetic (CFO's equivalent uses
+        # _safe_float() for the same reason).
+        total_arr = sum(_safe_float(a.revenue) for a in accounts)
 
         # Health scores
         healthy_min_val = ht.healthy_min()
@@ -2053,7 +2071,7 @@ PERSONA_PROMPTS = {
                 'Lead with dollar amounts. Quantify risk in ARR terms. '
                 'Recommend actions that protect or grow revenue.',
         'suggested': [
-            'How much confirmed revenue is at risk (context graph) over the next 90 days?',
+            'How much revenue exposure is in the context graph over the next 90 days?',
             'Which 3 accounts are most likely to churn next quarter, and why?',
             'Where is our biggest expansion upside in the portfolio?',
             'Show the causal chain for our worst-trending account this quarter.',
@@ -2066,11 +2084,12 @@ PERSONA_PROMPTS = {
         'tone': 'Think like a CFO — every insight should connect to investment returns. '
                 'Show ROI ratios, cost-per-account, payback periods. '
                 'Compare actual vs projected. Flag inefficient spend. '
-                'Distinguish context-graph confirmed $ at risk vs playbook-attributed $ '
-                'vs modeled churn exposure. Name the NRR lens (historical / Wizard B / forward).',
+                'Distinguish context-graph risk exposure (node-evidenced, not independently '
+                'verified) vs playbook-attributed $ (the genuinely verified figure) vs '
+                'modeled churn exposure. Name the NRR lens (historical / Wizard B / forward).',
         'suggested': [
             'What is our CS investment returning per dollar?',
-            'How much confirmed revenue is at risk (context graph)?',
+            'How much revenue exposure is in the context graph?',
             'Compare actual vs projected revenue protection — is a target set?',
             'What is our payback period on CS Pulse adoption?',
             'How does modeled ROI scale as we add more accounts?',

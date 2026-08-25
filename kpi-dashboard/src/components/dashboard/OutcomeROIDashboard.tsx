@@ -451,7 +451,7 @@ const OutcomePanel: React.FC<{
         {/* Outcome breakdown */}
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="bg-blue-50 rounded-lg p-3">
-            <div className="text-xs text-blue-600 font-medium">Revenue Protected</div>
+            <div className="text-xs text-blue-600 font-medium">Revenue Protected (Modeled from KPI Actuals)</div>
             <div className="text-sm font-bold text-blue-900 mt-1">{fmtDollar(s.revenue_protected)}</div>
           </div>
           <div className="bg-emerald-50 rounded-lg p-3">
@@ -559,9 +559,9 @@ const CombinedHero: React.FC<{ combined: OutcomeStory['combined'] }> = ({ combin
     />
     <HeroCard
       icon={<Shield className="h-5 w-5 text-blue-500" />}
-      label="Revenue Protected"
+      label="Revenue Protected (Modeled)"
       value={fmtDollar(combined.revenue_protected)}
-      sub="GRR + support outcomes"
+      sub="GRR + support outcomes — modeled from KPI actuals, not customer-reported"
       accent="text-blue-600"
     />
     <HeroCard

@@ -48,12 +48,12 @@ export const VPCSMetricGuideBanner: React.FC = () => {
       {!collapsed && (
         <ul className="mt-2 space-y-1.5 text-[10px] text-gray-400 list-disc list-inside leading-relaxed">
           <li>
-            <span className="text-gray-300">Confirmed revenue at risk</span> — context-graph OUTCOME $
-            (same engine as CFO/CRO).
+            <span className="text-gray-300">Risk exposure</span> — context-graph OUTCOME $
+            (node-evidenced, not independently verified; same engine as CFO/CRO).
           </li>
           <li>
             <span className="text-gray-300">Health buckets</span> — ARR in healthy / at-risk / critical bands;
-            not the same dollar amount as confirmed graph $.
+            not the same dollar amount as the risk-exposure graph $.
           </li>
           <li>
             <span className="text-gray-300">Playbook success %</span> — resolved executions ÷ total runs;
@@ -96,7 +96,7 @@ export const VPCSPreProofBanner: React.FC<{
           <p className="text-amber-100/70">
             {executionsTotal} execution{executionsTotal === 1 ? '' : 's'} with{' '}
             <span className="text-amber-200/90">$0 attributed</span> so far. Rankings and capacity
-            planning use execution outcomes; confirmed $ is in the graph strip below.
+            planning use execution outcomes; context-graph $ is in the strip below.
             <span className="block mt-1 text-[10px] text-amber-100/50">
               Phase: {phase.replace('_', ' ')}
             </span>
@@ -112,19 +112,19 @@ export const VPCSContextGraphStrip: React.FC<{
 }> = ({ data }) => {
   const tiles = [
     {
-      label: 'Confirmed revenue at risk',
+      label: 'Risk exposure',
       value: data.revenue_at_risk,
       accent: 'text-red-400',
       border: 'border-t-red-500',
     },
     {
-      label: 'Confirmed revenue protected',
+      label: 'Customer-reported saves (unverified)',
       value: data.graph_revenue_protected,
       accent: 'text-emerald-400',
       border: 'border-t-emerald-500',
     },
     {
-      label: 'Expansion pipeline (confirmed)',
+      label: 'Expansion pipeline',
       value: data.expansion_pipeline,
       accent: 'text-teal-400',
       border: 'border-t-teal-500',
@@ -141,7 +141,7 @@ export const VPCSContextGraphStrip: React.FC<{
               Revenue intelligence (context graph)
             </h3>
             <p className="text-[10px] text-gray-500 mt-0.5">
-              {data.revenue_risk_label} · same confirmed $ as CFO / CRO
+              {data.revenue_risk_label} · same graph $ as CFO / CRO
             </p>
           </div>
         </div>
@@ -161,7 +161,7 @@ export const VPCSContextGraphStrip: React.FC<{
       </div>
       <p className="text-[9px] text-gray-600 mt-3">
         Legacy “Revenue Intelligence” row used the same fields without graph labeling — prefer this strip
-        for board-ready confirmed $.
+        for board-ready reporting.
       </p>
     </div>
   );

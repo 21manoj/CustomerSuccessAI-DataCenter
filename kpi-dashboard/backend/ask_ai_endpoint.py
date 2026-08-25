@@ -69,13 +69,15 @@ PERSONA_PROMPTS = {
                 'When citing industry benchmarks: CS spend 0.8–2.5% of ARR, '
                 'ROI typically 5–15×, payback 3–6 months. Use the wider range '
                 'unless the customer has a defined target. '
-                'Never conflate: (1) context-graph confirmed revenue at risk, '
-                '(2) playbook-attributed revenue protected, (3) modeled churn exposure '
-                'from unhealthy accounts. Name which lens you use. For NRR, state whether '
-                'historical actuals, Wizard B TTM counterfactual, or Predictor v3 forward.',
+                'Never conflate: (1) context-graph risk exposure (node-evidenced, not '
+                'independently verified), (2) playbook-attributed revenue protected '
+                '(the only genuinely verified figure — closed PlaybookExecutionV2 rows), '
+                '(3) modeled churn exposure from unhealthy accounts. Name which lens you '
+                'use. For NRR, state whether historical actuals, Wizard B TTM '
+                'counterfactual, or Predictor v3 forward.',
         'suggested': [
             'What is our CS investment returning per dollar?',
-            'How much confirmed revenue is at risk in the context graph?',
+            'How much revenue exposure is in the context graph?',
             'Compare actual vs projected revenue protection — do we have a target set?',
             'What is our payback period on CS Pulse at current playbook economics?',
             'How does modeled ROI scale if we add more accounts?',
@@ -401,8 +403,10 @@ Top accounts by ARR: {top_str}
 Health thresholds: Critical (<{ht.at_risk_min()}), At-Risk ({ht.at_risk_min()}-{ht.healthy_min()-1}), Healthy (>={ht.healthy_min()})
 
 REVENUE INTELLIGENCE (from Context Graph — same source as CRO dashboard):
-  Revenue at Risk: ${rev_at_risk:,.0f} (causal evidence from context graph outcomes)
-  Revenue Protected: ${rev_protected:,.0f} (confirmed by interventions)
+  Risk Exposure: ${rev_at_risk:,.0f} (node-evidenced from context graph outcomes — NOT independently
+    verified; call it "risk exposure" or "modeled risk," never "confirmed")
+  Customer-Reported Saves: ${rev_protected:,.0f} (from customer-uploaded outcome data, taken at face
+    value — NOT independently verified by an audit trail. Never say "confirmed" or "verified.")
   Expansion Pipeline: ${rev_expansion:,.0f} (identified opportunities)
   Critical Accounts ARR: ${critical_arr:,.0f} (total ARR of critical accounts — NOT the same as revenue at risk)
 

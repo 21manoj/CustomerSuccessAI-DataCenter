@@ -300,7 +300,7 @@ function HeroCard({
         {/* Right: Three mini stats */}
         <div className="flex flex-wrap lg:flex-nowrap gap-3">
           {[
-            { label: 'Revenue Protected', value: revenueProtected, icon: Shield, color: 'text-emerald-400' },
+            { label: 'Revenue Protected (Modeled)', value: revenueProtected, icon: Shield, color: 'text-emerald-400' },
             { label: 'Revenue Grown', value: revenueExpanded, icon: TrendingUp, color: 'text-cyan-400' },
             { label: 'Efficiency Savings', value: costSavings, icon: Zap, color: 'text-amber-400' },
           ].map((stat) => {
@@ -458,7 +458,7 @@ function InvestmentBreakdown({
   const returnBuckets = useMemo(() => {
     if (!summary) return [];
     return [
-      { name: 'Revenue Protected', value: summary.revenue_protected, color: '#10b981' },
+      { name: 'Revenue Protected (Modeled)', value: summary.revenue_protected, color: '#10b981' },
       { name: 'Revenue Expanded', value: summary.revenue_expanded, color: '#06b6d4' },
       { name: 'Cost Savings', value: summary.cost_savings, color: '#f59e0b' },
       { name: 'Compounding', value: summary.compounding_effect, color: '#8b5cf6' },

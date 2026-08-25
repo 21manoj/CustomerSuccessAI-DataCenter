@@ -773,7 +773,7 @@ const TopStrategicMovesTile: React.FC<{ moves: StrategicMove[] }> = ({ moves }) 
                   <p className="text-[10px] uppercase tracking-wider text-gray-500">{t.tag}</p>
                   <p className="text-sm font-semibold text-white leading-tight">{m.label}</p>
                   <p className="text-[10px] text-gray-500 mt-0.5">
-                    Move every KPI {m.improvement_pct}% this quarter
+                    {m.improvement_pct}% scenario — dollar impact scales with this tier
                   </p>
                 </div>
                 <span className={`text-xs font-bold ${t.accent}`}>{m.improvement_pct}%</span>
@@ -816,6 +816,10 @@ const TopStrategicMovesTile: React.FC<{ moves: StrategicMove[] }> = ({ moves }) 
         <p className="text-[9px] italic text-gray-500 leading-tight">
           Source: Power-of-1 benchmark · estimated. Scenarios scale to portfolio ARR;
           actuals will diverge as Wizard B / C learn from your outcomes.
+          Formula: each metric has its own $-per-scenario-tier rate and its own
+          real percentage-point move per tier — they are not the same number, so
+          the tile's scenario % is not a per-metric rate; don't divide a metric's
+          $ impact by it to back into a per-point rate.
         </p>
       </div>
     </div>

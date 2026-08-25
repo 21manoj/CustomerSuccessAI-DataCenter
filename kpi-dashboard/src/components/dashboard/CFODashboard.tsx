@@ -386,7 +386,7 @@ const SOURCES: Record<string, { text: string; tier: ProvenanceTier }> = {
   predictorV3: { text: 'Source: CS Pulse (Predictor v3) · forward forecast · point estimate', tier: 'derived' },
   /** Power-of-1 industry benchmark estimate — not customer data. */
   benchmark: { text: 'Source: Power-of-1 benchmark · estimated · not customer data', tier: 'benchmark' },
-  /** OUTCOME-node aggregation — same engine as CRO "Confirmed Risk". */
+  /** OUTCOME-node aggregation — same engine as CRO "Risk Exposure". */
   contextGraph: { text: 'Source: Context graph · OUTCOME nodes · evidence-weighted', tier: 'derived' },
   /** Health-score × churn-probability model (Cost of Inaction panel). */
   modeledExposure: { text: 'Source: CS Pulse · health churn model · modeled · not playbook proof', tier: 'derived' },
@@ -1202,7 +1202,7 @@ const InvestmentAllocationWidget: React.FC<{
 };
 
 /** Financial Ratios (right sidebar) */
-/** One-line map so CFOs do not conflate NRR lenses, playbook $, and modeled vs confirmed risk. */
+/** One-line map so CFOs do not conflate NRR lenses, playbook $, and modeled vs node-evidenced risk. */
 /** Phase hint for Row C empty state — sets expectations by deployment phase. */
 function expectedProofHint(phase: CustomerPhase): string {
   switch (phase) {
@@ -1231,7 +1231,7 @@ const CFOPreProofBanner: React.FC<{ phase: CustomerPhase }> = ({ phase }) => (
         <p className="text-amber-100/70">
           CS spend, protected revenue, and portfolio ROI in the summary row below are{' '}
           <span className="text-amber-200/90">benchmark-modeled</span>, not bottom-up proof.
-          Confirmed context-graph $ is in the strip above; playbook attribution appears in Row C and
+          Context-graph $ (node-evidenced) is in the strip above; playbook attribution appears in Row C and
           the proof table once executions close.
           <span className="block mt-1 text-[10px] text-amber-100/50">
             Deployment phase: {phase.replace('_', ' ')} · {expectedProofHint(phase)}
@@ -1269,12 +1269,12 @@ const CFOMetricGuideBanner: React.FC = () => {
             <code className="text-[9px] text-gray-500">PlaybookExecutionV2</code> rows (Row C / proof table).
           </li>
           <li>
-            <span className="text-gray-300">Revenue intelligence (context graph)</span> — confirmed $ from OUTCOME
-            nodes (strip below). Same totals as CRO Overview.
+            <span className="text-gray-300">Revenue intelligence (context graph)</span> — node-evidenced $ from OUTCOME
+            nodes (strip below), not independently verified. Same totals as CRO Overview.
           </li>
           <li>
             <span className="text-gray-300">Modeled cost of inaction</span> — health-score churn math on unhealthy accounts.
-            Not the same as confirmed context-graph $ at risk.
+            Not the same as the context-graph risk-exposure $.
           </li>
           <li>
             <span className="text-gray-300">Power-of-1 / benchmark tiles</span> — industry estimates until playbook proof populates.
@@ -1283,7 +1283,7 @@ const CFOMetricGuideBanner: React.FC = () => {
       )}
       {collapsed && (
         <p className="text-[9px] text-gray-500 mt-1">
-          NRR = lens-specific · Playbook $ ≠ context-graph confirmed risk · expand for definitions
+          NRR = lens-specific · Playbook $ ≠ context-graph risk exposure · expand for definitions
         </p>
       )}
     </div>
@@ -1293,9 +1293,9 @@ const CFOMetricGuideBanner: React.FC = () => {
 type ProvenanceBucketKey = 'revenue_at_risk' | 'revenue_protected' | 'expansion_pipeline';
 
 const PROVENANCE_BUCKET_TITLES: Record<ProvenanceBucketKey, string> = {
-  revenue_at_risk: 'Confirmed revenue at risk — sample OUTCOMEs',
-  revenue_protected: 'Confirmed revenue protected — sample OUTCOMEs',
-  expansion_pipeline: 'Expansion pipeline (confirmed) — sample OUTCOMEs',
+  revenue_at_risk: 'Risk exposure — sample OUTCOMEs',
+  revenue_protected: 'Customer-reported saves (unverified) — sample OUTCOMEs',
+  expansion_pipeline: 'Expansion pipeline — sample OUTCOMEs',
 };
 
 const ContextGraphRevenuePanel: React.FC<{ data: ContextGraphRevenue }> = ({ data }) => {
@@ -1312,21 +1312,21 @@ const ContextGraphRevenuePanel: React.FC<{ data: ContextGraphRevenue }> = ({ dat
   }> = [
     {
       key: 'revenue_at_risk',
-      label: 'Confirmed revenue at risk',
+      label: 'Risk exposure',
       value: data.revenue_at_risk,
       accent: 'text-red-400',
       border: 'border-t-red-500',
     },
     {
       key: 'revenue_protected',
-      label: 'Confirmed revenue protected',
+      label: 'Customer-reported saves (unverified)',
       value: data.graph_revenue_protected,
       accent: 'text-emerald-400',
       border: 'border-t-emerald-500',
     },
     {
       key: 'expansion_pipeline',
-      label: 'Expansion pipeline (confirmed)',
+      label: 'Expansion pipeline',
       value: data.expansion_pipeline,
       accent: 'text-cyan-400',
       border: 'border-t-cyan-500',
@@ -1471,7 +1471,7 @@ const FinancialRatiosWidget: React.FC<{ ratios: FinancialRatio[] }> = ({ ratios 
   </div>
 );
 
-/** Health-based churn model — not CRO context-graph "confirmed revenue at risk". */
+/** Health-based churn model — not CRO context-graph "risk exposure". */
 const CostOfInactionPanel: React.FC<{
   data: CFODashboardData['cost_of_inaction'];
   compact?: boolean;
@@ -1487,7 +1487,7 @@ const CostOfInactionPanel: React.FC<{
               Modeled cost of inaction
             </h3>
             <p className="text-[9px] text-gray-500 normal-case font-normal tracking-normal">
-              If unhealthy accounts churn · not context-graph confirmed $
+              If unhealthy accounts churn · not the context-graph risk exposure $
             </p>
           </div>
         </div>
@@ -1516,7 +1516,7 @@ const CostOfInactionPanel: React.FC<{
         <div>
           <p
             className="text-[9px] text-gray-500 mb-0.5 cursor-help"
-            title="Sum of ARR for unhealthy accounts. Exposure surface area — not the same as context-graph confirmed revenue at risk."
+            title="Sum of ARR for unhealthy accounts. Exposure surface area — not the same as the context-graph risk-exposure figure."
           >
             At-risk account ARR
           </p>
@@ -2091,7 +2091,7 @@ const CFODashboard: React.FC = () => {
                 label: 'Attributed revenue (playbooks)',
                 value: formatCompact(proofProtected + proofExpanded),
                 subtitle: `${proof.executions_resolved || 0} of ${proof.executions_total || 0} playbooks resolved`,
-                tooltip: 'Sum of revenue_protected + revenue_expanded on closed PlaybookExecutionV2 rows. Playbook attribution — not the same as context-graph confirmed $ at risk.',
+                tooltip: 'Sum of revenue_protected + revenue_expanded on closed PlaybookExecutionV2 rows. Playbook attribution — not the same as the context-graph risk exposure figure.',
                 accent: 'green',
                 source: 'csPulseProof',
               },
@@ -2114,7 +2114,7 @@ const CFODashboard: React.FC = () => {
                 estimated: true,
                 source: 'benchmark',
               },
-              { label: 'Portfolio ROI', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true, source: 'benchmark' },
+              { label: 'Modeled Return (Benchmark Rates)', value: `${roiPct}%`, subtitle: `${formatCompact(csInvestment)} → ${formatCompact(roiImpact)}`, accent: 'cyan', estimated: true, source: 'benchmark' },
             ],
             power_of_1: po1Metrics,
             power_of_1_total: po1Metrics.reduce((sum: number, m: PowerOf1Row) => sum + m.dollar_impact, 0),
@@ -2175,7 +2175,7 @@ const CFODashboard: React.FC = () => {
                   revenue_at_risk: graphAtRisk,
                   graph_revenue_protected: graphProtected,
                   expansion_pipeline: graphExpansion,
-                  revenue_risk_label: json.revenue_risk_label || 'Confirmed Risk (Context Graph)',
+                  revenue_risk_label: json.revenue_risk_label || 'Risk Exposure (Context Graph)',
                   provenance: graphProvenance,
                 }
               : null,

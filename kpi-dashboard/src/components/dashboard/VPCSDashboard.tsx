@@ -1380,7 +1380,7 @@ const VPCSDashboard: React.FC = () => {
                     revenue_at_risk: d.revenue_summary.revenue_at_risk,
                     graph_revenue_protected: d.revenue_summary.revenue_protected,
                     expansion_pipeline: d.revenue_summary.expansion_pipeline,
-                    revenue_risk_label: 'Context-graph confirmed',
+                    revenue_risk_label: 'Risk Exposure (Context Graph)',
                   }}
                 />
               )}

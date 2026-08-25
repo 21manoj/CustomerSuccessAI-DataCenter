@@ -1001,7 +1001,7 @@ const ContextGraphView: React.FC = () => {
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
                 <div className="flex items-center gap-2 text-emerald-400 text-sm mb-3">
                   <Shield className="w-4 h-4" />
-                  <span className="font-medium">Revenue Protected</span>
+                  <span className="font-medium">Customer-Reported Saves (Unverified)</span>
                 </div>
                 <div className="text-3xl font-bold text-emerald-400 mb-1">
                   {revenue ? formatCompact(revenue.protected) : (portfolioSummary ? formatCompact(portfolioSummary.total_protected) : '--')}

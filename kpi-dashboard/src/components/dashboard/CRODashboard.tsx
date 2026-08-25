@@ -874,7 +874,7 @@ function applyPeriodToCroData(
     if ((i === 1 || i === 2) && !isLiveQuarter) {
       return {
         ...card,
-        subtitle: `Point-in-time (context graph) · select Q4 for current confirmed $`,
+        subtitle: `Point-in-time (context graph) · select Q4 for current graph $`,
       };
     }
     return card;
@@ -1335,7 +1335,7 @@ const CRODashboard: React.FC = () => {
             revenue_at_risk: json.revenue_at_risk || 0,
             graph_revenue_protected: json.revenue_protected || 0,
             expansion_pipeline: json.expansion_pipeline || 0,
-            revenue_risk_label: json.revenue_risk_label || 'Confirmed Risk (Context Graph)',
+            revenue_risk_label: json.revenue_risk_label || 'Risk Exposure (Context Graph)',
             provenance: graphProv,
           };
           const arrExposure = json.arr_exposure || 0;
@@ -1351,29 +1351,29 @@ const CRODashboard: React.FC = () => {
               {
                 label: 'Revenue at Risk',
                 amount: json.revenue_at_risk || 0,
-                subtitle: json.revenue_risk_label || 'Confirmed (context graph)',
+                subtitle: json.revenue_risk_label || 'Risk Exposure (Context Graph)',
                 account_count: json.accounts_at_risk_count || 0,
                 accent: 'red',
-                badge: 'Confirmed',
+                badge: 'Node-Evidenced',
                 footnote: arrExposure > 0
                   ? `ARR exposure (health-band): ${formatCompact(arrExposure)} · ${json.arr_exposure_label || 'sub-70 accounts'}`
                   : undefined,
               },
               {
-                label: 'Revenue Protected',
+                label: 'Customer-Reported Saves',
                 amount: json.revenue_protected || 0,
-                subtitle: json.accounts_recovered_count ? 'Playbook interventions proven' : 'Context graph confirmed',
+                subtitle: json.accounts_recovered_count ? 'Playbook interventions proven' : 'Context graph, unverified',
                 account_count: json.accounts_recovered_count || undefined,
                 accent: 'green',
-                badge: 'Confirmed',
+                badge: 'Unverified',
               },
               {
                 label: 'Expansion Pipeline',
                 amount: json.expansion_pipeline || 0,
-                subtitle: json.expansion_candidates_count ? 'Stakeholder maps confirmed' : 'Context graph confirmed',
+                subtitle: json.expansion_candidates_count ? 'Stakeholder maps identified' : 'Context graph, unverified',
                 account_count: json.expansion_candidates_count || undefined,
                 accent: 'cyan',
-                badge: 'Confirmed',
+                badge: 'Unverified',
               },
             ],
             metrics: [
@@ -1428,7 +1428,7 @@ const CRODashboard: React.FC = () => {
             last_updated: json.last_updated || new Date().toISOString(),
             arr_exposure: arrExposure,
             arr_exposure_label: json.arr_exposure_label || 'Exposure (ARR in at-risk accounts)',
-            revenue_risk_label: json.revenue_risk_label || 'Confirmed Risk (Context Graph)',
+            revenue_risk_label: json.revenue_risk_label || 'Risk Exposure (Context Graph)',
             context_graph_revenue: contextGraphRevenue,
             proof_data: proof,
             customer_phase: customerPhase,

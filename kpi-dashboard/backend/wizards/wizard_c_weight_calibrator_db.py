@@ -627,7 +627,7 @@ def run_wizard_c(customer_id: int) -> dict:
     # ------------------------------------------------------------------
     # NRR Predictive Validation (Hole 5)
     # Check if calibrated weights suppress NRR-linked KPIs while the
-    # customer has confirmed revenue at risk. Warn, don't block.
+    # customer has node-evidenced revenue at risk. Warn, don't block.
     # ------------------------------------------------------------------
     NRR_LINKED_KPIS = ['P5-KPI1', 'P5-KPI2', 'P5-KPI3']
     nrr_validation = {'status': 'ok', 'warnings': []}
@@ -693,7 +693,7 @@ def run_wizard_c(customer_id: int) -> dict:
                     'warnings': nrr_warnings,
                     'revenue_at_risk': 0,
                     'recommendation': (
-                        'NRR-linked KPIs suppressed but no confirmed revenue at risk. '
+                        'NRR-linked KPIs suppressed but no node-evidenced revenue at risk. '
                         'Calibration is safe to keep.'
                     ),
                 }

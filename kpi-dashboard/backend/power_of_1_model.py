@@ -545,7 +545,10 @@ def dedupe_portfolio_dollar_impact(metrics: List[Dict]) -> float:
     seen_playbooks = set()
     total = 0.0
     for m in sorted(metrics, key=lambda x: x.get('dollar_impact', 0) or 0, reverse=True):
-        impact = m.get('dollar_impact', 0) or 0
+        # CEO dashboard's po1_metrics can carry decimal.Decimal dollar_impact
+        # (DB Numeric-sourced), which crashes `float += Decimal`; CFO's path
+        # already coerces to float upstream, so this only ever fired here.
+        impact = float(m.get('dollar_impact', 0) or 0)
         metric_def = POWER_OF_1_METRICS.get(m.get('metric_id'))
         playbooks = set(metric_def.dc2s_linked_playbooks) if metric_def else set()
         if playbooks and playbooks & seen_playbooks:

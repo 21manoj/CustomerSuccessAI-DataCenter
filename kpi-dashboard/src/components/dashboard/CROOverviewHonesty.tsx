@@ -87,12 +87,12 @@ export const CROMetricGuideBanner: React.FC = () => {
       {!collapsed && (
         <ul className="mt-2 space-y-1.5 text-[10px] text-gray-400 list-disc list-inside leading-relaxed">
           <li>
-            <span className="text-gray-300">Confirmed revenue at risk</span> — context-graph OUTCOME $
-            (evidence chains). Same totals as CFO.
+            <span className="text-gray-300">Risk exposure</span> — context-graph OUTCOME $
+            (node-evidenced, not independently verified). Same totals as CFO.
           </li>
           <li>
             <span className="text-gray-300">ARR exposure</span> — health-band ARR in sub-70 accounts;
-            not the same as confirmed graph $.
+            not the same as the risk-exposure graph $.
           </li>
           <li>
             <span className="text-gray-300">NRR %</span> — two horizons, not interchangeable:
@@ -117,7 +117,7 @@ export const CROMetricGuideBanner: React.FC = () => {
       )}
       {collapsed && (
         <p className="text-[9px] text-gray-500 mt-1">
-          Confirmed graph $ ≠ ARR exposure · Foresight NRR = Predictor v3 forward · Hindsight NRR = Wizard B counterfactual (backward) · expand for definitions
+          Risk-exposure graph $ ≠ ARR exposure · Foresight NRR = Predictor v3 forward · Hindsight NRR = Wizard B counterfactual (backward) · expand for definitions
         </p>
       )}
     </div>
@@ -141,8 +141,8 @@ export const CROPreProofBanner: React.FC<{
           </p>
           <p className="text-amber-100/70">
             {executionsTotal} execution{executionsTotal === 1 ? '' : 's'} logged with{' '}
-            <span className="text-amber-200/90">$0 attributed</span> revenue so far. Context-graph
-            confirmed $ is in the strip below; playbook rankings in Ask AI use outcome history when
+            <span className="text-amber-200/90">$0 attributed</span> revenue so far. Context-graph $
+            is in the strip below; playbook rankings in Ask AI use outcome history when
             available.
             <span className="block mt-1 text-[10px] text-amber-100/50">
               Phase: {phase.replace('_', ' ')} · {expectedProofHint(phase)}
@@ -164,19 +164,19 @@ export const CROContextGraphStrip: React.FC<{
   const nodeCount = prov?.outcome_node_count ?? 0;
   const tiles = [
     {
-      label: 'Confirmed revenue at risk',
+      label: 'Risk exposure',
       value: data.revenue_at_risk,
       accent: 'text-red-400',
       border: 'border-t-red-500',
     },
     {
-      label: 'Confirmed revenue protected',
+      label: 'Customer-reported saves (unverified)',
       value: data.graph_revenue_protected,
       accent: 'text-emerald-400',
       border: 'border-t-emerald-500',
     },
     {
-      label: 'Expansion pipeline (confirmed)',
+      label: 'Expansion pipeline',
       value: data.expansion_pipeline,
       accent: 'text-cyan-400',
       border: 'border-t-cyan-500',

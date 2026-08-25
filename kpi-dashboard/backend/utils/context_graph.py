@@ -720,12 +720,12 @@ def aggregate_revenue_with_provenance(
         'outcome_node_count': len(outcome_nodes),
         'revenue_at_risk': {
             'value': base['revenue_at_risk'],
-            'label': 'Confirmed Risk (Context Graph)',
+            'label': 'Risk Exposure (Context Graph)',
             'sample_nodes': samples['at_risk'],
         },
         'revenue_protected': {
             'value': base['revenue_protected'],
-            'label': 'Protected (Context Graph OUTCOME nodes)',
+            'label': 'Customer-Reported Saves (Unverified)',
             'sample_nodes': samples['protected'],
         },
         'expansion_pipeline': {
