@@ -115,7 +115,8 @@ def get_playbook_duration_days(playbook_id: str, vertical: Optional[str] = None)
         return _PLAYBOOK_DURATION_DAYS[playbook_id]
     if vertical and is_saas_vertical(vertical):
         try:
-            from verticals.saas_premium.vertical_config import PLAYBOOK_CONFIG
+            from _ask_ai_helpers import _get_playbook_config
+            PLAYBOOK_CONFIG, _ = _get_playbook_config('saas_premium')
             cfg = PLAYBOOK_CONFIG.get(playbook_id) or {}
             return int(cfg.get('estimated_duration_days') or 21)
         except Exception:
