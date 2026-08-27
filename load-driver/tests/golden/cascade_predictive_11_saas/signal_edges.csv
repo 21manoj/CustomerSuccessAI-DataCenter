@@ -1,0 +1,74 @@
+source_account_id,from_signal_ref,to_signal_ref,edge_type,weight,label,confidence,lag_days
+1001,narrative_sig_1001_1,dec_1001_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1001,dec_1001_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1001,narrative_sig_1001_1,dec_1001_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1002,narrative_sig_1002_1,dec_1002_1,TRIGGERED,1.0,Expansion signal triggered investment,0.85,7
+1002,dec_1002_1,expansion_opportunity,LED_TO,1.0,Investment identified expansion,0.8,14
+1002,dec_1002_2,revenue_growth,LED_TO,1.0,Upsell proposal drove revenue growth,0.8,14
+1002,narrative_sig_1002_1,dec_1002_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.9,7
+1002,dec_1002_1,expansion_approved,LED_TO,1.0,Proposal secured expansion approval,0.9,21
+1003,narrative_sig_1003_1,dec_1003_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1003,dec_1003_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1003,narrative_sig_1003_1,dec_1003_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1004,narrative_sig_1004_1,dec_1004_1,TRIGGERED,1.0,Stakeholder loss triggered escalation,0.9,7
+1004,dec_1004_1,revenue_at_risk,LED_TO,1.0,Escalation revealed revenue risk,0.85,14
+1004,narrative_sig_1004_2,dec_1004_2,TRIGGERED,1.0,KPI decline triggered retention plan,0.85,10
+1004,dec_1004_2,engagement_decline,LED_TO,1.0,Retention plan addressed engagement decline,0.8,21
+1004,narrative_sig_1004_1,narrative_sig_1004_2,LED_TO,1.0,Champion departure caused usage collapse,0.9,7
+1004,narrative_sig_1004_2,sig_1004_3,LED_TO,1.0,Usage decline led to competitor evaluation,0.8,14
+1004,narrative_sig_1004_1,dec_1004_1,TRIGGERED,1.0,Exec engagement triggered recovery plan,0.9,7
+1004,dec_1004_1,churn_averted,LED_TO,1.0,Recovery plan averted churn,0.9,21
+1004,dec_1004_2,revenue_protected,LED_TO,1.0,Executive QBR protected revenue,0.85,21
+1004,narrative_sig_1004_1,dec_1004_1,TRIGGERED,1.0,New champion identified triggered renewal,0.9,7
+1004,dec_1004_1,renewal_secured,LED_TO,1.0,Renewal confirmed with new champion,0.95,14
+1005,narrative_sig_1005_1,dec_1005_1,TRIGGERED,1.0,Critical incident triggered emergency response,0.9,7
+1005,dec_1005_1,revenue_at_risk,LED_TO,1.0,Response revealed revenue at risk,0.85,14
+1005,narrative_sig_1005_2,dec_1005_2,TRIGGERED,1.0,Escalation triggered retention plan,0.85,10
+1005,dec_1005_2,capacity_constraint,LED_TO,1.0,Retention surfaced capacity constraints,0.8,21
+1005,narrative_sig_1005_1,narrative_sig_1005_2,LED_TO,1.0,NPS decline escalated to executive level,0.85,7
+1005,narrative_sig_1005_2,sig_1005_3,LED_TO,1.0,Executive escalation drove usage decline,0.8,14
+1005,narrative_sig_1005_1,dec_1005_1,TRIGGERED,1.0,KPI recovery triggered remediation plan,0.9,7
+1005,dec_1005_1,churn_averted,LED_TO,1.0,Remediation averted churn,0.9,21
+1005,dec_1005_1,revenue_protected,LED_TO,1.0,Remediation protected revenue,0.85,28
+1005,narrative_sig_1005_1,dec_1005_1,TRIGGERED,1.0,KPI stabilization confirmed renewal,0.9,7
+1005,dec_1005_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.95,14
+1006,narrative_sig_1006_1,dec_1006_1,TRIGGERED,1.0,Critical incident triggered emergency response,0.9,7
+1006,dec_1006_1,partial_recovery,LED_TO,1.0,Emergency response led to partial recovery,0.85,14
+1006,narrative_sig_1006_2,dec_1006_2,TRIGGERED,1.0,Escalation triggered recovery plan,0.85,10
+1006,dec_1006_2,revenue_protected,LED_TO,1.0,Recovery plan protected revenue,0.8,21
+1006,narrative_sig_1006_1,narrative_sig_1006_2,LED_TO,1.0,Usage decline escalated to executive level,0.85,7
+1006,sig_1006_3,capacity_constraint,LED_TO,1.0,NPS decline confirmed capacity issues,0.85,14
+1006,narrative_sig_1006_1,dec_1006_1,TRIGGERED,1.0,KPI recovery signal triggered plan,0.9,7
+1006,dec_1006_1,churn_averted,LED_TO,1.0,Recovery plan averted churn,0.9,21
+1006,dec_1006_2,revenue_protected,LED_TO,1.0,Executive QBR protected revenue,0.85,21
+1006,narrative_sig_1006_1,dec_1006_1,TRIGGERED,1.0,KPI stabilization confirmed renewal,0.9,7
+1006,dec_1006_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.95,14
+1001,auto_recovery_1001_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1002,auto_recovery_1002_3,expansion_approved,LED_TO,0.85,Auto-recovery signal led to expansion_approved,0.8,14
+1002,auto_recovery_1002_3,revenue_growth,LED_TO,0.85,Auto-recovery signal led to revenue_growth,0.8,14
+1004,auto_recovery_1004_9,churn_averted,LED_TO,0.85,Auto-recovery signal led to churn_averted,0.8,14
+1004,auto_recovery_1004_9,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1004,auto_recovery_1004_9,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1005,auto_recovery_1005_8,churn_averted,LED_TO,0.85,Auto-recovery signal led to churn_averted,0.8,14
+1005,auto_recovery_1005_8,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1005,auto_recovery_1005_8,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1006,auto_recovery_1006_10,churn_averted,LED_TO,0.85,Auto-recovery signal led to churn_averted,0.8,14
+1006,auto_recovery_1006_10,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1006,auto_recovery_1006_10,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1006,auto_recovery_1006_10,capacity_constraint,LED_TO,0.85,Auto-recovery signal led to capacity_constraint,0.8,14
+1001,sig_1001_2,dec_1001_1,LED_TO,0.8,feature_adoption_increase led to decision,0.75,102
+1001,sig_1001_3,dec_1001_1,LED_TO,0.8,expansion_discussion led to decision,0.75,47
+1002,sig_1002_2,dec_1002_3,LED_TO,0.8,positive_engagement led to decision,0.75,21
+1003,sig_1003_2,dec_1003_2,LED_TO,0.8,nps_decline led to decision,0.75,28
+1003,sig_1003_3,dec_1003_1,LED_TO,0.8,feature_request led to decision,0.75,6
+1004,sig_1004_3,dec_1004_4,LED_TO,0.8,champion_departure led to decision,0.75,17
+1004,sig_1004_4,dec_1004_4,LED_TO,0.8,usage_decline led to decision,0.75,9
+1004,sig_1004_5,dec_1004_4,LED_TO,0.8,engagement_gap led to decision,0.75,2
+1004,sig_1004_6,dec_1004_5,LED_TO,0.8,competitor_mention led to decision,0.75,6
+1005,sig_1005_3,dec_1005_2,LED_TO,0.8,support_escalation led to decision,0.75,25
+1005,sig_1005_4,dec_1005_3,LED_TO,0.8,executive_escalation led to decision,0.75,29
+1005,sig_1005_5,dec_1005_3,LED_TO,0.8,nps_decline led to decision,0.75,12
+1006,sig_1006_3,dec_1006_1,LED_TO,0.8,champion_departure led to decision,0.75,56
+1006,sig_1006_4,dec_1006_1,LED_TO,0.8,usage_decline led to decision,0.75,30
+1006,sig_1006_5,dec_1006_2,LED_TO,0.8,executive_escalation led to decision,0.75,12
+1006,sig_1006_6,dec_1006_4,LED_TO,0.8,competitor_mention led to decision,0.75,32

@@ -1,0 +1,781 @@
+source_account_id,kpi_code,kpi_name,pillar,measured_at,value,target,weight,unit,status
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-01,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-08,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-15,81.65,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-22,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-29,82.26,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-05,83.09,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-12,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-19,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-26,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-03,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-10,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-17,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-24,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-31,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-07,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-14,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-21,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-28,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-04,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-11,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-18,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-25,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-04,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-11,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-18,84.0,60,0.16,percentage,healthy
+1001,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-25,84.0,60,0.16,percentage,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-01,9.68,21,0.14,days,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-29,9.01,21,0.14,days,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-11-26,9.07,21,0.14,days,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-12-24,8.44,21,0.14,days,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-01-21,7.35,21,0.14,days,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-02-18,7.35,21,0.14,days,healthy
+1001,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-03-18,7.35,21,0.14,days,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-10-01,83.49,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-10-08,82.89,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-10-15,83.32,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-10-22,86.58,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-10-29,87.64,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-11-05,88.04,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-11-12,90.18,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-11-19,90.27,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-11-26,87.14,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-12-03,90.61,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-12-10,87.92,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-12-17,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-12-24,87.35,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2025-12-31,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-01-07,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-01-14,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-01-21,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-01-28,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-02-04,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-02-11,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-02-18,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-02-25,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-03-04,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-03-11,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-03-18,91.0,65,0.1,percentage,healthy
+1001,P1-KPI10,Golden Path Velocity,P1,2026-03-25,91.0,65,0.1,percentage,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-01,90.95,70,0.22,score,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-29,88.94,70,0.22,score,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2025-11-26,96.31,70,0.22,score,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2025-12-24,96.23,70,0.22,score,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2026-01-21,98.0,70,0.22,score,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2026-02-18,98.0,70,0.22,score,healthy
+1001,P2-KPI1,Executive Sponsor Engagement,P2,2026-03-18,98.0,70,0.22,score,healthy
+1001,P2-KPI8,Persona Breadth,P2,2025-10-01,4.2,3.0,0.1,ratio,healthy
+1001,P2-KPI8,Persona Breadth,P2,2025-10-29,4.2,3.0,0.1,ratio,healthy
+1001,P2-KPI8,Persona Breadth,P2,2025-11-26,4.2,3.0,0.1,ratio,healthy
+1001,P2-KPI8,Persona Breadth,P2,2025-12-24,4.2,3.0,0.1,ratio,healthy
+1001,P2-KPI8,Persona Breadth,P2,2026-01-21,4.2,3.0,0.1,ratio,healthy
+1001,P2-KPI8,Persona Breadth,P2,2026-02-18,4.2,3.0,0.1,ratio,healthy
+1001,P2-KPI8,Persona Breadth,P2,2026-03-18,4.2,3.0,0.1,ratio,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-10-01,10.84,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-10-08,10.76,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-10-15,10.48,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-10-22,10.45,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-10-29,10.7,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-11-05,10.37,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-11-12,9.93,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-11-19,9.99,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-11-26,9.86,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-12-03,8.66,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-12-10,9.72,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-12-17,9.58,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-12-24,9.04,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2025-12-31,9.2,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-01-07,9.16,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-01-14,8.72,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-01-21,8.7,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-01-28,9.08,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-02-04,8.75,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-02-11,8.74,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-02-18,8.4,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-02-25,8.4,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-03-04,8.4,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-03-11,8.4,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-03-18,8.4,24,0.13,hours,healthy
+1001,P3-KPI1,Ticket Resolution Time,P3,2026-03-25,8.4,24,0.13,hours,healthy
+1001,P3-KPI3,Net Promoter Score (NPS),P3,2025-10-01,56.0,40,0.14,score,healthy
+1001,P3-KPI3,Net Promoter Score (NPS),P3,2025-12-24,56.0,40,0.14,score,healthy
+1001,P3-KPI3,Net Promoter Score (NPS),P3,2026-03-18,56.0,40,0.14,score,healthy
+1001,P3-KPI4,Escalation Rate,P3,2025-10-01,3.51,8,0.1,percentage,healthy
+1001,P3-KPI4,Escalation Rate,P3,2025-10-29,3.3,8,0.1,percentage,healthy
+1001,P3-KPI4,Escalation Rate,P3,2025-11-26,3.06,8,0.1,percentage,healthy
+1001,P3-KPI4,Escalation Rate,P3,2025-12-24,2.98,8,0.1,percentage,healthy
+1001,P3-KPI4,Escalation Rate,P3,2026-01-21,2.86,8,0.1,percentage,healthy
+1001,P3-KPI4,Escalation Rate,P3,2026-02-18,2.8,8,0.1,percentage,healthy
+1001,P3-KPI4,Escalation Rate,P3,2026-03-18,2.8,8,0.1,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-01,142.25,110,0.2,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-29,142.06,110,0.2,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2025-11-26,143.87,110,0.2,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2025-12-24,154.0,110,0.2,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2026-01-21,154.0,110,0.2,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2026-02-18,154.0,110,0.2,percentage,healthy
+1001,P5-KPI1,Net Revenue Retention (NRR),P5,2026-03-18,154.0,110,0.2,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-01,93.07,92,0.16,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-29,97.4,92,0.16,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-11-26,106.78,92,0.16,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-12-24,112.9,92,0.16,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-01-21,121.77,92,0.16,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-02-18,118.89,92,0.16,percentage,healthy
+1001,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-03-18,126.41,92,0.16,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2025-10-01,21.0,15,0.13,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2025-10-29,21.0,15,0.13,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2025-11-26,21.0,15,0.13,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2025-12-24,21.0,15,0.13,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2026-01-21,21.0,15,0.13,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2026-02-18,21.0,15,0.13,percentage,healthy
+1001,P5-KPI3,Expansion Revenue Rate,P5,2026-03-18,21.0,15,0.13,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-01,74.15,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-08,69.74,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-15,73.74,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-22,70.57,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-29,75.94,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-05,75.69,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-12,71.0,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-19,68.43,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-26,72.16,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-03,67.5,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-10,69.51,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-17,71.36,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-24,73.98,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-31,69.82,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-07,72.76,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-14,70.85,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-21,71.6,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-28,72.43,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-04,68.63,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-11,68.69,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-18,67.94,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-25,76.51,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-04,73.43,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-11,72.44,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-18,70.3,60,0.16,percentage,healthy
+1002,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-25,70.21,60,0.16,percentage,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-01,13.96,21,0.14,days,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-29,14.03,21,0.14,days,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-11-26,14.38,21,0.14,days,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-12-24,14.7,21,0.14,days,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-01-21,14.35,21,0.14,days,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-02-18,14.14,21,0.14,days,healthy
+1002,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-03-18,13.63,21,0.14,days,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-10-01,75.37,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-10-08,76.24,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-10-15,76.47,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-10-22,76.82,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-10-29,74.04,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-11-05,77.53,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-11-12,73.44,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-11-19,73.86,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-11-26,73.66,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-12-03,74.87,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-12-10,71.5,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-12-17,70.43,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-12-24,76.47,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2025-12-31,81.97,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-01-07,74.25,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-01-14,76.14,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-01-21,77.7,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-01-28,75.97,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-02-04,76.14,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-02-11,75.88,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-02-18,75.22,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-02-25,73.53,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-03-04,79.2,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-03-11,75.77,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-03-18,76.54,65,0.1,percentage,healthy
+1002,P1-KPI10,Golden Path Velocity,P1,2026-03-25,72.56,65,0.1,percentage,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-01,81.77,70,0.22,score,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-29,81.83,70,0.22,score,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2025-11-26,81.32,70,0.22,score,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2025-12-24,82.01,70,0.22,score,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2026-01-21,78.35,70,0.22,score,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2026-02-18,79.13,70,0.22,score,healthy
+1002,P2-KPI1,Executive Sponsor Engagement,P2,2026-03-18,77.59,70,0.22,score,healthy
+1002,P2-KPI8,Persona Breadth,P2,2025-10-01,4.2,3.0,0.1,ratio,healthy
+1002,P2-KPI8,Persona Breadth,P2,2025-10-29,4.2,3.0,0.1,ratio,healthy
+1002,P2-KPI8,Persona Breadth,P2,2025-11-26,4.2,3.0,0.1,ratio,healthy
+1002,P2-KPI8,Persona Breadth,P2,2025-12-24,4.2,3.0,0.1,ratio,healthy
+1002,P2-KPI8,Persona Breadth,P2,2026-01-21,4.2,3.0,0.1,ratio,healthy
+1002,P2-KPI8,Persona Breadth,P2,2026-02-18,4.2,3.0,0.1,ratio,healthy
+1002,P2-KPI8,Persona Breadth,P2,2026-03-18,4.2,3.0,0.1,ratio,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-10-01,16.16,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-10-08,16.03,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-10-15,16.56,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-10-22,16.11,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-10-29,14.44,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-11-05,16.47,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-11-12,16.03,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-11-19,15.87,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-11-26,16.88,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-12-03,16.96,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-12-10,16.56,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-12-17,16.42,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-12-24,16.24,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2025-12-31,15.43,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-01-07,17.28,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-01-14,16.7,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-01-21,16.25,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-01-28,16.18,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-02-04,16.39,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-02-11,15.32,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-02-18,14.41,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-02-25,16.22,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-03-04,16.26,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-03-11,16.3,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-03-18,16.41,24,0.13,hours,healthy
+1002,P3-KPI1,Ticket Resolution Time,P3,2026-03-25,15.8,24,0.13,hours,healthy
+1002,P3-KPI3,Net Promoter Score (NPS),P3,2025-10-01,56.0,40,0.14,score,healthy
+1002,P3-KPI3,Net Promoter Score (NPS),P3,2025-12-24,56.0,40,0.14,score,healthy
+1002,P3-KPI3,Net Promoter Score (NPS),P3,2026-03-18,56.0,40,0.14,score,healthy
+1002,P3-KPI4,Escalation Rate,P3,2025-10-01,5.77,8,0.1,percentage,healthy
+1002,P3-KPI4,Escalation Rate,P3,2025-10-29,4.9,8,0.1,percentage,healthy
+1002,P3-KPI4,Escalation Rate,P3,2025-11-26,5.54,8,0.1,percentage,healthy
+1002,P3-KPI4,Escalation Rate,P3,2025-12-24,5.42,8,0.1,percentage,healthy
+1002,P3-KPI4,Escalation Rate,P3,2026-01-21,5.4,8,0.1,percentage,healthy
+1002,P3-KPI4,Escalation Rate,P3,2026-02-18,5.26,8,0.1,percentage,healthy
+1002,P3-KPI4,Escalation Rate,P3,2026-03-18,5.44,8,0.1,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-01,131.72,110,0.2,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-29,127.42,110,0.2,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2025-11-26,133.59,110,0.2,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2025-12-24,133.61,110,0.2,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2026-01-21,131.69,110,0.2,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2026-02-18,115.86,110,0.2,percentage,healthy
+1002,P5-KPI1,Net Revenue Retention (NRR),P5,2026-03-18,123.12,110,0.2,percentage,healthy
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-01,92.31,92,0.16,percentage,healthy
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-29,91.59,92,0.16,percentage,risk
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-11-26,92.59,92,0.16,percentage,healthy
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-12-24,89.78,92,0.16,percentage,risk
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-01-21,89.84,92,0.16,percentage,risk
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-02-18,97.64,92,0.16,percentage,healthy
+1002,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-03-18,96.86,92,0.16,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2025-10-01,21.0,15,0.13,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2025-10-29,21.0,15,0.13,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2025-11-26,21.0,15,0.13,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2025-12-24,21.0,15,0.13,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2026-01-21,21.0,15,0.13,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2026-02-18,21.0,15,0.13,percentage,healthy
+1002,P5-KPI3,Expansion Revenue Rate,P5,2026-03-18,21.0,15,0.13,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-01,64.44,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-08,63.2,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-15,67.47,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-22,61.68,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-29,60.03,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-05,60.78,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-12,65.84,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-19,63.66,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-26,63.8,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-03,65.92,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-10,62.6,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-17,61.64,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-24,63.05,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-31,63.95,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-07,62.46,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-14,62.64,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-21,63.85,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-28,60.99,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-04,60.36,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-11,63.8,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-18,61.3,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-25,62.94,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-04,66.43,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-11,62.33,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-18,64.81,60,0.16,percentage,healthy
+1003,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-25,61.87,60,0.16,percentage,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-01,18.51,21,0.14,days,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-29,18.6,21,0.14,days,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-11-26,19.06,21,0.14,days,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-12-24,19.48,21,0.14,days,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-01-21,19.02,21,0.14,days,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-02-18,18.74,21,0.14,days,healthy
+1003,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-03-18,18.07,21,0.14,days,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-10-01,68.33,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-10-08,69.12,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-10-15,69.33,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-10-22,69.65,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-10-29,67.13,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-11-05,70.3,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-11-12,66.58,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-11-19,66.97,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-11-26,66.78,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-12-03,67.88,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-12-10,64.83,65,0.1,percentage,risk
+1003,P1-KPI10,Golden Path Velocity,P1,2025-12-17,63.85,65,0.1,percentage,risk
+1003,P1-KPI10,Golden Path Velocity,P1,2025-12-24,69.33,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2025-12-31,74.32,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-01-07,67.32,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-01-14,69.04,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-01-21,70.45,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-01-28,68.88,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-02-04,69.04,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-02-11,68.8,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-02-18,68.2,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-02-25,66.67,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-03-04,71.81,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-03-11,68.7,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-03-18,69.39,65,0.1,percentage,healthy
+1003,P1-KPI10,Golden Path Velocity,P1,2026-03-25,65.79,65,0.1,percentage,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-01,74.62,70,0.22,score,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-29,74.67,70,0.22,score,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2025-11-26,74.2,70,0.22,score,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2025-12-24,74.83,70,0.22,score,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2026-01-21,71.5,70,0.22,score,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2026-02-18,72.21,70,0.22,score,healthy
+1003,P2-KPI1,Executive Sponsor Engagement,P2,2026-03-18,70.8,70,0.22,score,healthy
+1003,P2-KPI8,Persona Breadth,P2,2025-10-01,3.5,3.0,0.1,ratio,healthy
+1003,P2-KPI8,Persona Breadth,P2,2025-10-29,3.64,3.0,0.1,ratio,healthy
+1003,P2-KPI8,Persona Breadth,P2,2025-11-26,3.6,3.0,0.1,ratio,healthy
+1003,P2-KPI8,Persona Breadth,P2,2025-12-24,3.4,3.0,0.1,ratio,healthy
+1003,P2-KPI8,Persona Breadth,P2,2026-01-21,3.54,3.0,0.1,ratio,healthy
+1003,P2-KPI8,Persona Breadth,P2,2026-02-18,3.44,3.0,0.1,ratio,healthy
+1003,P2-KPI8,Persona Breadth,P2,2026-03-18,3.64,3.0,0.1,ratio,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-10-01,21.46,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-10-08,21.3,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-10-15,22.0,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-10-22,21.4,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-10-29,19.18,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-11-05,21.88,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-11-12,21.29,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-11-19,21.08,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-11-26,22.42,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-12-03,22.54,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-12-10,22.0,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-12-17,21.81,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-12-24,21.58,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2025-12-31,20.5,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-01-07,22.96,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-01-14,22.19,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-01-21,21.59,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-01-28,21.5,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-02-04,21.78,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-02-11,20.35,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-02-18,19.14,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-02-25,21.55,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-03-04,21.61,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-03-11,21.65,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-03-18,21.8,24,0.13,hours,healthy
+1003,P3-KPI1,Ticket Resolution Time,P3,2026-03-25,20.98,24,0.13,hours,healthy
+1003,P3-KPI3,Net Promoter Score (NPS),P3,2025-10-01,44.69,40,0.14,score,healthy
+1003,P3-KPI3,Net Promoter Score (NPS),P3,2025-12-24,46.49,40,0.14,score,healthy
+1003,P3-KPI3,Net Promoter Score (NPS),P3,2026-03-18,46.74,40,0.14,score,healthy
+1003,P3-KPI4,Escalation Rate,P3,2025-10-01,7.79,8,0.1,percentage,healthy
+1003,P3-KPI4,Escalation Rate,P3,2025-10-29,6.62,8,0.1,percentage,healthy
+1003,P3-KPI4,Escalation Rate,P3,2025-11-26,7.48,8,0.1,percentage,healthy
+1003,P3-KPI4,Escalation Rate,P3,2025-12-24,7.32,8,0.1,percentage,healthy
+1003,P3-KPI4,Escalation Rate,P3,2026-01-21,7.29,8,0.1,percentage,healthy
+1003,P3-KPI4,Escalation Rate,P3,2026-02-18,7.11,8,0.1,percentage,healthy
+1003,P3-KPI4,Escalation Rate,P3,2026-03-18,7.34,8,0.1,percentage,healthy
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-01,119.59,110,0.2,percentage,healthy
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-29,115.68,110,0.2,percentage,healthy
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2025-11-26,121.28,110,0.2,percentage,healthy
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2025-12-24,121.3,110,0.2,percentage,healthy
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2026-01-21,119.56,110,0.2,percentage,healthy
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2026-02-18,105.19,110,0.2,percentage,risk
+1003,P5-KPI1,Net Revenue Retention (NRR),P5,2026-03-18,111.78,110,0.2,percentage,healthy
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-01,90.49,92,0.16,percentage,risk
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-29,89.78,92,0.16,percentage,risk
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-11-26,90.76,92,0.16,percentage,risk
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-12-24,88.01,92,0.16,percentage,risk
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-01-21,88.07,92,0.16,percentage,risk
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-02-18,95.71,92,0.16,percentage,healthy
+1003,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-03-18,94.95,92,0.16,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2025-10-01,17.42,15,0.13,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2025-10-29,18.84,15,0.13,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2025-11-26,17.97,15,0.13,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2025-12-24,18.57,15,0.13,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2026-01-21,18.57,15,0.13,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2026-02-18,17.93,15,0.13,percentage,healthy
+1003,P5-KPI3,Expansion Revenue Rate,P5,2026-03-18,18.44,15,0.13,percentage,healthy
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-01,39.32,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-08,39.03,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-15,38.52,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-22,42.55,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-29,41.37,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-05,41.69,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-12,41.32,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-19,39.41,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-26,38.31,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-03,36.02,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-10,36.49,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-17,35.6,60,0.16,percentage,risk
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-24,32.92,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-31,34.06,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-07,33.15,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-14,31.72,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-21,31.46,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-28,30.67,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-04,30.21,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-11,28.68,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-18,27.81,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-25,28.34,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-04,27.01,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-11,26.78,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-18,26.27,60,0.16,percentage,critical
+1004,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-25,25.47,60,0.16,percentage,critical
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-01,39.33,21,0.14,days,risk
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-29,39.65,21,0.14,days,risk
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-11-26,43.27,21,0.14,days,risk
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-12-24,48.13,21,0.14,days,critical
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-01-21,56.37,21,0.14,days,critical
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-02-18,57.12,21,0.14,days,critical
+1004,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-03-18,64.42,21,0.14,days,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2025-10-01,41.52,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-10-08,41.92,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-10-15,41.13,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-10-22,41.52,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-10-29,40.94,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-11-05,41.52,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-11-12,39.82,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-11-19,40.84,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-11-26,38.03,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-12-03,38.54,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-12-10,37.96,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-12-17,35.15,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-12-24,36.61,65,0.1,percentage,risk
+1004,P1-KPI10,Golden Path Velocity,P1,2025-12-31,33.4,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-01-07,33.87,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-01-14,34.09,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-01-21,30.76,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-01-28,30.65,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-02-04,32.21,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-02-11,30.53,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-02-18,30.71,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-02-25,28.44,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-03-04,28.99,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-03-11,27.48,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-03-18,27.23,65,0.1,percentage,critical
+1004,P1-KPI10,Golden Path Velocity,P1,2026-03-25,27.1,65,0.1,percentage,critical
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-01,45.4,70,0.22,score,risk
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-29,44.59,70,0.22,score,risk
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2025-11-26,44.23,70,0.22,score,risk
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2025-12-24,39.87,70,0.22,score,critical
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2026-01-21,36.65,70,0.22,score,critical
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2026-02-18,32.2,70,0.22,score,critical
+1004,P2-KPI1,Executive Sponsor Engagement,P2,2026-03-18,27.41,70,0.22,score,critical
+1004,P2-KPI8,Persona Breadth,P2,2025-10-01,1.8,3.0,0.1,ratio,risk
+1004,P2-KPI8,Persona Breadth,P2,2025-10-29,1.79,3.0,0.1,ratio,risk
+1004,P2-KPI8,Persona Breadth,P2,2025-11-26,1.65,3.0,0.1,ratio,risk
+1004,P2-KPI8,Persona Breadth,P2,2025-12-24,1.47,3.0,0.1,ratio,critical
+1004,P2-KPI8,Persona Breadth,P2,2026-01-21,1.47,3.0,0.1,ratio,critical
+1004,P2-KPI8,Persona Breadth,P2,2026-02-18,1.28,3.0,0.1,ratio,critical
+1004,P2-KPI8,Persona Breadth,P2,2026-03-18,1.19,3.0,0.1,ratio,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-10-01,44.61,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-10-08,44.18,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-10-15,43.16,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-10-22,43.55,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-10-29,42.75,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-11-05,44.75,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-11-12,42.72,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-11-19,46.98,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-11-26,47.13,24,0.13,hours,risk
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-12-03,48.06,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-12-10,51.43,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-12-17,51.82,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-12-24,50.3,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2025-12-31,53.68,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-01-07,54.77,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-01-14,58.39,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-01-21,58.36,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-01-28,59.55,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-02-04,60.2,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-02-11,63.1,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-02-18,64.82,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-02-25,66.63,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-03-04,69.9,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-03-11,70.97,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-03-18,67.27,24,0.13,hours,critical
+1004,P3-KPI1,Ticket Resolution Time,P3,2026-03-25,72.2,24,0.13,hours,critical
+1004,P3-KPI3,Net Promoter Score (NPS),P3,2025-10-01,15.75,40,0.14,score,risk
+1004,P3-KPI3,Net Promoter Score (NPS),P3,2025-12-24,13.49,40,0.14,score,risk
+1004,P3-KPI3,Net Promoter Score (NPS),P3,2026-03-18,11.1,40,0.14,score,risk
+1004,P3-KPI4,Escalation Rate,P3,2025-10-01,13.7,8,0.1,percentage,risk
+1004,P3-KPI4,Escalation Rate,P3,2025-10-29,13.86,8,0.1,percentage,risk
+1004,P3-KPI4,Escalation Rate,P3,2025-11-26,15.33,8,0.1,percentage,critical
+1004,P3-KPI4,Escalation Rate,P3,2025-12-24,17.32,8,0.1,percentage,critical
+1004,P3-KPI4,Escalation Rate,P3,2026-01-21,17.88,8,0.1,percentage,critical
+1004,P3-KPI4,Escalation Rate,P3,2026-02-18,19.6,8,0.1,percentage,critical
+1004,P3-KPI4,Escalation Rate,P3,2026-03-18,22.56,8,0.1,percentage,critical
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-01,93.33,110,0.2,percentage,critical
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-29,95.18,110,0.2,percentage,risk
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2025-11-26,94.9,110,0.2,percentage,critical
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2025-12-24,81.73,110,0.2,percentage,critical
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2026-01-21,76.68,110,0.2,percentage,critical
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2026-02-18,64.95,110,0.2,percentage,critical
+1004,P5-KPI1,Net Revenue Retention (NRR),P5,2026-03-18,57.88,110,0.2,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-01,82.93,92,0.16,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-29,84.79,92,0.16,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-11-26,77.83,92,0.16,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-12-24,73.39,92,0.16,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-01-21,67.1,92,0.16,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-02-18,57.01,92,0.16,percentage,critical
+1004,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-03-18,52.92,92,0.16,percentage,critical
+1004,P5-KPI3,Expansion Revenue Rate,P5,2025-10-01,7.06,15,0.13,percentage,risk
+1004,P5-KPI3,Expansion Revenue Rate,P5,2025-10-29,6.87,15,0.13,percentage,risk
+1004,P5-KPI3,Expansion Revenue Rate,P5,2025-11-26,6.78,15,0.13,percentage,risk
+1004,P5-KPI3,Expansion Revenue Rate,P5,2025-12-24,5.6,15,0.13,percentage,risk
+1004,P5-KPI3,Expansion Revenue Rate,P5,2026-01-21,5.33,15,0.13,percentage,risk
+1004,P5-KPI3,Expansion Revenue Rate,P5,2026-02-18,5.25,15,0.13,percentage,risk
+1004,P5-KPI3,Expansion Revenue Rate,P5,2026-03-18,4.59,15,0.13,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-01,29.28,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-08,29.4,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-15,28.02,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-22,27.91,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-29,28.25,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-05,27.11,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-12,29.05,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-19,25.73,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-26,25.46,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-03,25.08,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-10,25.43,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-17,24.23,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-24,22.66,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-31,23.81,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-07,22.3,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-14,22.7,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-21,21.54,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-28,20.34,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-04,21.41,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-11,21.02,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-18,20.0,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-25,19.89,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-04,18.81,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-11,18.74,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-18,18.92,60,0.16,percentage,critical
+1005,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-25,18.26,60,0.16,percentage,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-01,57.23,21,0.14,days,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-29,57.7,21,0.14,days,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-11-26,66.56,21,0.14,days,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-12-24,72.77,21,0.14,days,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-01-21,84.28,21,0.14,days,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-02-18,84.65,21,0.14,days,critical
+1005,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-03-18,94.73,21,0.14,days,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-10-01,29.07,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-10-08,29.35,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-10-15,28.79,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-10-22,29.07,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-10-29,28.66,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-11-05,28.4,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-11-12,26.61,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-11-19,27.32,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-11-26,25.48,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-12-03,25.85,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-12-10,25.5,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-12-17,23.65,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-12-24,24.67,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2025-12-31,22.67,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-01-07,23.16,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-01-14,23.48,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-01-21,21.39,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-01-28,21.49,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-02-04,22.72,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-02-11,21.75,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-02-18,22.05,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-02-25,20.67,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-03-04,21.22,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-03-11,20.36,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-03-18,20.36,65,0.1,percentage,critical
+1005,P1-KPI10,Golden Path Velocity,P1,2026-03-25,20.45,65,0.1,percentage,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-01,32.37,70,0.22,score,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-29,31.8,70,0.22,score,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2025-11-26,30.18,70,0.22,score,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2025-12-24,27.36,70,0.22,score,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2026-01-21,25.55,70,0.22,score,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2026-02-18,22.88,70,0.22,score,critical
+1005,P2-KPI1,Executive Sponsor Engagement,P2,2026-03-18,19.97,70,0.22,score,critical
+1005,P2-KPI8,Persona Breadth,P2,2025-10-01,1.23,3.0,0.1,ratio,critical
+1005,P2-KPI8,Persona Breadth,P2,2025-10-29,1.23,3.0,0.1,ratio,critical
+1005,P2-KPI8,Persona Breadth,P2,2025-11-26,1.08,3.0,0.1,ratio,critical
+1005,P2-KPI8,Persona Breadth,P2,2025-12-24,0.97,3.0,0.1,ratio,critical
+1005,P2-KPI8,Persona Breadth,P2,2026-01-21,1.0,3.0,0.1,ratio,critical
+1005,P2-KPI8,Persona Breadth,P2,2026-02-18,0.91,3.0,0.1,ratio,critical
+1005,P2-KPI8,Persona Breadth,P2,2026-03-18,0.88,3.0,0.1,ratio,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-10-01,71.87,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-10-08,71.18,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-10-15,69.54,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-10-22,70.16,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-10-29,68.88,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-11-05,74.55,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-11-12,73.52,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-11-19,80.41,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-11-26,80.26,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-12-03,81.46,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-12-10,86.8,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-12-17,87.09,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-12-24,84.19,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2025-12-31,89.6,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-01-07,91.17,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-01-14,96.92,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-01-21,96.64,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-01-28,98.38,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-02-04,99.23,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-02-11,103.78,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-02-18,106.38,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-02-25,109.14,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-03-04,114.26,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-03-11,115.81,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-03-18,109.64,24,0.13,hours,critical
+1005,P3-KPI1,Ticket Resolution Time,P3,2026-03-25,117.43,24,0.13,hours,critical
+1005,P3-KPI3,Net Promoter Score (NPS),P3,2025-10-01,0,40,0.14,score,critical
+1005,P3-KPI3,Net Promoter Score (NPS),P3,2025-12-24,0,40,0.14,score,critical
+1005,P3-KPI3,Net Promoter Score (NPS),P3,2026-03-18,0,40,0.14,score,critical
+1005,P3-KPI4,Escalation Rate,P3,2025-10-01,21.45,8,0.1,percentage,critical
+1005,P3-KPI4,Escalation Rate,P3,2025-10-29,21.71,8,0.1,percentage,critical
+1005,P3-KPI4,Escalation Rate,P3,2025-11-26,25.38,8,0.1,percentage,critical
+1005,P3-KPI4,Escalation Rate,P3,2025-12-24,28.19,8,0.1,percentage,critical
+1005,P3-KPI4,Escalation Rate,P3,2026-01-21,28.75,8,0.1,percentage,critical
+1005,P3-KPI4,Escalation Rate,P3,2026-02-18,31.23,8,0.1,percentage,critical
+1005,P3-KPI4,Escalation Rate,P3,2026-03-18,35.65,8,0.1,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-01,74.19,110,0.2,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-29,75.66,110,0.2,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2025-11-26,72.19,110,0.2,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2025-12-24,62.53,110,0.2,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2026-01-21,59.39,110,0.2,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2026-02-18,51.09,110,0.2,percentage,critical
+1005,P5-KPI1,Net Revenue Retention (NRR),P5,2026-03-18,46.41,110,0.2,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-01,66.9,92,0.16,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-29,68.4,92,0.16,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-11-26,60.08,92,0.16,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-12-24,56.99,92,0.16,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-01-21,52.85,92,0.16,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-02-18,45.71,92,0.16,percentage,critical
+1005,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-03-18,43.32,92,0.16,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2025-10-01,4.13,15,0.13,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2025-10-29,4.02,15,0.13,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2025-11-26,3.8,15,0.13,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2025-12-24,3.16,15,0.13,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2026-01-21,3.15,15,0.13,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2026-02-18,3.26,15,0.13,percentage,critical
+1005,P5-KPI3,Expansion Revenue Rate,P5,2026-03-18,3.04,15,0.13,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-01,20.61,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-08,19.72,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-15,19.82,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-22,18.99,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-10-29,18.4,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-05,17.91,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-12,17.92,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-19,17.38,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-11-26,16.53,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-03,16.41,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-10,17.24,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-17,15.98,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-24,15.72,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2025-12-31,15.81,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-07,16.03,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-14,16.07,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-21,16.41,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-01-28,15.95,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-04,15.95,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-11,15.18,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-18,15.57,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-02-25,16.06,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-04,16.8,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-11,16.01,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-18,16.35,60,0.16,percentage,critical
+1006,P1-KPI1,Daily Active Users (DAU) Rate,P1,2026-03-25,15.59,60,0.16,percentage,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-01,76.3,21,0.14,days,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-10-29,81.74,21,0.14,days,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-11-26,92.74,21,0.14,days,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2025-12-24,100.05,21,0.14,days,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-01-21,114.42,21,0.14,days,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-02-18,113.67,21,0.14,days,critical
+1006,P1-KPI3,Time-to-First-Value (TTFV),P1,2026-03-18,126.05,21,0.14,days,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-10-01,19.85,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-10-08,20.04,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-10-15,19.66,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-10-22,19.44,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-10-29,18.76,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-11-05,18.61,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-11-12,17.45,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-11-19,17.94,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-11-26,16.75,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-12-03,17.01,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-12-10,16.8,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-12-17,15.6,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-12-24,16.3,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2025-12-31,15.48,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-01-07,16.31,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-01-14,17.03,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-01-21,16.15,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-01-28,16.72,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-02-04,18.05,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-02-11,17.91,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-02-18,18.61,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-02-25,18.2,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-03-04,19.07,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-03-11,19.0,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-03-18,19.52,65,0.1,percentage,critical
+1006,P1-KPI10,Golden Path Velocity,P1,2026-03-25,20.09,65,0.1,percentage,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-01,22.11,70,0.22,score,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2025-10-29,20.81,70,0.22,score,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2025-11-26,19.84,70,0.22,score,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2025-12-24,18.08,70,0.22,score,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2026-01-21,17.67,70,0.22,score,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2026-02-18,16.71,70,0.22,score,critical
+1006,P2-KPI1,Executive Sponsor Engagement,P2,2026-03-18,15.56,70,0.22,score,critical
+1006,P2-KPI8,Persona Breadth,P2,2025-10-01,0.84,3.0,0.1,ratio,critical
+1006,P2-KPI8,Persona Breadth,P2,2025-10-29,0.8,3.0,0.1,ratio,critical
+1006,P2-KPI8,Persona Breadth,P2,2025-11-26,0.71,3.0,0.1,ratio,critical
+1006,P2-KPI8,Persona Breadth,P2,2025-12-24,0.64,3.0,0.1,ratio,critical
+1006,P2-KPI8,Persona Breadth,P2,2026-01-21,0.75,3.0,0.1,ratio,critical
+1006,P2-KPI8,Persona Breadth,P2,2026-02-18,0.78,3.0,0.1,ratio,critical
+1006,P2-KPI8,Persona Breadth,P2,2026-03-18,0.85,3.0,0.1,ratio,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-10-01,104.08,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-10-08,103.09,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-10-15,100.72,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-10-22,104.79,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-10-29,105.99,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-11-05,114.2,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-11-12,112.14,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-11-19,122.16,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-11-26,121.47,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-12-03,122.84,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-12-10,130.45,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-12-17,130.47,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-12-24,125.74,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2025-12-31,133.39,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-01-07,135.32,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-01-14,143.44,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-01-21,142.63,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-01-28,144.81,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-02-04,145.68,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-02-11,152.0,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-02-18,155.45,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-02-25,159.13,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-03-04,166.24,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-03-11,168.14,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-03-18,158.82,24,0.13,hours,critical
+1006,P3-KPI1,Ticket Resolution Time,P3,2026-03-25,169.82,24,0.13,hours,critical
+1006,P3-KPI3,Net Promoter Score (NPS),P3,2025-10-01,0,40,0.14,score,critical
+1006,P3-KPI3,Net Promoter Score (NPS),P3,2025-12-24,0,40,0.14,score,critical
+1006,P3-KPI3,Net Promoter Score (NPS),P3,2026-03-18,0,40,0.14,score,critical
+1006,P3-KPI4,Escalation Rate,P3,2025-10-01,30.61,8,0.1,percentage,critical
+1006,P3-KPI4,Escalation Rate,P3,2025-10-29,32.92,8,0.1,percentage,critical
+1006,P3-KPI4,Escalation Rate,P3,2025-11-26,37.85,8,0.1,percentage,critical
+1006,P3-KPI4,Escalation Rate,P3,2025-12-24,41.49,8,0.1,percentage,critical
+1006,P3-KPI4,Escalation Rate,P3,2026-01-21,41.83,8,0.1,percentage,critical
+1006,P3-KPI4,Escalation Rate,P3,2026-02-18,44.99,8,0.1,percentage,critical
+1006,P3-KPI4,Escalation Rate,P3,2026-03-18,50.95,8,0.1,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-01,50.66,110,0.2,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2025-10-29,49.52,110,0.2,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2025-11-26,47.45,110,0.2,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2025-12-24,41.32,110,0.2,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2026-01-21,40.81,110,0.2,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2026-02-18,36.88,110,0.2,percentage,critical
+1006,P5-KPI1,Net Revenue Retention (NRR),P5,2026-03-18,35.36,110,0.2,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-01,45.69,92,0.16,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-10-29,44.77,92,0.16,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-11-26,39.49,92,0.16,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2025-12-24,37.66,92,0.16,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-01-21,37.05,92,0.16,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-02-18,34.44,92,0.16,percentage,critical
+1006,P5-KPI2,Gross Revenue Retention (GRR),P5,2026-03-18,35.01,92,0.16,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2025-10-01,2.82,15,0.13,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2025-10-29,2.63,15,0.13,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2025-11-26,2.5,15,0.13,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2025-12-24,2.09,15,0.13,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2026-01-21,2.45,15,0.13,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2026-02-18,2.88,15,0.13,percentage,critical
+1006,P5-KPI3,Expansion Revenue Rate,P5,2026-03-18,3.09,15,0.13,percentage,critical

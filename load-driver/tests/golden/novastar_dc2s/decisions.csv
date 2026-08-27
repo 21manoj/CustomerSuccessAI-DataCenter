@@ -1,0 +1,49 @@
+source_account_id,decision_date,decision_id,title,decision_maker_role,chosen_option,outcome_description,risk_level,revenue_impact
+1001,2025-12-07,dec_1001_1,Escalation to Executive Sponsor — Titan Hyperscale Labs,executive_sponsor,Escalate account risk,Risk review initiated,high,-820000.0
+1001,2025-12-30,dec_1001_2,Emergency Retention Plan — Titan Hyperscale Labs,champion,Launch retention playbook,Retention plan in progress,critical,-820000.0
+1001,2026-03-16,dec_1001_3,Recovery Plan Approved — Titan Hyperscale Labs,executive_sponsor,Execute recovery plan,Recovery plan execution started,medium,-820000.0
+1001,2026-02-25,dec_1001_4,Executive QBR Established — Titan Hyperscale Labs,executive_sponsor,Weekly executive check-ins,Cadence approved,high,-820000.0
+1001,2026-03-15,dec_1001_5,Renewal Confirmed — Titan Hyperscale Labs,champion,Confirm renewal terms,Renewal locked in,low,-820000.0
+1002,2025-11-30,dec_1002_1,Emergency Response Plan — Meridian Cloud Services,executive_sponsor,Activate emergency plan,Emergency response underway,high,-580000.0
+1002,2026-01-06,dec_1002_2,Emergency Retention Plan — Meridian Cloud Services,champion,Launch retention playbook,Retention plan in progress,critical,-580000.0
+1002,2026-02-27,dec_1002_3,Recovery Plan Approved — Meridian Cloud Services,executive_sponsor,Execute recovery plan,Recovery plan execution started,medium,-580000.0
+1002,2026-02-27,dec_1002_4,Renewal Confirmed — Meridian Cloud Services,champion,Confirm renewal terms,Renewal locked in,low,-580000.0
+1003,2025-12-10,dec_1003_1,Emergency Response Plan — Apex Compute Holdings,executive_sponsor,Activate emergency plan,Emergency response underway,high,-410000.0
+1003,2025-12-30,dec_1003_2,Recovery Plan Approved — Apex Compute Holdings,executive_sponsor,Execute recovery plan,Recovery plan execution started,medium,-410000.0
+1003,2026-03-05,dec_1003_3,Recovery Plan Approved — Apex Compute Holdings,executive_sponsor,Execute recovery plan,Recovery plan execution started,medium,-410000.0
+1003,2026-03-19,dec_1003_4,Executive QBR Established — Apex Compute Holdings,executive_sponsor,Weekly executive check-ins,Cadence approved,high,-410000.0
+1003,2026-02-20,dec_1003_5,Renewal Confirmed — Apex Compute Holdings,champion,Confirm renewal terms,Renewal locked in,low,-410000.0
+1004,2025-12-30,dec_1004_1,Renewal Strategy Review — Pacific Data Systems,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-325000.0
+1004,2026-01-13,dec_1004_2,Feature Adoption Push — Pacific Data Systems,champion,Schedule training sessions,Training plan approved,medium,-325000.0
+1004,2026-02-15,dec_1004_3,Renewal Incentive Approved — Pacific Data Systems,economic_buyer,Offer multi-year discount,Incentive approved,medium,-325000.0
+1005,2025-12-30,dec_1005_1,Renewal Strategy Review — Quantum Edge Networks,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-240000.0
+1005,2026-01-13,dec_1005_2,Feature Adoption Push — Quantum Edge Networks,champion,Schedule training sessions,Training plan approved,medium,-240000.0
+1005,2026-03-14,dec_1005_3,Renewal Incentive Approved — Quantum Edge Networks,economic_buyer,Offer multi-year discount,Incentive approved,medium,-240000.0
+1006,2025-12-30,dec_1006_1,Renewal Strategy Review — Stratos AI Infrastructure,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-160000.0
+1006,2026-01-13,dec_1006_2,Feature Adoption Push — Stratos AI Infrastructure,champion,Schedule training sessions,Training plan approved,medium,-160000.0
+1006,2026-02-25,dec_1006_3,Renewal Incentive Approved — Stratos AI Infrastructure,economic_buyer,Offer multi-year discount,Incentive approved,medium,-160000.0
+1007,2025-12-30,dec_1007_1,Renewal Strategy Review — CyberVault DC,executive_sponsor,Adjust contract terms,Renewal discussion underway,medium,-145000.0
+1007,2026-01-13,dec_1007_2,Feature Adoption Push — CyberVault DC,champion,Schedule training sessions,Training plan approved,medium,-145000.0
+1007,2026-03-16,dec_1007_3,Renewal Incentive Approved — CyberVault DC,economic_buyer,Offer multi-year discount,Incentive approved,medium,-145000.0
+1008,2026-02-28,dec_1008_1,Renewal Confirmed — Atlas Computing Group,champion,Confirm renewal terms,Renewal locked in,low,510000.0
+1008,2026-02-14,dec_1008_2,Expansion Proposal Submitted — Atlas Computing Group,champion,Propose additional capacity,Expansion under review,low,510000.0
+1009,2026-02-28,dec_1009_1,Renewal Confirmed — Pinnacle Systems,champion,Confirm renewal terms,Renewal locked in,low,380000.0
+1009,2026-03-03,dec_1009_2,Expansion Proposal Submitted — Pinnacle Systems,champion,Propose additional capacity,Expansion under review,low,380000.0
+1010,2026-02-28,dec_1010_1,Renewal Confirmed — Helix Data Corp,champion,Confirm renewal terms,Renewal locked in,low,260000.0
+1010,2026-02-26,dec_1010_2,Expansion Proposal Submitted — Helix Data Corp,champion,Propose additional capacity,Expansion under review,low,260000.0
+1011,2026-02-28,dec_1011_1,Renewal Confirmed — Fortress Colocation,champion,Confirm renewal terms,Renewal locked in,low,340000.0
+1011,2026-03-09,dec_1011_2,Expansion Proposal Submitted — Fortress Colocation,champion,Propose additional capacity,Expansion under review,low,340000.0
+1012,2026-02-28,dec_1012_1,Renewal Confirmed — NexGen AI Labs,champion,Confirm renewal terms,Renewal locked in,low,210000.0
+1012,2026-03-17,dec_1012_2,Expansion Proposal Submitted — NexGen AI Labs,champion,Propose additional capacity,Expansion under review,low,210000.0
+1013,2026-02-28,dec_1013_1,Renewal Confirmed — Redline Infrastructure,champion,Confirm renewal terms,Renewal locked in,low,180000.0
+1013,2026-03-19,dec_1013_2,Expansion Proposal Submitted — Redline Infrastructure,champion,Propose additional capacity,Expansion under review,low,180000.0
+1014,2026-02-28,dec_1014_1,Renewal Confirmed — Cumulus Edge Computing,champion,Confirm renewal terms,Renewal locked in,low,150000.0
+1014,2026-03-07,dec_1014_2,Expansion Proposal Submitted — Cumulus Edge Computing,champion,Propose additional capacity,Expansion under review,low,150000.0
+1015,2026-02-28,dec_1015_1,Renewal Confirmed — SkyBridge Networks,champion,Confirm renewal terms,Renewal locked in,low,120000.0
+1015,2026-03-03,dec_1015_2,Expansion Proposal Submitted — SkyBridge Networks,champion,Propose additional capacity,Expansion under review,low,120000.0
+1016,2026-02-28,dec_1016_1,Renewal Confirmed — IronClad Systems,champion,Confirm renewal terms,Renewal locked in,low,190000.0
+1016,2026-03-16,dec_1016_2,Expansion Proposal Submitted — IronClad Systems,champion,Propose additional capacity,Expansion under review,low,190000.0
+1017,2026-02-28,dec_1017_1,Renewal Confirmed — TerraScale Solutions,champion,Confirm renewal terms,Renewal locked in,low,160000.0
+1017,2026-03-07,dec_1017_2,Expansion Proposal Submitted — TerraScale Solutions,champion,Propose additional capacity,Expansion under review,low,160000.0
+1018,2026-02-28,dec_1018_1,Renewal Confirmed — Velocity AI Compute,champion,Confirm renewal terms,Renewal locked in,low,110000.0
+1018,2026-03-15,dec_1018_2,Expansion Proposal Submitted — Velocity AI Compute,champion,Propose additional capacity,Expansion under review,low,110000.0

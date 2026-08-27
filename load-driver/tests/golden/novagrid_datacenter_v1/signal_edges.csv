@@ -1,0 +1,107 @@
+source_account_id,from_signal_ref,to_signal_ref,edge_type,weight,label,confidence,lag_days
+1001,narrative_sig_1001_1,dec_1001_1,TRIGGERED,1.0,Critical incident triggered emergency response,0.9,7
+1001,dec_1001_1,revenue_at_risk,LED_TO,1.0,Response revealed revenue at risk,0.85,14
+1001,narrative_sig_1001_2,dec_1001_2,TRIGGERED,1.0,Escalation triggered retention plan,0.85,10
+1001,dec_1001_2,capacity_constraint,LED_TO,1.0,Retention surfaced capacity constraints,0.8,21
+1001,narrative_sig_1001_1,narrative_sig_1001_2,LED_TO,1.0,NPS decline escalated to executive level,0.85,7
+1001,narrative_sig_1001_2,sig_1001_3,LED_TO,1.0,Executive escalation drove usage decline,0.8,14
+1001,narrative_sig_1001_1,dec_1001_1,TRIGGERED,1.0,KPI recovery triggered remediation plan,0.9,7
+1001,dec_1001_1,churn_averted,LED_TO,1.0,Remediation averted churn,0.9,21
+1001,dec_1001_1,revenue_protected,LED_TO,1.0,Remediation protected revenue,0.85,28
+1001,narrative_sig_1001_1,dec_1001_1,TRIGGERED,1.0,KPI stabilization confirmed renewal,0.9,7
+1001,dec_1001_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.95,14
+1002,narrative_sig_1002_1,dec_1002_1,TRIGGERED,1.0,KPI decline triggered renewal review,0.8,14
+1002,dec_1002_1,renewal_uncertainty,LED_TO,1.0,Review surfaced renewal uncertainty,0.75,21
+1002,narrative_sig_1002_2,dec_1002_2,TRIGGERED,1.0,Escalation triggered adoption push,0.75,14
+1002,dec_1002_2,engagement_decline,LED_TO,1.0,Training surfaced engagement decline,0.7,21
+1002,narrative_sig_1002_1,dec_1002_1,TRIGGERED,1.0,Re-engagement triggered incentive,0.85,7
+1002,dec_1002_1,renewal_secured,LED_TO,1.0,Incentive secured renewal,0.85,21
+1002,dec_1002_1,revenue_protected,LED_TO,1.0,Renewal protected revenue,0.8,28
+1003,narrative_sig_1003_1,dec_1003_1,TRIGGERED,1.0,KPI decline triggered renewal review,0.8,14
+1003,dec_1003_1,renewal_uncertainty,LED_TO,1.0,Review surfaced renewal uncertainty,0.75,21
+1003,narrative_sig_1003_2,dec_1003_2,TRIGGERED,1.0,Escalation triggered adoption push,0.75,14
+1003,dec_1003_2,engagement_decline,LED_TO,1.0,Training surfaced engagement decline,0.7,21
+1003,narrative_sig_1003_1,dec_1003_1,TRIGGERED,1.0,Re-engagement triggered incentive,0.85,7
+1003,dec_1003_1,renewal_secured,LED_TO,1.0,Incentive secured renewal,0.85,21
+1003,dec_1003_1,revenue_protected,LED_TO,1.0,Renewal protected revenue,0.8,28
+1004,narrative_sig_1004_1,dec_1004_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1004,dec_1004_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1004,narrative_sig_1004_1,dec_1004_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1004,dec_1004_1,expansion_approved,LED_TO,1.0,Proposal secured expansion,0.85,21
+1005,narrative_sig_1005_1,dec_1005_1,TRIGGERED,1.0,KPI decline triggered renewal review,0.8,14
+1005,dec_1005_1,renewal_uncertainty,LED_TO,1.0,Review surfaced renewal uncertainty,0.75,21
+1005,narrative_sig_1005_2,dec_1005_2,TRIGGERED,1.0,Escalation triggered adoption push,0.75,14
+1005,dec_1005_2,engagement_decline,LED_TO,1.0,Training surfaced engagement decline,0.7,21
+1005,narrative_sig_1005_1,dec_1005_1,TRIGGERED,1.0,Re-engagement triggered incentive,0.85,7
+1005,dec_1005_1,renewal_secured,LED_TO,1.0,Incentive secured renewal,0.85,21
+1005,dec_1005_1,revenue_protected,LED_TO,1.0,Renewal protected revenue,0.8,28
+1006,narrative_sig_1006_1,dec_1006_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1006,dec_1006_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1006,narrative_sig_1006_1,dec_1006_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1007,narrative_sig_1007_1,dec_1007_1,TRIGGERED,1.0,Critical incident triggered emergency response,0.9,7
+1007,dec_1007_1,revenue_at_risk,LED_TO,1.0,Response revealed revenue at risk,0.85,14
+1007,narrative_sig_1007_2,dec_1007_2,TRIGGERED,1.0,Escalation triggered retention plan,0.85,10
+1007,dec_1007_2,capacity_constraint,LED_TO,1.0,Retention surfaced capacity constraints,0.8,21
+1007,narrative_sig_1007_1,narrative_sig_1007_2,LED_TO,1.0,NPS decline escalated to executive level,0.85,7
+1007,narrative_sig_1007_2,sig_1007_3,LED_TO,1.0,Executive escalation drove usage decline,0.8,14
+1007,narrative_sig_1007_1,dec_1007_1,TRIGGERED,1.0,KPI recovery triggered remediation plan,0.9,7
+1007,dec_1007_1,churn_averted,LED_TO,1.0,Remediation averted churn,0.9,21
+1007,dec_1007_1,revenue_protected,LED_TO,1.0,Remediation protected revenue,0.85,28
+1007,narrative_sig_1007_1,dec_1007_1,TRIGGERED,1.0,KPI stabilization confirmed renewal,0.9,7
+1007,dec_1007_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.95,14
+1008,narrative_sig_1008_1,dec_1008_1,TRIGGERED,1.0,KPI decline triggered renewal review,0.8,14
+1008,dec_1008_1,renewal_uncertainty,LED_TO,1.0,Review surfaced renewal uncertainty,0.75,21
+1008,narrative_sig_1008_2,dec_1008_2,TRIGGERED,1.0,Escalation triggered adoption push,0.75,14
+1008,dec_1008_2,engagement_decline,LED_TO,1.0,Training surfaced engagement decline,0.7,21
+1008,narrative_sig_1008_1,dec_1008_1,TRIGGERED,1.0,Re-engagement triggered incentive,0.85,7
+1008,dec_1008_1,renewal_secured,LED_TO,1.0,Incentive secured renewal,0.85,21
+1008,dec_1008_1,revenue_protected,LED_TO,1.0,Renewal protected revenue,0.8,28
+1009,narrative_sig_1009_1,dec_1009_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1009,dec_1009_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1009,narrative_sig_1009_1,dec_1009_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1010,narrative_sig_1010_1,dec_1010_1,TRIGGERED,1.0,KPI decline triggered renewal review,0.8,14
+1010,dec_1010_1,renewal_uncertainty,LED_TO,1.0,Review surfaced renewal uncertainty,0.75,21
+1010,narrative_sig_1010_2,dec_1010_2,TRIGGERED,1.0,Escalation triggered adoption push,0.75,14
+1010,dec_1010_2,engagement_decline,LED_TO,1.0,Training surfaced engagement decline,0.7,21
+1010,narrative_sig_1010_1,dec_1010_1,TRIGGERED,1.0,Re-engagement triggered incentive,0.85,7
+1010,dec_1010_1,renewal_secured,LED_TO,1.0,Incentive secured renewal,0.85,21
+1010,dec_1010_1,revenue_protected,LED_TO,1.0,Renewal protected revenue,0.8,28
+1011,narrative_sig_1011_1,dec_1011_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1011,dec_1011_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1011,narrative_sig_1011_1,dec_1011_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1012,narrative_sig_1012_1,dec_1012_1,TRIGGERED,1.0,Routine review prompted renewal decision,0.8,7
+1012,dec_1012_1,renewal_secured,LED_TO,1.0,Renewal confirmed and secured,0.85,14
+1012,narrative_sig_1012_1,dec_1012_1,TRIGGERED,1.0,Advocacy triggered expansion proposal,0.85,7
+1001,auto_recovery_1001_4,churn_averted,LED_TO,0.85,Auto-recovery signal led to churn_averted,0.8,14
+1001,auto_recovery_1001_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1001,auto_recovery_1001_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1002,auto_recovery_1002_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1003,auto_recovery_1003_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1003,auto_recovery_1003_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1004,auto_recovery_1004_3,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1004,auto_recovery_1004_3,expansion_approved,LED_TO,0.85,Auto-recovery signal led to expansion_approved,0.8,14
+1005,auto_recovery_1005_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1005,auto_recovery_1005_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1006,auto_recovery_1006_3,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1007,auto_recovery_1007_4,churn_averted,LED_TO,0.85,Auto-recovery signal led to churn_averted,0.8,14
+1007,auto_recovery_1007_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1007,auto_recovery_1007_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1007,auto_recovery_1007_4,capacity_constraint,LED_TO,0.85,Auto-recovery signal led to capacity_constraint,0.8,14
+1008,auto_recovery_1008_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1008,auto_recovery_1008_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1009,auto_recovery_1009_2,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1010,auto_recovery_1010_4,revenue_protected,LED_TO,0.85,Auto-recovery signal led to revenue_protected,0.8,14
+1010,auto_recovery_1010_4,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1011,auto_recovery_1011_3,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1011,auto_recovery_1011_3,expansion_approved,LED_TO,0.85,Auto-recovery signal led to expansion_approved,0.8,14
+1012,auto_recovery_1012_3,renewal_secured,LED_TO,0.85,Auto-recovery signal led to renewal_secured,0.8,14
+1012,auto_recovery_1012_3,expansion_approved,LED_TO,0.85,Auto-recovery signal led to expansion_approved,0.8,14
+1001,sig_1001_3,dec_1001_4,LED_TO,0.8,reserved_cluster_idle led to decision,0.75,9
+1003,sig_1003_3,dec_1003_3,LED_TO,0.8,spot_price_pressure led to decision,0.75,47
+1004,sig_1004_2,dec_1004_1,LED_TO,0.8,silicon_refresh_interest led to decision,0.75,44
+1005,sig_1005_3,dec_1005_3,LED_TO,0.8,runway_risk led to decision,0.75,23
+1006,sig_1006_2,dec_1006_1,LED_TO,0.8,funding_raised led to decision,0.75,44
+1007,sig_1007_3,dec_1007_3,LED_TO,0.8,power_capacity_constraint led to decision,0.75,58
+1008,sig_1008_3,dec_1008_3,LED_TO,0.8,commitment_ramp_miss led to decision,0.75,12
+1011,sig_1011_2,dec_1011_1,LED_TO,0.8,utilization_ramp led to decision,0.75,44
+1012,sig_1012_2,dec_1012_1,LED_TO,0.8,reservation_expansion_interest led to decision,0.75,44
