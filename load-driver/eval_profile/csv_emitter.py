@@ -11,8 +11,109 @@ detection-side check; this is the prevention side.
 """
 import csv
 import io
+import json
 import random
 import zlib
+from pathlib import Path
+
+_BACKEND_CONFIG = Path(__file__).resolve().parent.parent.parent / 'kpi-dashboard' / 'backend' / 'config'
+
+
+def _load_kpi_catalog(vertical: str) -> dict:
+    path = _BACKEND_CONFIG / f'{vertical}_kpi_catalog.json'
+    with open(path) as f:
+        return json.load(f)['kpis']
+
+
+def _health_to_kpi_value(target_health: float, target_val: float, ranges: dict,
+                          higher_is_better: bool) -> float:
+    """Ported verbatim from scenarios/scenario_manifest.py's
+    _health_to_kpi_value (same math the demo generator uses) — reverse-
+    engineers a KPI value that scores approximately target_health through
+    the real generic scorer, rather than a placeholder value the scorer
+    can't interpret at all."""
+    healthy = ranges.get('healthy', {})
+    risk = ranges.get('risk', {})
+    critical = ranges.get('critical', {})
+
+    if not healthy or not risk:
+        factor = 0.4 + 0.6 * (target_health / 100.0) ** 0.7
+        if not higher_is_better:
+            factor = 1.0 / factor
+        return target_val * factor
+
+    if higher_is_better:
+        h_min = healthy.get('min', target_val * 0.8)
+        h_max = healthy.get('max', target_val * 1.2)
+        r_min = risk.get('min', target_val * 0.5)
+        r_max = risk.get('max', h_min)
+        c_min = critical.get('min', 0)
+        c_max = critical.get('max', r_min)
+        if target_health >= 70:
+            t = (target_health - 70) / 30.0
+            return h_min + t * (h_max - h_min)
+        elif target_health >= 50:
+            t = (target_health - 50) / 20.0
+            return r_min + t * (r_max - r_min)
+        else:
+            t = target_health / 50.0
+            return c_min + t * (c_max - c_min)
+    else:
+        h_min = healthy.get('min', target_val * 0.5)
+        h_max = healthy.get('max', target_val)
+        r_min = risk.get('min', h_max)
+        r_max = risk.get('max', target_val * 1.5)
+        c_min = critical.get('min', r_max)
+        c_max = critical.get('max', target_val * 3.0)
+        if target_health >= 70:
+            t = (target_health - 70) / 30.0
+            return h_max - t * (h_max - h_min)
+        elif target_health >= 50:
+            t = (target_health - 50) / 20.0
+            return r_max - t * (r_max - r_min)
+        else:
+            t = target_health / 50.0
+            return c_max - t * (c_max - c_min)
+
+
+def emit_kpi_measurements_csv(world: dict, accounts: list, seed: int) -> str:
+    """Real catalog KPI codes with values reverse-engineered from each
+    account's archetype-derived target health, using the same
+    _health_to_kpi_value math the demo generator uses — so the platform's
+    generic scorer (utils/generic_scorer.score_account_health) actually has
+    something to compute against, instead of a made-up code it can't match
+    to any catalog entry (which silently produced health_score=0.0 for
+    every account — caught live via reviewer feedback on customer_id=405,
+    2026-08-27, not something this generator's own local tests could catch
+    since they never exercise the live scorer)."""
+    catalog = _load_kpi_catalog(world['vertical'])
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow([
+        'source_account_id', 'kpi_code', 'kpi_name', 'pillar',
+        'measured_at', 'value', 'target', 'weight', 'unit', 'status',
+    ])
+    for a in accounts:
+        aid = _account_id(a.account_idx)
+        archetype = next(ar for ar in world['account_archetypes']
+                          if ar['archetype_id'] == a.archetype_id)
+        n_edges = len(archetype['active_edges'])
+        base_health = 78.0 if n_edges == 0 else max(20.0, 68.0 - n_edges * 11.0)
+        health_rng = _rng_for(seed, 'target_health', a.account_idx)
+        target_health = max(5.0, min(95.0, base_health + health_rng.uniform(-8, 8)))
+        status = 'healthy' if target_health >= 70 else ('at_risk' if target_health >= 50 else 'critical')
+
+        for kpi_code, meta in catalog.items():
+            target_val = meta.get('target', {})
+            target_val = target_val.get('value', 85.0) if isinstance(target_val, dict) else (target_val or 85.0)
+            higher_is_better = meta.get('higher_is_better', True)
+            value = _health_to_kpi_value(target_health, target_val, meta.get('ranges', {}), higher_is_better)
+            w.writerow([
+                aid, kpi_code, meta.get('name', kpi_code), meta.get('pillar', kpi_code.split('-')[0]),
+                '2026-01-01', round(value, 2), target_val, meta.get('weight_l1', 0.25),
+                meta.get('unit', '%'), status,
+            ])
+    return out.getvalue()
 
 
 def _rng_for(seed: int, *parts) -> random.Random:
@@ -111,26 +212,6 @@ def emit_account_details_csv(world: dict, accounts: list, customer_name: str) ->
             set(row.keys()) ^ set(_ACCOUNT_DETAILS_COLUMNS)
         )
         w.writerow([row[col] for col in _ACCOUNT_DETAILS_COLUMNS])
-    return out.getvalue()
-
-
-def emit_kpi_measurements_csv(accounts: list) -> str:
-    """Eval profile's focus is the qualitative-signal/outcome causal
-    structure, not KPI trend shape — one flat baseline point per account so
-    the file exists and passes ingest, honestly minimal rather than pretending
-    depth this generator doesn't model. Track D's own KPI-trajectory
-    determinism was already fixed separately (commit 951d9f380); this does
-    not duplicate that generator."""
-    out = io.StringIO()
-    w = csv.writer(out)
-    w.writerow([
-        'source_account_id', 'kpi_code', 'kpi_name', 'pillar',
-        'measured_at', 'value', 'target', 'weight', 'unit', 'status',
-    ])
-    for a in accounts:
-        aid = _account_id(a.account_idx)
-        w.writerow([aid, 'EVAL-KPI1', 'Eval Profile Placeholder', 'P1',
-                    '2026-01-01', 70, 85, 1.0, '%', 'at_risk'])
     return out.getvalue()
 
 

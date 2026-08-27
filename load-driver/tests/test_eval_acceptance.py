@@ -74,6 +74,51 @@ class TestCSVColumnAlignment:
                 )
 
 
+class TestKpiCodesMatchRealCatalog:
+    """Guard against the class of bug CC-review caught live on EC2
+    customer_id=405 (2026-08-27): emit_kpi_measurements_csv used a made-up
+    kpi_code ('EVAL-KPI1') that matched nothing in any real vertical KPI
+    catalog, so the live generic scorer (utils/generic_scorer.
+    score_account_health) found zero usable weighted inputs and silently
+    defaulted every account to health_score=0.0 — which then collapsed all
+    15 accounts into one health band, masking item 6's already-correct
+    per-band ROI variance and making it look like a regression. Local tests
+    could not catch this because they never exercise the live scorer; this
+    test catches the CLASS of bug (emitted codes not in the real catalog)
+    without needing a live server."""
+
+    def test_every_emitted_kpi_code_exists_in_the_real_catalog(self):
+        import world_schema as ws
+        import event_engine
+        from datetime import datetime
+        world = ws.load_world('datacenter_v1_world_a')
+        accounts = event_engine.generate_accounts(world, 1, 5, datetime(2025, 1, 1))
+        catalog = csv_emitter._load_kpi_catalog(world['vertical'])
+        csv_text = csv_emitter.emit_kpi_measurements_csv(world, accounts, seed=1)
+        rows = list(csv.DictReader(io.StringIO(csv_text)))
+        assert rows, "no KPI rows emitted at all"
+        emitted_codes = {r['kpi_code'] for r in rows}
+        unknown = emitted_codes - set(catalog.keys())
+        assert not unknown, f"emitted kpi_codes not in {world['vertical']}'s real catalog: {unknown}"
+
+    def test_kpi_values_vary_with_archetype_not_flat(self):
+        """A single flat value (the old bug) would make every account's
+        emitted values for a given KPI identical regardless of archetype —
+        this asserts the fix's actual point: values differ across accounts."""
+        import world_schema as ws
+        import event_engine
+        from datetime import datetime
+        world = ws.load_world('datacenter_v1_world_a')
+        accounts = event_engine.generate_accounts(world, 1, 15, datetime(2025, 1, 1))
+        csv_text = csv_emitter.emit_kpi_measurements_csv(world, accounts, seed=1)
+        rows = list(csv.DictReader(io.StringIO(csv_text)))
+        p1_kpi1_values = {r['value'] for r in rows if r['kpi_code'] == 'P1-KPI1'}
+        assert len(p1_kpi1_values) > 1, (
+            f"P1-KPI1 has only {len(p1_kpi1_values)} distinct value(s) across "
+            f"{len(accounts)} accounts with different archetypes — looks flat"
+        )
+
+
 @pytest.fixture(scope='module')
 def world_a_tenant(tmp_path_factory):
     out = tmp_path_factory.mktemp('world_a')

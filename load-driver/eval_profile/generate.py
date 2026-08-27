@@ -62,7 +62,7 @@ def generate_eval_tenant(world_id: str, seed: int, out_dir: str,
     (out_path / 'account_details.csv').write_text(
         csv_emitter.emit_account_details_csv(world, accounts, customer_name))
     (out_path / 'kpi_measurements.csv').write_text(
-        csv_emitter.emit_kpi_measurements_csv(accounts))
+        csv_emitter.emit_kpi_measurements_csv(world, accounts, seed))
     (out_path / 'qualitative_signals.csv').write_text(
         csv_emitter.emit_qualitative_signals_csv(world, accounts))
     (out_path / 'outcomes.csv').write_text(
