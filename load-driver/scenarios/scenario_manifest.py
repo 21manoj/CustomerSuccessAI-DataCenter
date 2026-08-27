@@ -28,6 +28,7 @@ import logging
 import math
 import random
 import time
+import zlib
 import uuid as uuid_mod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -1441,6 +1442,7 @@ class ManifestCSVGenerator:
         has_intervention: bool = False,
         recovery_start_month: Optional[int] = None,
         offset_months: int = 0,
+        account_idx: int = 0,
     ) -> List[float]:
         """
         Generate a time-series of KPI values for one account+KPI.
@@ -1453,7 +1455,20 @@ class ManifestCSVGenerator:
         V3.2: recovery_start_month makes 'recovering' inflection point configurable.
               E.g. recovery_start_month=4 in a 6-month window → inflects at 4/6 ≈ 67%.
               Default (None) keeps the original 40% hardcoded split.
+
+        Determinism (fixed 2026-08-25): every random draw in this function comes
+        from `series_rng`, seeded from (self.seed, account_idx, kpi_code) via a
+        stable crc32 hash — NOT Python's built-in `hash()` on a str, which is
+        salted per-process (PYTHONHASHSEED) and was silently non-deterministic
+        across runs, and NOT the bare `random` module, whose global stream
+        position depends on how many draws happened elsewhere first. Two runs
+        of the same manifest+seed must be byte-identical (AT-0/AT-6); this is
+        what makes that true for KPI trajectories.
         """
+        series_rng = random.Random(
+            self.seed + account_idx * 1_000_003 + zlib.crc32(kpi_code.encode()) + 4000
+        )
+
         # V2 phase logic: intervention flips declining to improving
         if self.phase == 'intervention' and trajectory in ('declining', 'slow_decline'):
             target_health = min(target_health + 15, 95)
@@ -1468,11 +1483,10 @@ class ManifestCSVGenerator:
             and has_intervention
         )
         if _has_intervention:
-            rng = random.Random(self.seed + hash(kpi_code))
             if classification == 'critical':
-                recovery_boost_pct = rng.uniform(0.05, 0.15)
+                recovery_boost_pct = series_rng.uniform(0.05, 0.15)
             elif classification == 'at_risk':
-                recovery_boost_pct = rng.uniform(0.03, 0.08)
+                recovery_boost_pct = series_rng.uniform(0.03, 0.08)
 
         n = len(self.dates)
 
@@ -1537,13 +1551,13 @@ class ManifestCSVGenerator:
             elif trajectory == 'ramping_up':
                 modifier = 0.55 + 0.55 * t if higher_is_better else 1.45 - 0.55 * t
             elif trajectory == 'stable_high':
-                modifier = 1.0 + 0.02 * random.gauss(0, 1)
+                modifier = 1.0 + 0.02 * series_rng.gauss(0, 1)
             elif trajectory == 'flat_high_risk':
                 modifier = 1.0
             else:  # stable
-                modifier = 1.0 + 0.01 * random.gauss(0, 1)
+                modifier = 1.0 + 0.01 * series_rng.gauss(0, 1)
 
-            noise = 1.0 + random.gauss(0, 0.03)
+            noise = 1.0 + series_rng.gauss(0, 0.03)
             val = base * modifier * noise
 
             # V3.1: Apply recovery boost for intervention phase (progressive)
@@ -2012,6 +2026,7 @@ class ManifestCSVGenerator:
                     has_intervention=bool(acct.get('intervention')),
                     recovery_start_month=recovery_start,
                     offset_months=self.extend_offset_months,
+                    account_idx=idx,
                 )
 
                 # Respect per-KPI measurement frequency from catalog.
