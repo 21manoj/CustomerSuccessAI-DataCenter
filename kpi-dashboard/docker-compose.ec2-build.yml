@@ -79,7 +79,6 @@ services:
     container_name: cspulse-platform
     ports:
       - "80:80"
-      - "443:443"
       - "8001:8001"
     environment:
       DATABASE_URL: postgresql://cspulse:${POSTGRES_PASSWORD}@postgres:5432/cs_pulse
