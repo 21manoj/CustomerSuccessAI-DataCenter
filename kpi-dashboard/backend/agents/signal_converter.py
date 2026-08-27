@@ -152,14 +152,20 @@ def convert_dc2s_kpi_to_signal_data(
         SignalData object
     """
     try:
-        # Try to get KPI definition for better name
+        # Try to get KPI definition for better name. dc2s_kpis is a shared
+        # table across every non-SaaS vertical, so the name must come from
+        # the owning account's OWN vertical catalog, not dc2_s's.
         kpi_name = dc_kpi.kpi_code
         try:
-            from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-            kpi_def = DC2S_KPIS.get(dc_kpi.kpi_code, {})
+            from models import Account
+            from utils.vertical_registry import get_kpis, get_vertical_for_customer
+            account = Account.query.get(dc_kpi.account_id)
+            vertical = get_vertical_for_customer(account.customer_id) if account else 'dc2_s'
+            kpi_def = get_kpis(vertical).get(dc_kpi.kpi_code, {})
             kpi_name = kpi_def.get('name', dc_kpi.kpi_code)
-        except ImportError:
-            # If import fails, just use kpi_code
+        except Exception:
+            # Resolution failed (no account, no CustomerConfig, unknown
+            # vertical) — fall back to the raw kpi_code, never guess dc2_s.
             pass
         
         # Calculate trend (simplified - would need historical data for real trend)

@@ -223,8 +223,8 @@ def load_csv_schemas() -> dict:
 
 
 def load_kpi_definitions():
-    from verticals.dc2_s.kpi_definitions import DC2S_KPIS, DC2S_PILLARS
-    return DC2S_KPIS, DC2S_PILLARS
+    from utils.vertical_registry import get_kpis, get_pillars
+    return get_kpis('dc2_s'), get_pillars('dc2_s')
 
 
 def load_health_thresholds() -> dict:
@@ -234,7 +234,8 @@ def load_health_thresholds() -> dict:
 
 
 def load_playbook_config() -> dict:
-    from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
+    from _ask_ai_helpers import _get_playbook_config
+    PLAYBOOK_CONFIG, _ = _get_playbook_config('dc2_s')
     return PLAYBOOK_CONFIG
 
 

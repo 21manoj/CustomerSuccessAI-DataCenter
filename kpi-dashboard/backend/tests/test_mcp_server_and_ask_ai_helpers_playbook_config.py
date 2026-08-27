@@ -67,10 +67,14 @@ def test_cs_pulse_mcp_server_playbook_config_parity_for_dc2s_and_saas_premium():
     assert callable(dc2s_trigger) and callable(saas_trigger)
 
 
-def test_cs_pulse_mcp_server_playbook_config_datacenter_v1_gets_safe_empty_not_dc2s():
-    """The exact live bug: customer 400 (datacenter_v1) was served dc2_s's
-    PB-05/PB-06 playbook catalog via this function. Must now get a safe,
-    explicit empty default instead.
+def test_cs_pulse_mcp_server_playbook_config_datacenter_v1_gets_its_own_not_dc2s():
+    """The original live bug: customer 400 (datacenter_v1) was served
+    dc2_s's PB-05/PB-06 playbook catalog via this function. datacenter_v1
+    now has its own real PLAYBOOK_CONFIG (added Aug 27 2026, found live on
+    customer 408 — this function was correctly resolving the vertical, then
+    silently getting {} back). It happens to reuse the PB-05/PB-06 id
+    strings for its own, different playbooks — the invariant is "never
+    dc2_s's definitions", proven by whole-dict inequality, not key absence.
     """
     from mcp_server.cs_pulse_mcp_server import _get_playbook_config
 
@@ -78,9 +82,9 @@ def test_cs_pulse_mcp_server_playbook_config_datacenter_v1_gets_safe_empty_not_d
 
     cfg, trigger = _get_playbook_config("datacenter_v1")
 
-    assert cfg == {}, f"Expected empty playbook config for datacenter_v1, got {cfg!r}"
-    assert cfg != dc2s_pb
-    assert "PB-05" not in cfg and "PB-06" not in cfg
+    assert cfg != {}, "datacenter_v1 has a real PLAYBOOK_CONFIG now — must not be empty"
+    assert cfg != dc2s_pb, "must be datacenter_v1's own config, never a silent dc2_s substitution"
+    assert cfg.get("PB-05") != dc2s_pb.get("PB-05"), "datacenter_v1's PB-05 must not be dc2_s's PB-05"
     assert callable(trigger)
     assert trigger() is False
 
@@ -117,9 +121,13 @@ def test_ask_ai_helpers_playbook_config_parity_for_dc2s_and_saas_premium():
     assert callable(dc2s_trigger) and callable(saas_trigger)
 
 
-def test_ask_ai_helpers_playbook_config_datacenter_v1_gets_safe_empty_not_dc2s():
-    """Same bug, third independent copy — Ask AI's direct-execution path
-    was also silently serving dc2_s's playbooks to any other vertical.
+def test_ask_ai_helpers_playbook_config_datacenter_v1_gets_its_own_not_dc2s():
+    """Same underlying invariant, third independent copy — Ask AI's
+    direct-execution path was also silently serving dc2_s's playbooks to
+    any other vertical. datacenter_v1 now has its own real PLAYBOOK_CONFIG
+    (added Aug 27 2026, found live on customer 408) — proven by whole-dict
+    inequality since it legitimately reuses some of dc2_s's PB-NN id
+    strings for its own, different playbooks.
     """
     from _ask_ai_helpers import _get_playbook_config
 
@@ -127,9 +135,9 @@ def test_ask_ai_helpers_playbook_config_datacenter_v1_gets_safe_empty_not_dc2s()
 
     cfg, trigger = _get_playbook_config("datacenter_v1")
 
-    assert cfg == {}, f"Expected empty playbook config for datacenter_v1, got {cfg!r}"
-    assert cfg != dc2s_pb
-    assert "PB-05" not in cfg and "PB-06" not in cfg
+    assert cfg != {}, "datacenter_v1 has a real PLAYBOOK_CONFIG now — must not be empty"
+    assert cfg != dc2s_pb, "must be datacenter_v1's own config, never a silent dc2_s substitution"
+    assert cfg.get("PB-05") != dc2s_pb.get("PB-05"), "datacenter_v1's PB-05 must not be dc2_s's PB-05"
     assert callable(trigger)
     assert trigger() is False
 

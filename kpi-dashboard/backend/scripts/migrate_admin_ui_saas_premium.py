@@ -229,8 +229,10 @@ def migrate():
         ))
         count = result.scalar()
         if count == 0:
-            from verticals.saas_premium.kpi_definitions import SAAS_PILLARS, SAAS_KPIS
-            from verticals.saas_premium.pillar_weights import BOOTSTRAP_L2_WEIGHTS
+            from utils.vertical_registry import get_pillars, get_kpis, get_default_pillar_weights
+            SAAS_PILLARS = get_pillars('saas_premium')
+            SAAS_KPIS = get_kpis('saas_premium')
+            BOOTSTRAP_L2_WEIGHTS = get_default_pillar_weights('saas_premium')
             import json
 
             templates = [

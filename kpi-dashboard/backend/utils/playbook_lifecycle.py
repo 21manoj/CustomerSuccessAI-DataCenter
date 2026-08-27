@@ -169,13 +169,15 @@ def _classify_health(score):
     return 'healthy'
 
 
-def _get_playbook_hours(playbook_id: str) -> tuple:
-    """Get CSM hours and sub_components from PLAYBOOK_CONFIG.
+def _get_playbook_hours(playbook_id: str, vertical: str = 'dc2_s') -> tuple:
+    """Get CSM hours and sub_components from the customer's own vertical's
+    PLAYBOOK_CONFIG.
 
     Returns (csm_hours, sub_components_list).
     """
     try:
-        from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG
+        from _ask_ai_helpers import _get_playbook_config
+        PLAYBOOK_CONFIG, _ = _get_playbook_config(vertical)
         cfg = PLAYBOOK_CONFIG.get(playbook_id, {})
         sub_components = cfg.get('sub_components', [])
         csm_hours = sum(sc.get('estimated_hours', 0) for sc in sub_components)
@@ -224,7 +226,12 @@ def start_execution(
     health_status = _classify_health(health_now)
 
     arr = float(account.revenue or 0)
-    csm_hours, sub_components = _get_playbook_hours(playbook_id)
+    try:
+        from utils.vertical_registry import get_vertical_for_customer
+        vertical = get_vertical_for_customer(customer_id)
+    except ValueError:
+        vertical = 'dc2_s'
+    csm_hours, sub_components = _get_playbook_hours(playbook_id, vertical)
 
     # Build action_log from sub_components (maps old step model → V2 action_log)
     action_log = []

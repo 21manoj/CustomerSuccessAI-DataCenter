@@ -486,12 +486,11 @@ def create_test_csvs(customer_id: int, data_dir: Path):
     log("Creating test CSVs with ALL KPIs...")
     
     with app.app_context():
-        from verticals.dc2_s.vertical_loader import DC2SVertical
+        from utils.vertical_registry import get_kpis
         from utils.config_loader import ConfigLoader
-        
+
         # Get ALL KPIs from vertical
-        vertical = DC2SVertical()
-        all_kpis = vertical.kpis  # ALL 38 KPIs
+        all_kpis = [{'code': code, **kpi_def} for code, kpi_def in get_kpis('dc2_s').items()]  # ALL 38 KPIs
         
         # Get enabled KPIs from config (for comparison)
         loader = ConfigLoader(customer_id)

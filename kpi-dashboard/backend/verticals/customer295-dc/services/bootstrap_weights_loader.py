@@ -16,14 +16,15 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Load canonical pillar weights from kpi_definitions (single source of truth)
+# Load canonical pillar weights via the registry (single dispatch point) —
+# this instance dir's declared slug ('dc') normalizes to 'dc2_s' through
+# utils.vertical_registry.VERTICAL_ALIASES, same vertical as before.
 try:
-    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-    _CANONICAL_PILLAR_WEIGHTS = {
-        pid: info.get('weight_l2', 0.20)
-        for pid, info in DC2S_PILLARS.items()
+    from utils.vertical_registry import get_default_pillar_weights
+    _CANONICAL_PILLAR_WEIGHTS = get_default_pillar_weights('dc') or {
+        'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25
     }
-except ImportError:
+except Exception:
     _CANONICAL_PILLAR_WEIGHTS = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
 
 # Load health thresholds from centralized config

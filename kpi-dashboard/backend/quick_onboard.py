@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app_v3_minimal import app, db
 from models import Customer, CustomerConfig, Account, DC2SKPI
 from utils.config_loader import ConfigLoader
-from verticals.dc2_s.vertical_loader import DC2SVertical
+from utils.vertical_registry import get_kpis
 
 # Defaults
 DEFAULT_COMPANY = f"Demo Company {int(datetime.now().timestamp())}"
@@ -48,8 +48,7 @@ def onboard(company_name=None, num_kpis=DEFAULT_NUM_KPIS):
         print(f"   ✅ Customer ID: {customer_id}")
         
         # 2. Create config with enabled KPIs
-        vertical = DC2SVertical()
-        all_kpis = [k['code'] for k in vertical.kpis]
+        all_kpis = list(get_kpis('dc2_s').keys())
         enabled_kpis = all_kpis[:num_kpis]  # Take first N KPIs
         
         config = CustomerConfig(

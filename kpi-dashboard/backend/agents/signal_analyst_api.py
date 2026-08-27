@@ -161,8 +161,8 @@ def analyze_account():
             except Exception as e:
                 logger.warning(f"Could not load pillar weights, using catalog defaults: {e}")
                 try:
-                    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
-                    pillar_weights = {p: v.get('weight_l2', 0.20) for p, v in DC2S_PILLARS.items()}
+                    from utils.vertical_registry import get_pillars
+                    pillar_weights = {p: v.get('weight_l2', 0.20) for p, v in get_pillars('dc2_s').items()}
                 except Exception:
                     pillar_weights = {'P1': 0.15, 'P2': 0.20, 'P3': 0.25, 'P4': 0.15, 'P5': 0.25}
         
