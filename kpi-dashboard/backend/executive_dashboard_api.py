@@ -1732,6 +1732,44 @@ def _build_pillar_investments(pillar_codes, pillar_weights, vertical_pillars,
     return rows
 
 
+def _continuous_churn_pct(health: float) -> float:
+    """CFO-ROI-ranking-specific continuous churn_pct, module-level for direct
+    unit testing (see tests/test_continuous_churn_pct.py).
+
+    Item 6 fix: the old benchmark branch scaled BOTH investment and impact by
+    the same arr_share, so it cancelled in the ROI ratio and every account
+    reported the identical portfolio ROI (302% on 390) regardless of health —
+    a constant column that read as measured. Investment tracks account size
+    (ARR ~ CS servicing effort); impact tracks *recoverable* revenue, which
+    the platform already models as ARR x churn_pct(health).
+
+    Item 6, part 2 (reviewer finding, live on eval-profile customer_id=406/
+    407, 2026-08-27): the fix above used context_graph.churn_pct_for_health,
+    a 3-value STEP function (40/20/5 by band). Any two accounts in the same
+    band share the identical churn_pct, and since both impact_share and
+    arr_share scale linearly with ARR, arr_i cancels out of the ROI ratio
+    exactly as it did before the original fix — collapsing every account
+    within a band to the SAME roi_pct (641/271/-7, bit-identical, regardless
+    of ARR or exact health). Same cancellation bug, one level deeper.
+    churn_pct_for_health itself stays UNCHANGED — it backs
+    modeled_churn_exposure/revenue-at-risk sizing (item 26 Model C, verified
+    live to the dollar across 6 tenants) and a coarse 3-band estimate is a
+    defensible choice there. This is a separate, CFO-ROI-ranking-specific
+    continuous variant: same three band anchors (40%/20%/5%), linearly
+    interpolated between them instead of stepped, so two accounts in the
+    same band still resolve to distinct ROI when their health differs.
+    """
+    if health <= 0:
+        return 0.40
+    if health < 50:
+        return 0.40 + (health - 0) * (0.20 - 0.40) / (50 - 0)
+    if health < 70:
+        return 0.20 + (health - 50) * (0.05 - 0.20) / (70 - 50)
+    if health < 100:
+        return 0.05 + (health - 70) * (0.02 - 0.05) / (100 - 70)
+    return 0.02
+
+
 def _build_cfo_account_details(customer_id, accounts, total_investment, total_impact):
     """Build per-account investment/impact breakdown for CFO drill-down."""
     if not accounts:
@@ -1744,24 +1782,14 @@ def _build_cfo_account_details(customer_id, accounts, total_investment, total_im
     latest_scores = _get_latest_health_scores(customer_id, [a.account_id for a in accounts])
     healthy_min_val = ht.healthy_min()
 
-    # ── benchmark impact allocation weights (health-adjusted) ────────────────
-    # Item 6 fix: the old benchmark branch scaled BOTH investment and impact by
-    # the same arr_share, so it cancelled in the ROI ratio and every account
-    # reported the identical portfolio ROI (302% on 390) regardless of health —
-    # a constant column that read as measured. Investment tracks account size
-    # (ARR ≈ CS servicing effort); impact tracks *recoverable* revenue, which
-    # the platform already models as ARR × churn_pct(health) (the sanctioned
-    # 40/20/5 band, single source in context_graph.churn_pct_for_health). So
-    # allocate impact by that weight and renormalize to preserve the portfolio
-    # total — ROI now varies by health (worse accounts protect more revenue per
-    # servicing dollar) while per-account impact still sums to total_impact.
-    from utils.context_graph import churn_pct_for_health
+    # ── benchmark impact allocation weights (health-adjusted) — see
+    # _continuous_churn_pct's docstring for the item-6 history. ──
     impact_weights = {}
     for acct in accounts:
         arr = _safe_float(acct.revenue)
         hs = latest_scores.get(acct.account_id)
         score = float(hs.health_score) if hs else 0
-        impact_weights[acct.account_id] = arr * churn_pct_for_health(score)
+        impact_weights[acct.account_id] = arr * _continuous_churn_pct(score)
     total_impact_weight = sum(impact_weights.values())
 
     result = []

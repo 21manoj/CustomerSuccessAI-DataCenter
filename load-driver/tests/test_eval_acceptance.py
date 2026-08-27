@@ -118,6 +118,43 @@ class TestKpiCodesMatchRealCatalog:
             f"{len(accounts)} accounts with different archetypes — looks flat"
         )
 
+    def test_pillars_diverge_within_one_account_not_near_duplicate(self):
+        """Reviewer finding, live on eval-profile customer_id=405/406/407
+        (2026-08-27): pillar_scores were near-duplicate within a single
+        account (P1/P2/P3/P4/P6 nearly identical, only P5 diverged) because
+        every KPI in every pillar was reverse-engineered from the SAME
+        single account-level target_health with no pillar-level variance.
+        Compares value/target ratios (unit-independent — pillars mix very
+        different units like $/GPU-hour and %, so raw values aren't
+        comparable across pillars) and asserts a real spread, not a few
+        hundredths."""
+        import world_schema as ws
+        import event_engine
+        from datetime import datetime
+        from collections import defaultdict
+        world = ws.load_world('datacenter_v1_world_a')
+        accounts = event_engine.generate_accounts(world, 7, 10, datetime(2025, 1, 1))
+        csv_text = csv_emitter.emit_kpi_measurements_csv(world, accounts, seed=7)
+        rows = list(csv.DictReader(io.StringIO(csv_text)))
+
+        by_account_pillar = defaultdict(list)
+        for r in rows:
+            target = float(r['target'])
+            ratio = (float(r['value']) / target) if target else 0.0
+            by_account_pillar[(r['source_account_id'], r['pillar'])].append(ratio)
+
+        for aid in {r['source_account_id'] for r in rows}:
+            pillar_means = {}
+            for (a, p), vals in by_account_pillar.items():
+                if a == aid:
+                    pillar_means[p] = sum(vals) / len(vals)
+            assert len(pillar_means) > 1, "expected multiple pillars"
+            spread = max(pillar_means.values()) - min(pillar_means.values())
+            assert spread > 0.05, (
+                f"account {aid}: pillar value/target ratios span only "
+                f"{spread:.3f} — looks near-duplicate across pillars: {pillar_means}"
+            )
+
 
 @pytest.fixture(scope='module')
 def world_a_tenant(tmp_path_factory):

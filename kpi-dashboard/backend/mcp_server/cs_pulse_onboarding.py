@@ -50,6 +50,30 @@ from onboarding_tool_registry import ONBOARDING_TOOLS
 from mcp_server.auth import require_auth_if_key_present as _require_auth_if_key_present
 
 
+def _clean_csv_str(value, default: str = '') -> str:
+    """CSV-cell-to-string, NaN-safe.
+
+    `str(row.get(col, '') or '')` looks like it guards a blank cell, but it
+    doesn't: pandas reads a blank CSV cell as an actual NaN float (not a
+    missing key, so the `.get()` default never applies), and NaN is TRUTHY
+    in Python (`bool(float('nan')) is True`) — so `nan or ''` evaluates to
+    `nan`, and the outer `str(...)` then produces the literal string 'nan'.
+    Reported live via reviewer feedback on eval-profile customer_id=405/406/
+    407 (2026-08-27): stakeholder_name/stakeholder_title showed the literal
+    string "nan" wherever the uploaded CSV left those cells blank — a
+    platform ingest bug, not specific to any one CSV generator, that would
+    fire for ANY blank string-typed cell through this same `or ''` idiom.
+    A NaN float is the only float unequal to itself — `value != value` — the
+    classic no-import-needed NaN test.
+    """
+    if value is None:
+        return default
+    if isinstance(value, float) and value != value:
+        return default
+    s = str(value).strip()
+    return default if s.lower() in ('nan', 'none') else s
+
+
 def _is_onboarding_tool(name: str) -> bool:
     """Return True if the tool name is in the frictionless onboarding set."""
     return name in ONBOARDING_TOOLS
@@ -1453,8 +1477,8 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                     if exists:
                                         continue
 
-                                sh_name = str(row.get('stakeholder_name', '') or '').strip()
-                                sh_title = str(row.get('stakeholder_title', '') or '').strip()
+                                sh_name = _clean_csv_str(row.get('stakeholder_name'))
+                                sh_title = _clean_csv_str(row.get('stakeholder_title'))
                                 stakeholder_roles = None
                                 if sh_name:
                                     stakeholder_roles = [
@@ -1488,8 +1512,8 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                         continue
                                     _sig_props = {
                                         'signal_ref': str(sig_ref),
-                                        'sentiment': str(row.get('sentiment', '') or ''),
-                                        'sentiment_score': str(row.get('sentiment_score', '') or ''),
+                                        'sentiment': _clean_csv_str(row.get('sentiment')),
+                                        'sentiment_score': _clean_csv_str(row.get('sentiment_score')),
                                     }
                                     if sh_name:
                                         _sig_props['stakeholder_name'] = sh_name
@@ -1748,9 +1772,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                             continue
                         evt_date = row.get('event_date')
                         # Title: prefer 'title', fall back to 'description', then construct from event_type
-                        ee_title = str(row.get('title', '') or row.get('description', '') or '')
-                        if not ee_title or ee_title == 'nan':
-                            ee_type = str(row.get('event_type', 'engagement'))
+                        ee_title = _clean_csv_str(row.get('title')) or _clean_csv_str(row.get('description'))
+                        if not ee_title:
+                            ee_type = _clean_csv_str(row.get('event_type'), default='engagement')
                             ee_title = ee_type.replace('_', ' ').title()
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,

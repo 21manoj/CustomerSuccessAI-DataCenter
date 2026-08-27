@@ -103,13 +103,33 @@ def emit_kpi_measurements_csv(world: dict, accounts: list, seed: int) -> str:
         target_health = max(5.0, min(95.0, base_health + health_rng.uniform(-8, 8)))
         status = 'healthy' if target_health >= 70 else ('at_risk' if target_health >= 50 else 'critical')
 
+        # Reviewer finding, live on eval-profile customer_id=405/406/407
+        # (2026-08-27): pillar_scores were near-duplicate across P1/P2/P3/P4/
+        # P6 (only P5 diverged). Root cause: every KPI in every pillar was
+        # reverse-engineered from the SAME single account-level target_health
+        # with no pillar- or KPI-level variance at all, so pillars trivially
+        # converge to ~target_health regardless of pillar identity. Real
+        # accounts don't move all pillars in lockstep — a per-pillar offset
+        # (which pillar this account happens to be weak/strong in) plus a
+        # smaller per-KPI offset (noise within a pillar) fixes this: pillars
+        # diverge from each other, KPIs within a pillar still cluster.
+        pillar_offsets = {}
         for kpi_code, meta in catalog.items():
             target_val = meta.get('target', {})
             target_val = target_val.get('value', 85.0) if isinstance(target_val, dict) else (target_val or 85.0)
             higher_is_better = meta.get('higher_is_better', True)
-            value = _health_to_kpi_value(target_health, target_val, meta.get('ranges', {}), higher_is_better)
+            pillar = meta.get('pillar', kpi_code.split('-')[0])
+
+            if pillar not in pillar_offsets:
+                pillar_rng = _rng_for(seed, 'pillar_jitter', a.account_idx, pillar)
+                pillar_offsets[pillar] = pillar_rng.uniform(-10.0, 10.0)
+            kpi_rng = _rng_for(seed, 'kpi_jitter', a.account_idx, kpi_code)
+            kpi_offset = kpi_rng.uniform(-3.0, 3.0)
+            effective_health = max(2.0, min(98.0, target_health + pillar_offsets[pillar] + kpi_offset))
+
+            value = _health_to_kpi_value(effective_health, target_val, meta.get('ranges', {}), higher_is_better)
             w.writerow([
-                aid, kpi_code, meta.get('name', kpi_code), meta.get('pillar', kpi_code.split('-')[0]),
+                aid, kpi_code, meta.get('name', kpi_code), pillar,
                 '2026-01-01', round(value, 2), target_val, meta.get('weight_l1', 0.25),
                 meta.get('unit', '%'), status,
             ])
