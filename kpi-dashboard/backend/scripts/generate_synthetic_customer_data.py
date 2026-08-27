@@ -29,7 +29,7 @@ import random
 # No longer needed — all codes are P-format only
 
 
-def _build_kpi_range_map():
+def _build_kpi_range_map(vertical='dc2_s'):
     """Build a range map keyed by BOTH P-format and AI/CH/DV/EX/OS-format codes.
 
     Returns dict: kpi_code → {abs_min, abs_max, healthy_min, healthy_max,
@@ -37,13 +37,14 @@ def _build_kpi_range_map():
                                higher_is_better, unit}
     """
     try:
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    except ImportError:
-        print("   ⚠️  DC2S_KPIS not available — falling back to generic 0-100 range")
+        from utils.vertical_registry import get_kpis
+        kpi_defs = get_kpis(vertical)
+    except Exception:
+        print(f"   ⚠️  KPI catalog for '{vertical}' not available — falling back to generic 0-100 range")
         return {}
 
     range_map = {}
-    for kpi_code, defn in DC2S_KPIS.items():
+    for kpi_code, defn in kpi_defs.items():
         ranges = defn.get('ranges', {})
         all_mins, all_maxs = [], []
         healthy = ranges.get('healthy', {})
@@ -255,16 +256,24 @@ def generate_accounts_csv(customer_id, num_accounts=10, company_name=None):
 def generate_kpi_measurements_csv(customer_id, accounts_df, num_months=12):
     """Generate KPI measurements from config (ENABLED KPIs only).
 
-    Range-aware: uses DC2S_KPIS reference ranges to generate values
-    in the correct units (days, hours, counts, etc.) — not a flat 0-100 scale.
+    Range-aware: uses the customer's own vertical's KPI catalog reference
+    ranges to generate values in the correct units (days, hours, counts,
+    etc.) — not a flat 0-100 scale.
     """
 
     with app.app_context():
         loader = ConfigLoader(customer_id)
         enabled_kpis = loader.get_enabled_kpis()
 
-        # Build range map from DC2S_KPIS (keyed by both P-format and AI/CH/DV/EX/OS-format)
-        kpi_range_map = _build_kpi_range_map()
+        try:
+            from utils.vertical_registry import get_vertical_for_customer
+            vertical = get_vertical_for_customer(customer_id)
+        except ValueError:
+            vertical = 'dc2_s'
+
+        # Build range map from the customer's own vertical's KPI catalog
+        # (keyed by both P-format and AI/CH/DV/EX/OS-format)
+        kpi_range_map = _build_kpi_range_map(vertical)
         range_aware_count = sum(1 for k in enabled_kpis if k in kpi_range_map)
 
         print(f"   Config-aware: Using {len(enabled_kpis)} enabled KPIs")
