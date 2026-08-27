@@ -24,12 +24,20 @@ logger = logging.getLogger(__name__)
 ARCS_DIR = Path(__file__).parent.parent / 'config' / 'story_arcs'
 SCHEMA_PATH = ARCS_DIR / 'schema.json'
 
-# Valid KPI codes from DC2_S vertical (38 KPIs)
+# Valid KPI codes across every known vertical — story arc manifests aren't
+# scoped to one vertical, so a code valid for datacenter_v1 or saas_premium
+# must not be rejected just because it isn't one of dc2_s's 38.
 VALID_KPI_CODES = set()
 try:
-    from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    VALID_KPI_CODES = set(DC2S_KPIS.keys())
+    from utils.vertical_registry import SUPPORTED_VERTICALS, get_kpis
+    for _v in SUPPORTED_VERTICALS:
+        try:
+            VALID_KPI_CODES |= set(get_kpis(_v).keys())
+        except Exception:
+            continue
 except ImportError:
+    pass
+if not VALID_KPI_CODES:
     # Fallback: generate expected codes
     for p, count in [('P1', 8), ('P2', 8), ('P3', 8), ('P4', 6), ('P5', 8)]:
         for i in range(1, count + 1):
