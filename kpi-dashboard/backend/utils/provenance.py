@@ -99,10 +99,11 @@ def is_trustworthy_edge(
          for backward compat with rows pre-dating per-edge confidence).
       2. The edge's endpoint nodes are both trustworthy (caller's
          responsibility — pass already-filtered nodes via subquery, or
-         join + filter at SQL level).
+         join + filter at SQL level, using `is_trustworthy()`/
+         `normalize()` so the legacy 'customer' DB default is included —
+         see item 23 phase-2 sweep, 2026-08-25).
 
-    This helper only checks #1. SQL-level filtering for #2 is in
-    `apply_node_source_filter()`.
+    This helper only checks #1.
     """
     conf = getattr(edge, 'confidence', None)
     if conf is None:
@@ -111,19 +112,6 @@ def is_trustworthy_edge(
         return float(conf) >= min_confidence
     except (TypeError, ValueError):
         return True
-
-
-def apply_node_source_filter(query, ContextNode, *, allow_synthetic: bool = False):
-    """Add `source IN (trustworthy_sources())` to a SQLAlchemy query.
-
-    Usage:
-        from utils.provenance import apply_node_source_filter
-        from models import ContextNode
-        q = ContextNode.query.filter_by(node_type='OUTCOME')
-        q = apply_node_source_filter(q, ContextNode)
-    """
-    allowlist = trustworthy_sources(extra=(SYNTHETIC,) if allow_synthetic else ())
-    return query.filter(ContextNode.source.in_(allowlist))
 
 
 def count_trustworthy_causal_edges(

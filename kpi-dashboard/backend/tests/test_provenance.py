@@ -193,49 +193,16 @@ class TestCountTrustworthyCausalEdges:
         assert trustworthy + dropped_synth + dropped_low == len(edges)
 
 
-class TestApplyNodeSourceFilter:
-    """Smoke test for the SQL-side filter helper using a mock query."""
+class TestNoRawSourceFilterVocabularyMismatch:
+    """Item 23 phase-2 sweep (2026-08-25): apply_node_source_filter was deleted
+    — dead (test-only callers) and wrong if ever adopted, since its raw
+    `.in_((OBSERVED, INFERRED))` filter, unlike is_trustworthy()/normalize(),
+    silently excluded the legacy 'customer' DB default. Any future SQL-level
+    node-source filter must normalize() or include 'customer' explicitly.
+    This pins that trap so it can't be reintroduced unnoticed."""
 
-    def test_default_filter_excludes_synthetic(self):
-        from utils.provenance import apply_node_source_filter
-
-        captured = {}
-
-        class _MockQuery:
-            def filter(self, predicate):
-                captured['predicate'] = predicate
-                return self
-
-        class _MockColumn:
-            def in_(self, allowlist):
-                captured['allowlist'] = tuple(allowlist)
-                return ('IN_PREDICATE', tuple(allowlist))
-
-        class _MockModel:
-            source = _MockColumn()
-
-        apply_node_source_filter(_MockQuery(), _MockModel)
-        assert SYNTHETIC not in captured['allowlist']
-        assert OBSERVED in captured['allowlist']
-        assert INFERRED in captured['allowlist']
-
-    def test_allow_synthetic_includes_synthetic(self):
-        from utils.provenance import apply_node_source_filter
-
-        captured = {}
-
-        class _MockQuery:
-            def filter(self, predicate):
-                captured['predicate'] = predicate
-                return self
-
-        class _MockColumn:
-            def in_(self, allowlist):
-                captured['allowlist'] = tuple(allowlist)
-                return ('IN_PREDICATE', tuple(allowlist))
-
-        class _MockModel:
-            source = _MockColumn()
-
-        apply_node_source_filter(_MockQuery(), _MockModel, allow_synthetic=True)
-        assert SYNTHETIC in captured['allowlist']
+    def test_customer_default_is_trustworthy_but_not_in_raw_allowlist(self):
+        # The trap: is_trustworthy() (normalize()-based) says yes...
+        assert is_trustworthy('customer') is True
+        # ...but a raw `.in_(trustworthy_sources())` SQL filter would say no.
+        assert 'customer' not in trustworthy_sources()
