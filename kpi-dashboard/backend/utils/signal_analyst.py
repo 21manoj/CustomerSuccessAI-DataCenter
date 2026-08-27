@@ -943,11 +943,54 @@ _PLAYBOOK_DURATION_DAYS = {
 }
 
 
+def _classify_auto_close_outcome(health_at_trigger, health_at_close, trigger_month, close_month) -> str:
+    """Auto-close outcome classification, extracted for direct unit testing
+    (no DB mocking needed — pure function of already-fetched values).
+
+    Both branches that used to fall through to 'resolved' — missing health
+    data, and "stabilized" (no real change) — were claiming success with no
+    evidence behind it: reported live on eval-profile customer_id=405/406
+    (2026-08-27) as a CFO dashboard showing "7/7 resolved" for executions
+    where health_at_trigger == health_at_close EXACTLY, revenue_protected/
+    expanded=0, csm_hours=0. Root cause: _get_health_at_date falls back to
+    the single earliest-available HealthScore row when nothing exists at/
+    before the target date — for an account with only ONE HealthScore row
+    ever (thin history, not unique to eval-profile), trigger and close
+    resolve to the SAME row, so "stabilized" was really "no second data
+    point to compare, so trivially equal." A genuinely stabilized account
+    (health held steady across two REAL measurements) still counts as a
+    resolved success; an account with no real second measurement does not.
+    """
+    if health_at_trigger is None or health_at_close is None:
+        return 'insufficient_data'
+    has_real_second_point = (
+        trigger_month is not None and close_month is not None
+        and trigger_month != close_month
+    )
+    if not has_real_second_point:
+        return 'insufficient_data'  # trigger/close are the same snapshot — no trend to judge
+    if health_at_close > health_at_trigger + 5:
+        return 'resolved'
+    if health_at_close < health_at_trigger - 10:
+        return 'timeout'
+    return 'resolved'  # genuinely stabilized: two real measurements, held steady
+
+
 def _get_health_at_date(account_id: int, target_date) -> Optional[float]:
     """Get the health score closest to (but not after) a target date.
 
     Returns the health_score float, or None if no score exists before that date.
     """
+    hs, _month = _get_health_row_at_date(account_id, target_date)
+    return float(hs.health_score) if hs and hs.health_score is not None else None
+
+
+def _get_health_row_at_date(account_id: int, target_date):
+    """Same lookup as _get_health_at_date, but also returns which
+    HealthScore row (identified by measurement_month) backed the value —
+    so a caller comparing two dates can tell a genuine two-point trend from
+    both dates resolving to the SAME single snapshot (see the auto-close
+    outcome fix below)."""
     try:
         from models import HealthScore
         target = target_date.date() if hasattr(target_date, 'date') else target_date
@@ -961,7 +1004,7 @@ def _get_health_at_date(account_id: int, target_date) -> Optional[float]:
             .first()
         )
         if hs and hs.health_score is not None:
-            return float(hs.health_score)
+            return hs, hs.measurement_month
         # Fallback: get ANY health score for this account (earliest available)
         hs_any = (
             HealthScore.query
@@ -969,10 +1012,12 @@ def _get_health_at_date(account_id: int, target_date) -> Optional[float]:
             .order_by(HealthScore.measurement_month.asc())
             .first()
         )
-        return float(hs_any.health_score) if hs_any and hs_any.health_score else None
+        if hs_any and hs_any.health_score is not None:
+            return hs_any, hs_any.measurement_month
+        return None, None
     except Exception as e:
-        logger.debug(f"_get_health_at_date failed for account {account_id}: {e}")
-        return None
+        logger.debug(f"_get_health_row_at_date failed for account {account_id}: {e}")
+        return None, None
 
 
 def _execute_playbook_from_signal(
@@ -1056,17 +1101,12 @@ def _execute_playbook_from_signal(
         if days_elapsed > playbook_duration:
             closed_at = signal_date + timedelta(days=playbook_duration)
             health_at_close = _get_health_at_date(account_id, closed_at)
+            _trigger_row, trigger_month = _get_health_row_at_date(account_id, signal_date)
+            _close_row, close_month = _get_health_row_at_date(account_id, closed_at)
 
-            # Determine outcome from health trajectory
-            if health_at_trigger is not None and health_at_close is not None:
-                if health_at_close > health_at_trigger + 5:
-                    outcome = 'resolved'
-                elif health_at_close < health_at_trigger - 10:
-                    outcome = 'timeout'
-                else:
-                    outcome = 'resolved'  # stabilized = success
-            else:
-                outcome = 'resolved'
+            outcome = _classify_auto_close_outcome(
+                health_at_trigger, health_at_close, trigger_month, close_month,
+            )
 
             try:
                 close_execution(
