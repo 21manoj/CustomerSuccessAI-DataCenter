@@ -1,0 +1,7 @@
+source_account_id,outcome_date,title,outcome_type,revenue_value
+3535,2026-04-30,Revenue at Risk,revenue_at_risk,-4100000
+3536,2026-05-10,Downgrade Booked,contraction,-820000
+3537,2026-05-20,Renewal Secured,renewal,2300000
+3538,2026-05-30,Expansion Closed,expansion,900000
+3540,2026-06-09,Renewal Secured,renewal,12500000
+3541,2026-03-31,Churn Confirmed,churn,-3600000

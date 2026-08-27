@@ -1,0 +1,18 @@
+source_account_id,signal_ref,signal_date,signal_type,content,sentiment
+3535,sig_3535_0,2025-12-01,critical_incident,Critical service incident reported,negative
+3535,sig_3535_1,2025-12-08,support_escalation,Support ticket escalated to management,negative
+3535,sig_3535_2,2026-01-24,reserved_cluster_idle,"Reserved 1,000-GPU cluster utilization fell 65%->22%",negative
+3535,sig_3535_3,2026-03-31,churn_averted,"Retention plan approved, 12-month commitment",positive
+3536,sig_3536_0,2025-12-04,usage_decline,Sustained drop in batch job submissions,negative
+3536,sig_3536_1,2026-01-19,budget_pressure,Procurement signalled FY27 budget freeze,negative
+3536,sig_3536_2,2026-03-06,engagement_gap,No QBR held in two consecutive quarters,negative
+3537,sig_3537_0,2025-12-11,sla_breach,Two SLA breaches in rolling 30 days,negative
+3537,sig_3537_1,2026-01-28,mttr_regression,Mean time to repair up 40% quarter over quarter,negative
+3537,sig_3537_2,2026-04-20,capacity_constraint,Requested capacity unavailable in region,negative
+3538,sig_3538_0,2025-12-15,adoption_milestone,Cleared 80% platform adoption threshold,positive
+3538,sig_3538_1,2026-02-09,expansion_interest,Asked for pricing on second region,positive
+3540,sig_3540_0,2025-12-21,adoption_milestone,Standardised on platform across three BUs,positive
+3540,sig_3540_1,2026-02-27,exec_sponsorship,CTO joined quarterly steering committee,positive
+3541,sig_3541_0,2025-12-03,champion_change,Primary champion left the company,negative
+3541,sig_3541_1,2026-01-16,engagement_gap,Weekly sync cancelled four times running,negative
+3541,sig_3541_2,2026-03-12,competitor_mention,Evaluating an alternative provider,negative

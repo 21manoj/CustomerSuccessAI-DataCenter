@@ -1,0 +1,7 @@
+source_account_id,customer_id,account_name,industry,region,arr,renewal_date
+3535,390,Titan Hyperscale Labs,AI Infrastructure,US-West,8200000,2026-06-29
+3536,390,Meridian AI,AI Infrastructure,US-East,4100000,2026-04-30
+3537,390,Quantum Labs,Research Computing,EU-Central,2300000,2026-09-27
+3538,390,Apex Compute,Financial Services,US-East,3000000,2027-01-05
+3540,390,Pacific Dataworks,Media & Entertainment,APAC,12500000,2026-12-01
+3541,390,Orion Models,AI Infrastructure,US-West,3600000,2026-03-01

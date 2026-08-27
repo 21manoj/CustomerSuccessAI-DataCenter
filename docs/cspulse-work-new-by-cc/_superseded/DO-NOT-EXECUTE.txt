@@ -1,0 +1,6 @@
+These documents are superseded. Do NOT execute them.
+
+synthetic-worldgen-prompt.md  -> replaced by 04-generator-and-harness/fix-load-generator-prompt.md
+edge-provenance-plan.md       -> replaced by 03-edge-provenance/ws1-ws2-prompts.md
+
+Kept for provenance only.

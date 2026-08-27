@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wizard A — Edge Provenance: Current vs. Target Design</title>
+<style>
+:root {
+  color-scheme: light;
+  --page:      #f9f9f7;
+  --surface:   #fcfcfb;
+  --ink:       #0b0b0b;
+  --ink-2:     #52514e;
+  --ink-3:     #898781;
+  --rule:      #e1e0d9;
+  --line:      #c3c2b7;
+  --border:    rgba(11,11,11,0.10);
+  --blue:      #2a78d6;
+  --critical:  #d03b3b;
+  --warning:   #fab219;
+  --serious:   #ec835a;
+  --good:      #0ca30c;
+  --good-ink:  #006300;
+  --wash-crit: rgba(208,59,59,0.06);
+  --wash-good: rgba(12,163,12,0.06);
+  --wash-neut: rgba(11,11,11,0.035);
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page:      #0d0d0d;
+    --surface:   #1a1a19;
+    --ink:       #ffffff;
+    --ink-2:     #c3c2b7;
+    --ink-3:     #898781;
+    --rule:      #2c2c2a;
+    --line:      #383835;
+    --border:    rgba(255,255,255,0.10);
+    --blue:      #3987e5;
+    --good-ink:  #0ca30c;
+    --wash-crit: rgba(208,59,59,0.13);
+    --wash-good: rgba(12,163,12,0.11);
+    --wash-neut: rgba(255,255,255,0.05);
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 40px 28px 64px;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1360px; margin: 0 auto; }
+
+header.doc { margin-bottom: 32px; max-width: 900px; }
+.eyebrow {
+  font-size: 11px; font-weight: 650; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px;
+}
+h1 { font-size: 27px; line-height: 1.22; margin: 0 0 12px; font-weight: 660; letter-spacing: -0.015em; }
+header.doc p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+@media (max-width: 1080px) { .panels { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 22px 24px;
+}
+.panel-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.tag {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 5px; white-space: nowrap;
+}
+.tag--now   { background: var(--wash-crit); color: var(--critical); }
+.tag--ideal { background: var(--wash-good); color: var(--good-ink); }
+.panel h2 { font-size: 17px; margin: 0; font-weight: 640; letter-spacing: -0.01em; }
+.panel-sub { color: var(--ink-2); font-size: 13px; margin: 6px 0 20px; }
+
+/* ---- flow ---- */
+.flow { display: flex; flex-direction: column; align-items: stretch; }
+.node {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: var(--surface);
+}
+.node--stage { background: var(--wash-neut); }
+.node--bad  { border-color: rgba(208,59,59,0.42); background: var(--wash-crit); }
+.node--good { border-color: rgba(12,163,12,0.40); background: var(--wash-good); }
+.node--ghost { border-style: dashed; background: transparent; }
+
+.n-title { font-size: 13px; font-weight: 640; letter-spacing: -0.005em; margin-bottom: 3px; }
+.n-title .file { font-family: var(--mono); font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+.n-body { font-size: 12.3px; color: var(--ink-2); }
+.n-body code, code.inl {
+  font-family: var(--mono); font-size: 11.4px;
+  background: var(--wash-neut); padding: 1px 4px; border-radius: 3px; color: var(--ink);
+}
+.n-list { margin: 6px 0 0; padding: 0; list-style: none; }
+.n-list li { font-size: 12.3px; color: var(--ink-2); padding: 2px 0 2px 13px; position: relative; }
+.n-list li::before {
+  content: ""; position: absolute; left: 2px; top: 9px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--line);
+}
+
+.conn { height: 20px; position: relative; flex: none; }
+.conn::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 5px;
+  width: 1.5px; background: var(--line); transform: translateX(-50%);
+}
+.conn::after {
+  content: ""; position: absolute; left: 50%; bottom: 0;
+  border-left: 4.5px solid transparent; border-right: 4.5px solid transparent;
+  border-top: 6px solid var(--line); transform: translateX(-50%);
+}
+
+/* fan-out to 3 consumers */
+.fan { position: relative; height: 22px; }
+.fan::before {
+  content: ""; position: absolute; top: 0; left: 16.6%; right: 16.6%; height: 1.5px;
+  background: var(--line); top: 11px;
+}
+.fan .stem { position: absolute; top: 0; left: 50%; width: 1.5px; height: 11px; background: var(--line); transform: translateX(-50%); }
+.fan .drop { position: absolute; top: 11px; width: 1.5px; height: 11px; background: var(--line); }
+.fan .drop:nth-of-type(2) { left: 16.6%; }
+.fan .drop:nth-of-type(3) { left: 50%; transform: translateX(-50%); }
+.fan .drop:nth-of-type(4) { left: 83.4%; }
+
+.triad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.triad .node { padding: 10px 10px; }
+.triad .n-title { font-size: 11.4px; font-family: var(--mono); font-weight: 600; letter-spacing: -0.01em; word-break: break-word; }
+.triad .n-body { font-size: 11.6px; margin-top: 4px; }
+
+.merge { position: relative; height: 22px; }
+.merge::before { content: ""; position: absolute; top: 10px; left: 16.6%; right: 16.6%; height: 1.5px; background: var(--line); }
+.merge .rise { position: absolute; top: 0; width: 1.5px; height: 10px; background: var(--line); }
+.merge .rise:nth-of-type(1) { left: 16.6%; }
+.merge .rise:nth-of-type(2) { left: 50%; transform: translateX(-50%); }
+.merge .rise:nth-of-type(3) { left: 83.4%; }
+.merge .out { position: absolute; top: 10px; left: 50%; width: 1.5px; height: 7px; background: var(--line); transform: translateX(-50%); }
+.merge .arw {
+  position: absolute; bottom: 0; left: 50%;
+  border-left: 4.5px solid transparent; border-right: 4.5px solid transparent;
+  border-top: 6px solid var(--line); transform: translateX(-50%);
+}
+
+/* side annotation */
+.side {
+  display: flex; gap: 8px; align-items: flex-start;
+  margin: 8px 0 0 0; padding: 8px 10px;
+  border-left: 2px solid var(--line);
+  font-size: 11.9px; color: var(--ink-3);
+}
+
+/* flaw / fix markers */
+.mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%;
+  font-size: 9.5px; font-weight: 700; flex: none;
+  margin-right: 6px; position: relative; top: 1px;
+}
+.mark--bad  { background: var(--critical); color: #fff; }
+.mark--good { background: var(--good); color: #fff; }
+.flaw { display: flex; align-items: flex-start; margin-top: 7px; font-size: 12.2px; }
+.flaw .txt { color: var(--ink-2); }
+.flaw .txt b { color: var(--ink); font-weight: 620; }
+
+/* verdict banners */
+.verdict {
+  margin-top: 18px; padding: 13px 15px; border-radius: 9px;
+  font-size: 13px; line-height: 1.45;
+}
+.verdict--bad  { background: var(--wash-crit); border: 1px solid rgba(208,59,59,0.35); }
+.verdict--good { background: var(--wash-good); border: 1px solid rgba(12,163,12,0.35); }
+.verdict .vh { font-weight: 680; margin-bottom: 4px; display: flex; align-items: center; gap: 7px; }
+.verdict--bad .vh  { color: var(--critical); }
+.verdict--good .vh { color: var(--good-ink); }
+.verdict p { margin: 0; color: var(--ink-2); }
+
+.pill {
+  display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+  padding: 2px 6px; border-radius: 4px; letter-spacing: 0.02em; margin-right: 5px;
+}
+.pill--obs { background: rgba(12,163,12,0.14); color: var(--good-ink); }
+.pill--ass { background: rgba(250,178,25,0.20); color: #8a5f00; }
+.pill--inf { background: rgba(236,131,90,0.20); color: #a54a20; }
+.pill--unk { background: var(--wash-neut); color: var(--ink-3); }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .pill--ass { color: var(--warning); }
+  :root:where(:not([data-theme="light"])) .pill--inf { color: var(--serious); }
+}
+
+.tierrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 500px) { .tierrow { grid-template-columns: 1fr; } }
+.tierrow .node { padding: 9px 10px; }
+.tierrow .n-body { font-size: 11.6px; }
+
+/* principles */
+.principles {
+  margin-top: 26px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 22px;
+}
+.principles h3 { margin: 0 0 4px; font-size: 15px; font-weight: 640; }
+.principles .sub { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
+.pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 900px) { .pgrid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 540px) { .pgrid { grid-template-columns: 1fr; } }
+.p-item { border-top: 2px solid var(--blue); padding-top: 10px; }
+.p-item .ph { font-size: 12.8px; font-weight: 650; margin-bottom: 4px; }
+.p-item .pb { font-size: 12.2px; color: var(--ink-2); }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 22px;
+  font-size: 11.8px; color: var(--ink-3);
+}
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 11px; height: 11px; border-radius: 3px; border: 1px solid var(--border); }
+
+footer.doc { margin-top: 22px; font-size: 11.6px; color: var(--ink-3); }
+
+@media print {
+  body { padding: 0; background: #fff; }
+  .panels { grid-template-columns: 1fr 1fr; }
+  .panel, .principles { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <div class="eyebrow">CS Pulse · Context Graph · Design Note</div>
+    <h1>Wizard A edge provenance — what ships today vs. what the evidence thesis requires</h1>
+    <p>Wizard A fabricates causal edges from static arc templates and writes them with an author-typed
+    <code class="inl">confidence</code>. Every downstream surface renders and narrates those edges identically to
+    evidence-backed ones. The left panel traces that path; the right shows the target design, where warrant is
+    declared at write time and no surface can lose it.</p>
+  </header>
+
+  <div class="panels">
+
+    <!-- ══════════════════ PANEL A — TODAY ══════════════════ -->
+    <section class="panel">
+      <div class="panel-head">
+        <span class="tag tag--now">Today</span>
+        <h2>Provenance exists in the row, and dies before the surface</h2>
+      </div>
+      <p class="panel-sub">Template plausibility is laundered into computed confidence, then flattened by three
+      independent consumers that each ignore <code class="inl">source_platform</code>.</p>
+
+      <div class="flow">
+
+        <div class="node node--stage">
+          <div class="n-title">Inputs</div>
+          <div class="n-body"><code>accounts.csv</code> · <code>kpi_measurements.csv</code> ·
+          <code>enhanced_qualitative_signals.csv</code></div>
+          <div class="side"><span><code class="inl">signal_edges.csv</code> is optional — and frequently absent
+          entirely.</span></div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node">
+          <div class="n-title">classify_arc() <span class="file">utils/arc_classifier.py</span></div>
+          <div class="n-body">14-rule cascade selects one of 8 arc types. Deterministic, no LLM — and no evidence
+          requirement.</div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node node--bad">
+          <div class="n-title">generate_edges() <span class="file">utils/arc_edge_generator.py</span></div>
+          <div class="n-body">Builds <code>ContextEdge</code> rows purely from the static <code>ARC_TEMPLATES</code>
+          dict — hand-authored edges per arc phase.</div>
+          <div class="flaw">
+            <span class="mark mark--bad">1</span>
+            <span class="txt"><b>Author-typed confidence.</b> <code class="inl">'confidence': 0.80</code> is a
+            plausibility number a template author typed — not a computed epistemic measure.</span>
+          </div>
+          <div class="flaw">
+            <span class="mark mark--bad">2</span>
+            <span class="txt"><b>No evidence gate.</b> Runs and fabricates a full causal graph even when zero
+            <code class="inl">signal_edges</code> rows were ever uploaded.</span>
+          </div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node">
+          <div class="n-title">ContextEdge persisted</div>
+          <div class="n-body"><code>confidence = 0.80</code> &nbsp;·&nbsp;
+          <code>source_platform = 'wizard_a'</code><br>
+          <code>to_dict()</code> exposes both fields — no consumer acts on them.</div>
+          <div class="flaw">
+            <span class="mark mark--bad">3</span>
+            <span class="txt"><b>Existing guards stop at nodes.</b>
+            <code class="inl">_is_narrative_only()</code> and Invariant&nbsp;I3′ (the unearned-confidence clamp)
+            both protect <em>OUTCOME nodes</em> only. Neither was ever extended to edges.</span>
+          </div>
+        </div>
+
+        <div class="fan">
+          <div class="stem"></div><div class="drop"></div><div class="drop"></div><div class="drop"></div>
+        </div>
+
+        <div class="triad">
+          <div class="node node--bad">
+            <div class="n-title">get_context_graph_mermaid</div>
+            <div class="n-body">Draws every causal edge as
+            <code>n{from} --&gt;|{type}| n{to}</code>. No color, no dash, no confidence shown —
+            regardless of source.</div>
+          </div>
+          <div class="node node--bad">
+            <div class="n-title">get_causal_chain</div>
+            <div class="n-body">Returns <code>{node, edge, depth}</code> per hop. No provenance field, no tier
+            filter, no warrant on the response.</div>
+          </div>
+          <div class="node node--bad">
+            <div class="n-title">get_platform_instructions</div>
+            <div class="n-body">Has rules for revenue math and Exposure vs. Confirmed Risk. Silent on edge
+            provenance.</div>
+          </div>
+        </div>
+
+        <div class="merge">
+          <div class="rise"></div><div class="rise"></div><div class="rise"></div>
+          <div class="out"></div><div class="arw"></div>
+        </div>
+
+        <div class="node node--stage">
+          <div class="n-title">Buyer · auditor · LLM narration</div>
+          <div class="n-body">“<em>Champion departure caused renewal uncertainty</em>” — confidence 0.80,
+          stated flat.</div>
+        </div>
+
+      </div>
+
+      <div class="verdict verdict--bad">
+        <div class="vh"><span class="mark mark--bad">!</span>Net effect</div>
+        <p>A template-fabricated 0.80 and a genuinely evidence-backed 0.80 render identically, narrate identically,
+        and are indistinguishable to the person being asked to act on them. The first question an audit function
+        asks is not “what does the graph show” — it is “how do you know that edge is real.”</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ PANEL B — IDEAL ══════════════════ -->
+    <section class="panel">
+      <div class="panel-head">
+        <span class="tag tag--ideal">Target</span>
+        <h2>Warrant is declared at write time and cannot be dropped downstream</h2>
+      </div>
+      <p class="panel-sub">One constructor stamps the tier; the surfaces mark rather than hide; the honesty check
+      leaves the diagram and becomes a number.</p>
+
+      <div class="flow">
+
+        <div class="node node--stage">
+          <div class="n-title">Inputs, separated by warrant class</div>
+          <div class="tierrow" style="margin-top:8px">
+            <div class="node"><div class="n-body"><span class="pill pill--obs">observed</span>
+            Logged event with resolvable <code>source_ref</code> + timestamp</div></div>
+            <div class="node"><div class="n-body"><span class="pill pill--ass">asserted</span>
+            <code>signal_edges.csv</code> — a human said so</div></div>
+            <div class="node"><div class="n-body"><span class="pill pill--inf">inferred</span>
+            <code>ARC_TEMPLATES</code> · LLM · lag-correlation</div></div>
+            <div class="node"><div class="n-body"><span class="pill pill--unk">unknown</span>
+            Legacy rows with no source — <em>never</em> defaults to observed</div></div>
+          </div>
+          <div class="side"><span>A CSM typing “champion left → renewal risk” is a <strong>human inference</strong>,
+          not an observation. Collapsing it into the top tier launders opinion into evidence — invisibly.</span></div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node node--good">
+          <div class="n-title">EdgeFactory() — the only sanctioned constructor</div>
+          <ul class="n-list">
+            <li><code>evidence_tier</code> <strong>NOT NULL</strong>, persisted — asserted by the writer that knows
+            its own warrant, never derived at read time by a consumer that is guessing</li>
+            <li><code>method</code> named explicitly: <code>template</code> | <code>llm</code> |
+            <code>correlation</code></li>
+            <li>Inferred edges write <code>confidence = NULL</code> — not clamped. Nothing was computed, so no
+            number is emitted</li>
+            <li><code>template_plausibility</code> carried separately; never lands in a field named
+            <em>confidence</em></li>
+          </ul>
+          <div class="flaw">
+            <span class="mark mark--good">✓</span>
+            <span class="txt"><b>Regression-proof by construction.</b> A new edge source cannot silently inherit
+            the wrong tier — the DB constraint forces it to declare one.</span>
+          </div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node">
+          <div class="n-title">ContextEdge persisted with provenance</div>
+          <div class="n-body">Invariant I3′ extended from nodes to edges — unearned-confidence clamp plus the
+          existing structured <code>event=unearned_confidence_clamp</code> log line for ops visibility.</div>
+        </div>
+
+        <div class="fan">
+          <div class="stem"></div><div class="drop"></div><div class="drop"></div><div class="drop"></div>
+        </div>
+
+        <div class="triad">
+          <div class="node node--good">
+            <div class="n-title">get_context_graph_mermaid</div>
+            <div class="n-body"><strong>Always show, never hide.</strong> Dashed + gray, with
+            <code>(inferred)</code> in the label <em>text</em> so it survives a screenshot. Graph-level banner:
+            “0 observed edges — all 23 template-inferred.”</div>
+          </div>
+          <div class="node node--good">
+            <div class="n-title">get_causal_chain</div>
+            <div class="n-body"><code>evidence_tier</code> per hop, plus a pre-composed <code>assertion</code>
+            string. Top-level <code>chain_warrant: partially_inferred</code> makes the caveat unskippable.</div>
+          </div>
+          <div class="node node--good">
+            <div class="n-title">get_graph_summary</div>
+            <div class="n-body"><strong>Evidence Density</strong> = observed ÷ total causal edges, as a named
+            percentage — plus the observed / asserted / inferred split.</div>
+          </div>
+        </div>
+
+        <div class="merge">
+          <div class="rise"></div><div class="rise"></div><div class="rise"></div>
+          <div class="out"></div><div class="arw"></div>
+        </div>
+
+        <div class="node node--ghost">
+          <div class="n-title">System-prompt rule — belt &amp; braces, <em>not</em> the control</div>
+          <div class="n-body">A prompt-layer guardrail is the weakest tier available, and IMDA's own May 2026 update
+          ranks structural and rule-based controls above it. Keep the line; never let it be the mechanism.</div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node node--stage">
+          <div class="n-title">Buyer · auditor · LLM narration</div>
+          <div class="n-body">“Champion departure is <em>inferred</em> to have caused renewal uncertainty
+          <span style="color:var(--ink-3)">(arc template; not observed)</span>.”</div>
+        </div>
+
+        <div class="conn"></div>
+
+        <div class="node node--good">
+          <div class="n-title">Regression guard</div>
+          <div class="n-body">Golden case — provision a customer with zero uploaded signal edges, then assert
+          <code>evidence_density == 0</code> and that <strong>no surface renders an unmarked causal edge</strong>.</div>
+        </div>
+
+      </div>
+
+      <div class="verdict verdict--good">
+        <div class="vh"><span class="mark mark--good">✓</span>Net effect</div>
+        <p>Warrant travels with the edge from constructor to diagram to narration. The honesty check stops depending
+        on a reader noticing a dash style and becomes a number a CRO or auditor can be handed — one the product
+        publishes about itself.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══════════════════ PRINCIPLES ══════════════════ -->
+  <div class="principles">
+    <h3>The four design rules the target state encodes</h3>
+    <p class="sub">Each one is a direct response to a way the current path fails.</p>
+    <div class="pgrid">
+      <div class="p-item">
+        <div class="ph">Write-time assertion &gt; read-time derivation</div>
+        <div class="pb"><code class="inl">source_platform</code> records which system wrote the row, not what
+        warrant it has. Deriving tier at read time reproduces the original bug with a new field name — five call
+        sites, five chances to forget.</div>
+      </div>
+      <div class="p-item">
+        <div class="ph">NULL &gt; clamped</div>
+        <div class="pb">A clamped 0.35 is still a number, still renders, still gets narrated as if it means
+        something. NULL is the epistemically correct value and forces every consumer to handle absence — loudly,
+        at dev time.</div>
+      </div>
+      <div class="p-item">
+        <div class="ph">Mark, never hide</div>
+        <div class="pb">The node pattern does not port. Hiding a node is additive; hiding an edge is topological.
+        Suppress template edges on a template-only graph and you render disconnected nodes — then someone adds an
+        exception and the discipline erodes.</div>
+      </div>
+      <div class="p-item">
+        <div class="ph">Structural &gt; prompt-layer control</div>
+        <div class="pb">Do not ask the model to caveat — put the caveat in the payload. If the honest phrasing is
+        the data, the narration cannot route around it.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--wash-crit); border-color:rgba(208,59,59,0.42)"></i>Defect in the
+    current path</span>
+    <span><i class="sw" style="background:var(--wash-good); border-color:rgba(12,163,12,0.40)"></i>Control in the
+    target design</span>
+    <span><i class="sw" style="background:var(--wash-neut)"></i>Boundary — input or consumer</span>
+    <span><i class="sw" style="background:transparent; border-style:dashed"></i>Present but non-load-bearing</span>
+  </div>
+
+  <footer class="doc">
+    Traced against <code>utils/arc_edge_generator.py</code>, <code>utils/arc_classifier.py</code>,
+    <code>utils/context_graph.py</code> and <code>cs_pulse_intelligence.py</code>. Arc-rule count shown as 14 per
+    the code; platform documentation currently states both 12 and 8 — a doc-drift lint worth closing separately.
+  </footer>
+
+</div>
+</body>
+</html>

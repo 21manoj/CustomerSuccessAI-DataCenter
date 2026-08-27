@@ -1,0 +1,4 @@
+from_signal_ref,to_signal_ref,edge_type,weight,lag_days,evidence,label,source_platform
+sig_3535_0,sig_3535_1,LED_TO,1.0,7,ticket #INC-4471 escalation log,Incident severity triggered management escalation,csv_import
+sig_3535_1,sig_3535_2,LED_TO,1.0,47,capacity planning review 2026-01-24,Unresolved escalation preceded workload migration off reserved cluster,csv_import
+sig_3541_0,sig_3541_1,LED_TO,1.0,44,calendar export: 4 cancelled syncs,Champion departure left sync cadence unowned,csv_import
