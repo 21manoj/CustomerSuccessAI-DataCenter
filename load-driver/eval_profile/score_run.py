@@ -10,9 +10,11 @@ three dimensions in generator-ground-truth-spec.md section 3 — Provenance
 discipline (evidence_tier), Abstention (did the LIVE system decline or
 force), Coverage estimation (the LIVE system's own coverage estimate) — score
 the PLATFORM's actual behavior on uploaded data, not the generator's output,
-and need infrastructure that doesn't exist yet (WS-2 2a's data_origin schema,
-Wizard A's abstention mechanism). Their scoring FUNCTIONS are stubbed below
-with the shape they'll need, not faked with placeholder numbers.
+and need infrastructure that doesn't fully exist yet: WS-2 2a's data_origin
+schema now exists (customers.data_origin, set at registration time by
+run_eval_profile), but Wizard A's abstention-with-reasons mechanism still
+doesn't. Their scoring FUNCTIONS are stubbed below with the shape they'll
+need, not faked with placeholder numbers.
 """
 import csv
 import json

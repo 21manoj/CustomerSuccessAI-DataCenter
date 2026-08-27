@@ -12,6 +12,7 @@ from datetime import datetime
 
 from extensions import db
 from models import Account, HealthScore, PlaybookExecutionV2, ContextNode, ContextEdge
+from utils import edge_factory
 
 logger = logging.getLogger(__name__)
 
@@ -487,23 +488,71 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
             db.session.add(outcome_node)
             db.session.flush()
 
-        # ── Causal edges: ABSTAIN (WS-2 review, 2026-08-24) ──
-        # This path used to write two heuristic edges on every playbook close:
-        #   RESULTED_IN: the account's MOST RECENT decision node → outcome, at
-        #     a typed confidence=1.0 (a recency guess wearing full confidence —
-        #     the worst confidence-overloading instance found in the audit);
-        #   LED_TO: the 3 most recent prior signals → outcome, at a typed 0.7.
-        # Neither is a logged causal fact; both were adjudicated `inferred`
-        # (cells 12/13). Per the reviewer's direction, the writer now ABSTAINS
-        # — no edge at all — rather than keep accumulating typed constants
-        # until WS-2 2c ships the EdgeFactory (evidence_tier stamped,
-        # confidence NULL for inferred). Reinstate the linkage there, through
-        # the factory, or from a real trigger-condition log — never by
-        # restoring these constructors. Residue marker:
-        # tests/test_playbook_close_edge_abstention.py.
-        #
-        # The OUTCOME node itself (real execution economics) is still written
-        # above — only the fabricated causal linkage stops.
+        # ── Causal edges: EdgeFactory, evidence_tier stamped, confidence NULL
+        # (WS-2 2c) ──
+        # This path used to write two heuristic edges on every playbook close
+        # via a raw ContextEdge() constructor, at typed point-estimate
+        # confidences (RESULTED_IN=1.0, LED_TO=0.7) that were adjudicated
+        # `inferred` (cells 12/13), not logged causal fact — the writer
+        # abstained entirely (WS-2 review, 2026-08-24) until this factory
+        # existed. Same recency heuristic, same edges, but now routed through
+        # utils.edge_factory (which routes through upsert_edge, so the I1/I2/
+        # I17 pre-commit gate applies) with confidence left NULL rather than
+        # a fabricated point estimate. See tests/test_playbook_close_edge_abstention.py
+        # (this function must still construct no raw ContextEdge / call no
+        # bare upsert_edge — linkage lives in the factory, not here).
+        decision_node = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == execution.account_id,
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_type == 'DECISION',
+            )
+            .order_by(ContextNode.occurred_at.desc())
+            .first()
+        )
+        if decision_node:
+            edge_factory.create_inferred_edge(
+                from_node_id=decision_node.node_id,
+                to_node_id=outcome_node.node_id,
+                edge_type='RESULTED_IN',
+                source_platform='playbook_execution',
+                derivation=edge_factory.CLOSE_LINK_DERIVATION,
+                customer_id=customer_id,
+                label=f'{execution.playbook_id} → {outcome}',
+            )
+
+        # ── Link recent SIGNAL nodes → OUTCOME for causal traversal ──
+        # Enables "Why did this happen?" queries via get_causal_chain.
+        # Connect up to 3 most recent signals that occurred BEFORE the
+        # outcome. The "occurred_at <= outcome_ts" filter eliminates I17
+        # (reverse-time) violations — historical / back-dated playbook
+        # closes were previously linked to signals that post-dated the
+        # outcome, producing mechanically backward causal edges visible to
+        # buyer audits.
+        recent_signals = (
+            ContextNode.query
+            .filter(
+                ContextNode.account_id == execution.account_id,
+                ContextNode.customer_id == customer_id,
+                ContextNode.node_type == 'SIGNAL',
+                ContextNode.occurred_at <= outcome_node.occurred_at,
+            )
+            .order_by(ContextNode.occurred_at.desc())
+            .limit(3)
+            .all()
+        )
+        for sig in recent_signals:
+            edge_factory.create_inferred_edge(
+                from_node_id=sig.node_id,
+                to_node_id=outcome_node.node_id,
+                edge_type='LED_TO',
+                source_platform='playbook_execution',
+                derivation=edge_factory.CLOSE_LINK_DERIVATION,
+                customer_id=customer_id,
+                label=f'{sig.node_subtype or "signal"} contributed to {outcome}',
+                extra_properties={'inferred_by': 'playbook_close_linker'},
+            )
 
     except Exception as cg_err:
         logger.warning(f"Context graph OUTCOME write failed (non-fatal): {cg_err}")

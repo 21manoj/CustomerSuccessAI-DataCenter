@@ -224,10 +224,11 @@ def build_ground_truth(world: dict, accounts: list, seed: int, knobs: dict,
             },
         },
         'data_origin': 'synthetic_eval_profile',
-        # WS-2 2a's data_origin column doesn't exist yet — this is the
-        # forward-declared value this generator will write once it does
-        # (see fix-load-generator-prompt-v2.md §7). Not written to any DB
-        # column today; carried here so the contract is pinned in advance.
+        # WS-2 2a: matches customers.data_origin, which cs_pulse_driver.py's
+        # run_eval_profile() sets via register_customer(data_origin=...) for
+        # any --register run (fix-load-generator-prompt-v2.md §7). Carried
+        # here too so ground_truth.json is self-describing for scoring even
+        # when a tenant was only generated to disk, never registered live.
     }
 
 

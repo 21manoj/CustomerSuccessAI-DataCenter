@@ -435,6 +435,9 @@ def run_eval_profile(args):
         email=email,
         password=password,
         vertical=vertical,
+        # WS-2 2a: this tenant's data comes from the generator, not a real
+        # customer — ground_truth.py forward-declared this exact value.
+        data_origin='synthetic_eval_profile',
     )
     if not (resp and resp.get('customer_id')):
         logger.error(f"  Registration failed: {resp}")
