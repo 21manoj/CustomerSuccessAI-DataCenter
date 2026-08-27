@@ -86,6 +86,25 @@
       "strength": 0.6,
       "source_system": "product_telemetry",
       "latent_edge": true
+    },
+    {
+      "edge_id": "e6",
+      "from": "interconnect_bottleneck",
+      "to": "runway_risk",
+      "lag_days_mean": 16,
+      "lag_days_std": 4,
+      "strength": 0.50,
+      "source_system": "product_telemetry",
+      "note": "Gives interconnect_bottleneck its own independent downstream effect, distinct from reliability_sla_breach's (e7) -- makes the no_relationship absence below between the two actually testable: both types now occur for the same account with no edge connecting THEM to each other, rather than neither type ever being generated at all."
+    },
+    {
+      "edge_id": "e7",
+      "from": "reliability_sla_breach",
+      "to": "payment_delinquency",
+      "lag_days_mean": 9,
+      "lag_days_std": 3,
+      "strength": 0.50,
+      "source_system": "support_ticketing"
     }
   ],
   "template_disagreements": [
@@ -200,6 +219,16 @@
         7000000
       ],
       "weight": 2
+    },
+    {
+      "archetype_id": "independent_reliability_case",
+      "active_edges": ["e6", "e7"],
+      "arr_range": [
+        1800000,
+        6500000
+      ],
+      "weight": 2,
+      "note": "interconnect_bottleneck and reliability_sla_breach both occur for these accounts, each with its own independent downstream effect, no edge between the two -- the account population the no_relationship absence (interconnect_bottleneck, reliability_sla_breach) is actually testable against."
     },
     {
       "archetype_id": "no_arc",

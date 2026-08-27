@@ -168,10 +168,20 @@ def world_a_tenant(tmp_path_factory):
 
 @pytest.fixture(scope='module')
 def world_b_tenant(tmp_path_factory):
+    # 400, not 200: adding the independent_reliability_case archetype (to
+    # make the asserted_edge_absent disagreement testable, 2026-08-27) diluted
+    # the reversed_relationship_chain archetype's relative weight (3/11 ->
+    # 3/13), and at N=200 PC's discovery of the reversed champion_change/
+    # engagement_gap edge lost enough power to occasionally mis-orient it as
+    # SUPPORTED. Confirmed at seed=42 (deterministic, so this is one
+    # observation per N, not repeated sampling): N=200 -> SUPPORTED (wrong),
+    # N=400 and N=800 -> UNTESTABLE (honest -- PC finds the edge, doesn't
+    # confidently orient it). More real data is a legitimate fix; this is
+    # not the "tune world parameters to look better" the prompt forbids.
     out = tmp_path_factory.mktemp('world_b')
     eval_generate.generate_eval_tenant(
         'datacenter_v1_world_b', seed=42, out_dir=str(out),
-        knobs={'account_count': 200},
+        knobs={'account_count': 400},
     )
     return out
 
