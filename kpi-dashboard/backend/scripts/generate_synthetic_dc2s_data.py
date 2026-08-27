@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app_v3_minimal import app
-from verticals.dc2_s.vertical_loader import DC2SVertical
+from utils.vertical_registry import get_kpis
 from id_generator import generate_customer_id, generate_account_id
 import pandas as pd
 from datetime import datetime, timedelta
@@ -28,8 +28,7 @@ print("NOTE: Generating ALL KPIs (not just enabled) to test filtering")
 
 with app.app_context():
     # Get ALL KPIs from vertical (not just enabled)
-    vertical = DC2SVertical()
-    all_kpis = vertical.kpis  # ALL 38 KPIs
+    all_kpis = [{'code': code, **kpi_def} for code, kpi_def in get_kpis('dc2_s').items()]  # ALL 38 KPIs
     
     print(f"Total KPIs available: {len(all_kpis)}")
     print(f"Generating CSV with ALL {len(all_kpis)} KPIs...")
