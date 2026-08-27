@@ -25,6 +25,41 @@ PLAYBOOK_NAMES = playbook_display_names()
 INTERVENTION_ATTRIBUTION = 0.50
 
 
+def _piecewise_linear(health: float, anchors: list) -> float:
+    """Continuous piecewise-linear interpolation across sorted (health, value)
+    anchors — clamped flat outside the anchor range, linear between every
+    consecutive pair inside it. No discontinuities: unlike an if/elif chain
+    with independently-interpolated bands, every band's endpoint IS the next
+    band's start value, by construction."""
+    if health <= anchors[0][0]:
+        return anchors[0][1]
+    if health >= anchors[-1][0]:
+        return anchors[-1][1]
+    for (h0, v0), (h1, v1) in zip(anchors, anchors[1:]):
+        if h0 <= health <= h1:
+            t = (health - h0) / (h1 - h0)
+            return v0 + t * (v1 - v0)
+    return anchors[-1][1]  # unreachable given the clamps above
+
+
+# Item 13 (reviewer finding, live on eval-profile customer_id=405/406/407,
+# 2026-08-27): health_to_annual_churn_prob returned a flat 0.45 for EVERY
+# health below 30 (health=14.7 and health=19.8 both scored exactly 45% —
+# no differentiation at all, same bug class as item 6's step function).
+# Worse, and not part of the original report: the if/elif band boundaries
+# didn't connect — health=49.9 -> ~35%, health=50.0 -> 25%, a sudden 10-point
+# drop for a 0.1-point health change (and another ~7-point jump at the
+# health=70 boundary). _piecewise_linear anchored at each band's own
+# documented endpoint removes both defects: continuous everywhere, and the
+# same value at every band boundary from either side.
+_CHURN_PROB_ANCHORS = [
+    (0, 0.45), (50, 0.25), (70, 0.08), (85, 0.05), (100, 0.03),
+]
+_EXPANSION_PROB_ANCHORS = [
+    (0, 0.0), (50, 0.05), (70, 0.15), (85, 0.25), (100, 0.35),
+]
+
+
 def health_to_annual_churn_prob(health: float) -> float:
     """Map health score to annualized churn probability.
 
@@ -32,19 +67,12 @@ def health_to_annual_churn_prob(health: float) -> float:
       - Critical (<50): 35-45% annual churn
       - At-risk (50-69): 15-25% annual churn
       - Healthy (>=70): 3-8% annual churn
-    Uses linear interpolation within each band.
+    Continuous piecewise-linear across the full 0-100 range — see
+    _piecewise_linear's docstring and the item-13 note above.
     """
     if health is None:
         return 0.20  # unknown → assume 20%
-    if health < 30:
-        return 0.45
-    if health < 50:
-        return 0.45 - (health - 30) / 20 * 0.10   # 45% → 35%
-    if health < 70:
-        return 0.25 - (health - 50) / 20 * 0.10   # 25% → 15%
-    if health < 85:
-        return 0.08 - (health - 70) / 15 * 0.03   # 8% → 5%
-    return 0.03                                     # >85: 3%
+    return round(_piecewise_linear(health, _CHURN_PROB_ANCHORS), 4)
 
 
 def health_to_annual_expansion_prob(health: float) -> float:
@@ -55,19 +83,12 @@ def health_to_annual_expansion_prob(health: float) -> float:
       - At-risk (50-69):  5-10% expansion (stabilizing, limited upsell)
       - Healthy (70-84): 15-25% expansion (engaged, open to growth conversations)
       - Champion (>=85): 25-35% expansion (advocates, driving adoption internally)
-    Uses linear interpolation within each band.
+    Continuous piecewise-linear across the full 0-100 range — same fix as
+    health_to_annual_churn_prob above (item 13).
     """
     if health is None:
         return 0.05  # unknown → assume 5%
-    if health < 30:
-        return 0.0
-    if health < 50:
-        return 0.0 + (health - 30) / 20 * 0.02       # 0% → 2%
-    if health < 70:
-        return 0.05 + (health - 50) / 20 * 0.05       # 5% → 10%
-    if health < 85:
-        return 0.15 + (health - 70) / 15 * 0.10       # 15% → 25%
-    return 0.25 + min((health - 85) / 15 * 0.10, 0.10)  # 25% → 35% (capped)
+    return round(_piecewise_linear(health, _EXPANSION_PROB_ANCHORS), 4)
 
 
 # Expansion attribution factor: what % of expansion is attributable to CS intervention
