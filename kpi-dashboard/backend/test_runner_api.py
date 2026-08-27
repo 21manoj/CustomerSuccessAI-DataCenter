@@ -961,8 +961,8 @@ def _simulation_thread(customer_id: int, interval_seconds: int, num_days: int, d
             if not enabled_kpis:
                 # Fall back to all 38 KPIs
                 try:
-                    from verticals.dc2_s.kpi_definitions import get_all_kpis
-                    all_kpis = get_all_kpis()
+                    from utils.vertical_registry import get_kpis
+                    all_kpis = get_kpis('dc2_s')
                     enabled_kpis = list(all_kpis.keys())
                 except Exception:
                     enabled_kpis = [f'P{p}-KPI{k}' for p in range(1, 6) for k in range(1, 9)]
@@ -984,8 +984,8 @@ def _simulation_thread(customer_id: int, interval_seconds: int, num_days: int, d
             # Load KPI definitions for targets
             kpi_targets = {}
             try:
-                from verticals.dc2_s.kpi_definitions import get_all_kpis
-                all_kpi_defs = get_all_kpis()
+                from utils.vertical_registry import get_kpis
+                all_kpi_defs = get_kpis('dc2_s')
                 for code, kdef in all_kpi_defs.items():
                     kpi_targets[code] = kdef.get('target', 80)
             except Exception:
