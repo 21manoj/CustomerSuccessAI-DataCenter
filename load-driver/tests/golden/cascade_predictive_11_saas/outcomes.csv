@@ -1,22 +1,22 @@
-source_account_id,outcome_date,outcome_type,title,description,revenue_value,status,linked_signal_id
-1001,2026-03-14,renewal_secured,Renewal Secured — Pinnacle HR Platform,Renewal confirmed. Account committed for next term.,195000.0,resolved,narrative_sig_1001_1
-1001,2026-01-31,expansion_approved,Expansion Approved — Pinnacle HR Platform,Account approved additional capacity and new product modules.,780000.0,in_progress,narrative_sig_1001_1
-1002,2026-02-28,expansion_opportunity,Expansion Potential — Atlas Retail Intelligence,Account showing strong expansion signals.,645000.0,open,narrative_sig_1002_1
-1002,2026-03-07,revenue_growth,Revenue Growth — Atlas Retail Intelligence,Upsell opportunity converted. New workload onboarded.,430000.0,in_progress,narrative_sig_1002_1
-1002,2026-03-23,expansion_approved,Expansion Approved — Atlas Retail Intelligence,Account approved additional capacity and new product modules.,860000.0,in_progress,narrative_sig_1002_1
-1003,2026-03-14,renewal_secured,Renewal Secured — Meridian Media Group,Renewal confirmed. Account committed for next term.,310000.0,resolved,narrative_sig_1003_1
-1004,2026-01-29,revenue_at_risk,Revenue at Risk — OceanBlue Climate Tech,Account showing signs of churn. ARR at risk.,-2550000.0,open,narrative_sig_1004_1
-1004,2026-02-05,engagement_decline,Engagement Declining — OceanBlue Climate Tech,Stakeholder engagement dropped significantly.,-510000.0,in_progress,narrative_sig_1004_1
-1004,2026-03-23,churn_averted,Churn Risk Averted — OceanBlue Climate Tech,Retention plan executed. Account committed to renewal.,2040000.0,resolved,narrative_sig_1004_1
-1004,2026-03-29,revenue_protected,Revenue Protected — OceanBlue Climate Tech,Intervention protected ARR through engagement and service improvements.,255000.0,resolved,narrative_sig_1004_1
-1004,2026-03-25,renewal_secured,Renewal Secured — OceanBlue Climate Tech,Renewal confirmed. Account committed for next term.,255000.0,resolved,narrative_sig_1004_1
-1005,2026-01-29,revenue_at_risk,Revenue at Risk — NorthLight Energy Analytics,Account showing signs of churn. ARR at risk.,-3500000.0,open,narrative_sig_1005_1
-1005,2026-02-05,capacity_constraint,Capacity Issues — NorthLight Energy Analytics,Infrastructure capacity constraints impacting service quality.,-1050000.0,in_progress,narrative_sig_1005_1
-1005,2026-03-24,churn_averted,Churn Risk Averted — NorthLight Energy Analytics,Retention plan executed. Account committed to renewal.,2800000.0,resolved,narrative_sig_1005_1
-1005,2026-03-26,revenue_protected,Revenue Protected — NorthLight Energy Analytics,Intervention protected ARR through engagement and service improvements.,350000.0,resolved,narrative_sig_1005_1
-1005,2026-03-31,renewal_secured,Renewal Secured — NorthLight Energy Analytics,Renewal confirmed. Account committed for next term.,350000.0,resolved,narrative_sig_1005_1
-1006,2026-01-29,partial_recovery,Partial Recovery — Citadel Compliance Group,Services stabilizing following initial response.,-940000.0,in_progress,narrative_sig_1006_1
-1006,2026-02-12,revenue_protected,Revenue Protected — Citadel Compliance Group,Intervention protected ARR through engagement and service improvements.,470000.0,resolved,narrative_sig_1006_1
-1006,2026-03-27,capacity_constraint,Capacity Issues — Citadel Compliance Group,Infrastructure capacity constraints impacting service quality.,-1410000.0,in_progress,narrative_sig_1006_1
-1006,2026-03-23,churn_averted,Churn Risk Averted — Citadel Compliance Group,Retention plan executed. Account committed to renewal.,3760000.0,resolved,narrative_sig_1006_1
-1006,2026-03-27,renewal_secured,Renewal Secured — Citadel Compliance Group,Renewal confirmed. Account committed for next term.,470000.0,resolved,narrative_sig_1006_1
+source_account_id,outcome_date,outcome_type,title,description,evidence,revenue_value,status,linked_signal_id
+1001,2026-03-14,renewal_secured,Renewal Secured — Pinnacle HR Platform,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,195000.0,resolved,narrative_sig_1001_1
+1001,2026-01-31,expansion_approved,Expansion Approved — Pinnacle HR Platform,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,780000.0,in_progress,narrative_sig_1001_1
+1002,2026-02-28,expansion_opportunity,Expansion Potential — Atlas Retail Intelligence,Account showing strong expansion signals.,Account showing strong expansion signals.,645000.0,open,narrative_sig_1002_1
+1002,2026-03-07,revenue_growth,Revenue Growth — Atlas Retail Intelligence,Upsell opportunity converted. New workload onboarded.,Upsell opportunity converted. New workload onboarded.,430000.0,in_progress,narrative_sig_1002_1
+1002,2026-03-23,expansion_approved,Expansion Approved — Atlas Retail Intelligence,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,860000.0,in_progress,narrative_sig_1002_1
+1003,2026-03-14,renewal_secured,Renewal Secured — Meridian Media Group,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,310000.0,resolved,narrative_sig_1003_1
+1004,2026-01-29,revenue_at_risk,Revenue at Risk — OceanBlue Climate Tech,Account showing signs of churn. ARR at risk.,Account showing signs of churn. ARR at risk.,-2550000.0,open,narrative_sig_1004_1
+1004,2026-02-05,engagement_decline,Engagement Declining — OceanBlue Climate Tech,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-510000.0,in_progress,narrative_sig_1004_1
+1004,2026-03-23,churn_averted,Churn Risk Averted — OceanBlue Climate Tech,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,2040000.0,resolved,narrative_sig_1004_1
+1004,2026-03-29,revenue_protected,Revenue Protected — OceanBlue Climate Tech,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,255000.0,resolved,narrative_sig_1004_1
+1004,2026-03-25,renewal_secured,Renewal Secured — OceanBlue Climate Tech,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,255000.0,resolved,narrative_sig_1004_1
+1005,2026-01-29,revenue_at_risk,Revenue at Risk — NorthLight Energy Analytics,Account showing signs of churn. ARR at risk.,Account showing signs of churn. ARR at risk.,-3500000.0,open,narrative_sig_1005_1
+1005,2026-02-05,capacity_constraint,Capacity Issues — NorthLight Energy Analytics,Infrastructure capacity constraints impacting service quality.,Infrastructure capacity constraints impacting service quality.,-1050000.0,in_progress,narrative_sig_1005_1
+1005,2026-03-24,churn_averted,Churn Risk Averted — NorthLight Energy Analytics,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,2800000.0,resolved,narrative_sig_1005_1
+1005,2026-03-26,revenue_protected,Revenue Protected — NorthLight Energy Analytics,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,350000.0,resolved,narrative_sig_1005_1
+1005,2026-03-31,renewal_secured,Renewal Secured — NorthLight Energy Analytics,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,350000.0,resolved,narrative_sig_1005_1
+1006,2026-01-29,partial_recovery,Partial Recovery — Citadel Compliance Group,Services stabilizing following initial response.,Services stabilizing following initial response.,-940000.0,in_progress,narrative_sig_1006_1
+1006,2026-02-12,revenue_protected,Revenue Protected — Citadel Compliance Group,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,470000.0,resolved,narrative_sig_1006_1
+1006,2026-03-27,capacity_constraint,Capacity Issues — Citadel Compliance Group,Infrastructure capacity constraints impacting service quality.,Infrastructure capacity constraints impacting service quality.,-1410000.0,in_progress,narrative_sig_1006_1
+1006,2026-03-23,churn_averted,Churn Risk Averted — Citadel Compliance Group,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,3760000.0,resolved,narrative_sig_1006_1
+1006,2026-03-27,renewal_secured,Renewal Secured — Citadel Compliance Group,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,470000.0,resolved,narrative_sig_1006_1

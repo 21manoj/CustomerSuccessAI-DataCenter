@@ -1,41 +1,41 @@
-source_account_id,outcome_date,outcome_type,title,description,revenue_value,status,linked_signal_id
-1001,2026-03-01,revenue_at_risk,Revenue at Risk — Titan Hyperscale Labs,Account showing signs of churn. ARR at risk.,-4100000.0,open,narrative_sig_1001_1
-1001,2026-03-08,capacity_constraint,Capacity Issues — Titan Hyperscale Labs,Infrastructure capacity constraints impacting service quality.,-1230000.0,in_progress,narrative_sig_1001_1
-1001,2026-04-26,churn_averted,Churn Risk Averted — Titan Hyperscale Labs,Retention plan executed. Account committed to renewal.,3280000.0,resolved,narrative_sig_1001_1
-1001,2026-04-26,revenue_protected,Revenue Protected — Titan Hyperscale Labs,Intervention protected ARR through engagement and service improvements.,410000.0,resolved,narrative_sig_1001_1
-1001,2026-04-21,renewal_secured,Renewal Secured — Titan Hyperscale Labs,Renewal confirmed. Account committed for next term.,410000.0,resolved,narrative_sig_1001_1
-1002,2026-03-01,renewal_uncertainty,Renewal at Risk — Meridian AI,Renewal timeline uncertain due to unresolved issues.,-820000.0,in_progress,narrative_sig_1002_1
-1002,2026-03-08,engagement_decline,Engagement Declining — Meridian AI,Stakeholder engagement dropped significantly.,-410000.0,in_progress,narrative_sig_1002_1
-1002,2026-04-22,renewal_secured,Renewal Secured — Meridian AI,Renewal confirmed. Account committed for next term.,205000.0,resolved,narrative_sig_1002_1
-1002,2026-04-24,revenue_protected,Revenue Protected — Meridian AI,Intervention protected ARR through engagement and service improvements.,205000.0,resolved,narrative_sig_1002_1
-1003,2026-03-01,renewal_uncertainty,Renewal at Risk — Quantum Labs,Renewal timeline uncertain due to unresolved issues.,-460000.0,in_progress,narrative_sig_1003_1
-1003,2026-03-08,engagement_decline,Engagement Declining — Quantum Labs,Stakeholder engagement dropped significantly.,-230000.0,in_progress,narrative_sig_1003_1
-1003,2026-04-24,renewal_secured,Renewal Secured — Quantum Labs,Renewal confirmed. Account committed for next term.,115000.0,resolved,narrative_sig_1003_1
-1003,2026-04-26,revenue_protected,Revenue Protected — Quantum Labs,Intervention protected ARR through engagement and service improvements.,115000.0,resolved,narrative_sig_1003_1
-1004,2026-04-14,renewal_secured,Renewal Secured — Apex Compute,Renewal confirmed. Account committed for next term.,150000.0,resolved,narrative_sig_1004_1
-1004,2026-04-09,expansion_approved,Expansion Approved — Apex Compute,Account approved additional capacity and new product modules.,600000.0,in_progress,narrative_sig_1004_1
-1005,2026-03-01,renewal_uncertainty,Renewal at Risk — Nova Foundry,Renewal timeline uncertain due to unresolved issues.,-180000.0,in_progress,narrative_sig_1005_1
-1005,2026-03-08,engagement_decline,Engagement Declining — Nova Foundry,Stakeholder engagement dropped significantly.,-90000.0,in_progress,narrative_sig_1005_1
-1005,2026-04-23,renewal_secured,Renewal Secured — Nova Foundry,Renewal confirmed. Account committed for next term.,45000.0,resolved,narrative_sig_1005_1
-1005,2026-04-25,revenue_protected,Revenue Protected — Nova Foundry,Intervention protected ARR through engagement and service improvements.,45000.0,resolved,narrative_sig_1005_1
-1006,2026-04-14,renewal_secured,Renewal Secured — Pacific Dataworks,Renewal confirmed. Account committed for next term.,625000.0,resolved,narrative_sig_1006_1
-1006,2026-03-06,expansion_approved,Expansion Approved — Pacific Dataworks,Account approved additional capacity and new product modules.,2500000.0,in_progress,narrative_sig_1006_1
-1007,2026-03-01,revenue_at_risk,Revenue at Risk — Orion Models,Account showing signs of churn. ARR at risk.,-1800000.0,open,narrative_sig_1007_1
-1007,2026-03-08,capacity_constraint,Capacity Issues — Orion Models,Infrastructure capacity constraints impacting service quality.,-540000.0,in_progress,narrative_sig_1007_1
-1007,2026-04-25,churn_averted,Churn Risk Averted — Orion Models,Retention plan executed. Account committed to renewal.,1440000.0,resolved,narrative_sig_1007_1
-1007,2026-04-21,revenue_protected,Revenue Protected — Orion Models,Intervention protected ARR through engagement and service improvements.,180000.0,resolved,narrative_sig_1007_1
-1007,2026-04-24,renewal_secured,Renewal Secured — Orion Models,Renewal confirmed. Account committed for next term.,180000.0,resolved,narrative_sig_1007_1
-1008,2026-03-01,renewal_uncertainty,Renewal at Risk — Helix Compute,Renewal timeline uncertain due to unresolved issues.,-220000.0,in_progress,narrative_sig_1008_1
-1008,2026-03-08,engagement_decline,Engagement Declining — Helix Compute,Stakeholder engagement dropped significantly.,-110000.0,in_progress,narrative_sig_1008_1
-1008,2026-04-23,renewal_secured,Renewal Secured — Helix Compute,Renewal confirmed. Account committed for next term.,55000.0,resolved,narrative_sig_1008_1
-1008,2026-04-26,revenue_protected,Revenue Protected — Helix Compute,Intervention protected ARR through engagement and service improvements.,55000.0,resolved,narrative_sig_1008_1
-1009,2026-04-14,renewal_secured,Renewal Secured — Vector Dynamics,Renewal confirmed. Account committed for next term.,45000.0,resolved,narrative_sig_1009_1
-1009,2026-02-22,expansion_approved,Expansion Approved — Vector Dynamics,Account approved additional capacity and new product modules.,180000.0,in_progress,narrative_sig_1009_1
-1010,2026-03-01,renewal_uncertainty,Renewal at Risk — Cirrus AI,Renewal timeline uncertain due to unresolved issues.,-320000.0,in_progress,narrative_sig_1010_1
-1010,2026-03-08,engagement_decline,Engagement Declining — Cirrus AI,Stakeholder engagement dropped significantly.,-160000.0,in_progress,narrative_sig_1010_1
-1010,2026-04-30,renewal_secured,Renewal Secured — Cirrus AI,Renewal confirmed. Account committed for next term.,80000.0,resolved,narrative_sig_1010_1
-1010,2026-04-30,revenue_protected,Revenue Protected — Cirrus AI,Intervention protected ARR through engagement and service improvements.,80000.0,resolved,narrative_sig_1010_1
-1011,2026-04-14,renewal_secured,Renewal Secured — Stellar Inference,Renewal confirmed. Account committed for next term.,140000.0,resolved,narrative_sig_1011_1
-1011,2026-03-17,expansion_approved,Expansion Approved — Stellar Inference,Account approved additional capacity and new product modules.,560000.0,in_progress,narrative_sig_1011_1
-1012,2026-04-14,renewal_secured,Renewal Secured — Zenith Training,Renewal confirmed. Account committed for next term.,450000.0,resolved,narrative_sig_1012_1
-1012,2026-03-23,expansion_approved,Expansion Approved — Zenith Training,Account approved additional capacity and new product modules.,1800000.0,in_progress,narrative_sig_1012_1
+source_account_id,outcome_date,outcome_type,title,description,evidence,revenue_value,status,linked_signal_id
+1001,2026-03-01,revenue_at_risk,Revenue at Risk — Titan Hyperscale Labs,Account showing signs of churn. ARR at risk.,Account showing signs of churn. ARR at risk.,-4100000.0,open,narrative_sig_1001_1
+1001,2026-03-08,capacity_constraint,Capacity Issues — Titan Hyperscale Labs,Infrastructure capacity constraints impacting service quality.,Infrastructure capacity constraints impacting service quality.,-1230000.0,in_progress,narrative_sig_1001_1
+1001,2026-04-26,churn_averted,Churn Risk Averted — Titan Hyperscale Labs,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,3280000.0,resolved,narrative_sig_1001_1
+1001,2026-04-26,revenue_protected,Revenue Protected — Titan Hyperscale Labs,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,410000.0,resolved,narrative_sig_1001_1
+1001,2026-04-21,renewal_secured,Renewal Secured — Titan Hyperscale Labs,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,410000.0,resolved,narrative_sig_1001_1
+1002,2026-03-01,renewal_uncertainty,Renewal at Risk — Meridian AI,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-820000.0,in_progress,narrative_sig_1002_1
+1002,2026-03-08,engagement_decline,Engagement Declining — Meridian AI,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-410000.0,in_progress,narrative_sig_1002_1
+1002,2026-04-22,renewal_secured,Renewal Secured — Meridian AI,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,205000.0,resolved,narrative_sig_1002_1
+1002,2026-04-24,revenue_protected,Revenue Protected — Meridian AI,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,205000.0,resolved,narrative_sig_1002_1
+1003,2026-03-01,renewal_uncertainty,Renewal at Risk — Quantum Labs,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-460000.0,in_progress,narrative_sig_1003_1
+1003,2026-03-08,engagement_decline,Engagement Declining — Quantum Labs,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-230000.0,in_progress,narrative_sig_1003_1
+1003,2026-04-24,renewal_secured,Renewal Secured — Quantum Labs,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,115000.0,resolved,narrative_sig_1003_1
+1003,2026-04-26,revenue_protected,Revenue Protected — Quantum Labs,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,115000.0,resolved,narrative_sig_1003_1
+1004,2026-04-14,renewal_secured,Renewal Secured — Apex Compute,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,150000.0,resolved,narrative_sig_1004_1
+1004,2026-04-09,expansion_approved,Expansion Approved — Apex Compute,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,600000.0,in_progress,narrative_sig_1004_1
+1005,2026-03-01,renewal_uncertainty,Renewal at Risk — Nova Foundry,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-180000.0,in_progress,narrative_sig_1005_1
+1005,2026-03-08,engagement_decline,Engagement Declining — Nova Foundry,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-90000.0,in_progress,narrative_sig_1005_1
+1005,2026-04-23,renewal_secured,Renewal Secured — Nova Foundry,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,45000.0,resolved,narrative_sig_1005_1
+1005,2026-04-25,revenue_protected,Revenue Protected — Nova Foundry,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,45000.0,resolved,narrative_sig_1005_1
+1006,2026-04-14,renewal_secured,Renewal Secured — Pacific Dataworks,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,625000.0,resolved,narrative_sig_1006_1
+1006,2026-03-06,expansion_approved,Expansion Approved — Pacific Dataworks,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,2500000.0,in_progress,narrative_sig_1006_1
+1007,2026-03-01,revenue_at_risk,Revenue at Risk — Orion Models,Account showing signs of churn. ARR at risk.,Account showing signs of churn. ARR at risk.,-1800000.0,open,narrative_sig_1007_1
+1007,2026-03-08,capacity_constraint,Capacity Issues — Orion Models,Infrastructure capacity constraints impacting service quality.,Infrastructure capacity constraints impacting service quality.,-540000.0,in_progress,narrative_sig_1007_1
+1007,2026-04-25,churn_averted,Churn Risk Averted — Orion Models,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,1440000.0,resolved,narrative_sig_1007_1
+1007,2026-04-21,revenue_protected,Revenue Protected — Orion Models,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,180000.0,resolved,narrative_sig_1007_1
+1007,2026-04-24,renewal_secured,Renewal Secured — Orion Models,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,180000.0,resolved,narrative_sig_1007_1
+1008,2026-03-01,renewal_uncertainty,Renewal at Risk — Helix Compute,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-220000.0,in_progress,narrative_sig_1008_1
+1008,2026-03-08,engagement_decline,Engagement Declining — Helix Compute,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-110000.0,in_progress,narrative_sig_1008_1
+1008,2026-04-23,renewal_secured,Renewal Secured — Helix Compute,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,55000.0,resolved,narrative_sig_1008_1
+1008,2026-04-26,revenue_protected,Revenue Protected — Helix Compute,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,55000.0,resolved,narrative_sig_1008_1
+1009,2026-04-14,renewal_secured,Renewal Secured — Vector Dynamics,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,45000.0,resolved,narrative_sig_1009_1
+1009,2026-02-22,expansion_approved,Expansion Approved — Vector Dynamics,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,180000.0,in_progress,narrative_sig_1009_1
+1010,2026-03-01,renewal_uncertainty,Renewal at Risk — Cirrus AI,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-320000.0,in_progress,narrative_sig_1010_1
+1010,2026-03-08,engagement_decline,Engagement Declining — Cirrus AI,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-160000.0,in_progress,narrative_sig_1010_1
+1010,2026-04-30,renewal_secured,Renewal Secured — Cirrus AI,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,80000.0,resolved,narrative_sig_1010_1
+1010,2026-04-30,revenue_protected,Revenue Protected — Cirrus AI,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,80000.0,resolved,narrative_sig_1010_1
+1011,2026-04-14,renewal_secured,Renewal Secured — Stellar Inference,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,140000.0,resolved,narrative_sig_1011_1
+1011,2026-03-17,expansion_approved,Expansion Approved — Stellar Inference,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,560000.0,in_progress,narrative_sig_1011_1
+1012,2026-04-14,renewal_secured,Renewal Secured — Zenith Training,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,450000.0,resolved,narrative_sig_1012_1
+1012,2026-03-23,expansion_approved,Expansion Approved — Zenith Training,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,1800000.0,in_progress,narrative_sig_1012_1

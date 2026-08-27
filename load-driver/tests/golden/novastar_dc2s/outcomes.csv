@@ -1,54 +1,54 @@
-source_account_id,outcome_date,outcome_type,title,description,revenue_value,status,linked_signal_id
-1001,2026-01-29,revenue_at_risk,Revenue at Risk — Titan Hyperscale Labs,Account showing signs of churn. ARR at risk.,-4100000.0,open,narrative_sig_1001_1
-1001,2026-02-05,engagement_decline,Engagement Declining — Titan Hyperscale Labs,Stakeholder engagement dropped significantly.,-820000.0,in_progress,narrative_sig_1001_1
-1001,2026-03-27,churn_averted,Churn Risk Averted — Titan Hyperscale Labs,Retention plan executed. Account committed to renewal.,3280000.0,resolved,narrative_sig_1001_1
-1001,2026-03-27,revenue_protected,Revenue Protected — Titan Hyperscale Labs,Intervention protected ARR through engagement and service improvements.,410000.0,resolved,narrative_sig_1001_1
-1001,2026-03-22,renewal_secured,Renewal Secured — Titan Hyperscale Labs,Renewal confirmed. Account committed for next term.,410000.0,resolved,narrative_sig_1001_1
-1002,2026-01-29,revenue_at_risk,Revenue at Risk — Meridian Cloud Services,Account showing signs of churn. ARR at risk.,-2900000.0,open,narrative_sig_1002_1
-1002,2026-02-05,capacity_constraint,Capacity Issues — Meridian Cloud Services,Infrastructure capacity constraints impacting service quality.,-870000.0,in_progress,narrative_sig_1002_1
-1002,2026-03-23,churn_averted,Churn Risk Averted — Meridian Cloud Services,Retention plan executed. Account committed to renewal.,2320000.0,resolved,narrative_sig_1002_1
-1002,2026-03-25,revenue_protected,Revenue Protected — Meridian Cloud Services,Intervention protected ARR through engagement and service improvements.,290000.0,resolved,narrative_sig_1002_1
-1002,2026-03-23,renewal_secured,Renewal Secured — Meridian Cloud Services,Renewal confirmed. Account committed for next term.,290000.0,resolved,narrative_sig_1002_1
-1003,2026-01-29,partial_recovery,Partial Recovery — Apex Compute Holdings,Services stabilizing following initial response.,-410000.0,in_progress,narrative_sig_1003_1
-1003,2026-02-12,revenue_protected,Revenue Protected — Apex Compute Holdings,Intervention protected ARR through engagement and service improvements.,205000.0,resolved,narrative_sig_1003_1
-1003,2026-03-25,capacity_constraint,Capacity Issues — Apex Compute Holdings,Infrastructure capacity constraints impacting service quality.,-615000.0,in_progress,narrative_sig_1003_1
-1003,2026-03-27,churn_averted,Churn Risk Averted — Apex Compute Holdings,Retention plan executed. Account committed to renewal.,1640000.0,resolved,narrative_sig_1003_1
-1003,2026-03-25,renewal_secured,Renewal Secured — Apex Compute Holdings,Renewal confirmed. Account committed for next term.,205000.0,resolved,narrative_sig_1003_1
-1004,2026-01-29,renewal_uncertainty,Renewal at Risk — Pacific Data Systems,Renewal timeline uncertain due to unresolved issues.,-1300000.0,in_progress,narrative_sig_1004_1
-1004,2026-02-05,engagement_decline,Engagement Declining — Pacific Data Systems,Stakeholder engagement dropped significantly.,-650000.0,in_progress,narrative_sig_1004_1
-1004,2026-03-23,renewal_secured,Renewal Secured — Pacific Data Systems,Renewal confirmed. Account committed for next term.,325000.0,resolved,narrative_sig_1004_1
-1004,2026-03-29,revenue_protected,Revenue Protected — Pacific Data Systems,Intervention protected ARR through engagement and service improvements.,325000.0,resolved,narrative_sig_1004_1
-1005,2026-01-29,renewal_uncertainty,Renewal at Risk — Quantum Edge Networks,Renewal timeline uncertain due to unresolved issues.,-960000.0,in_progress,narrative_sig_1005_1
-1005,2026-02-05,engagement_decline,Engagement Declining — Quantum Edge Networks,Stakeholder engagement dropped significantly.,-480000.0,in_progress,narrative_sig_1005_1
-1005,2026-03-24,renewal_secured,Renewal Secured — Quantum Edge Networks,Renewal confirmed. Account committed for next term.,240000.0,resolved,narrative_sig_1005_1
-1005,2026-03-26,revenue_protected,Revenue Protected — Quantum Edge Networks,Intervention protected ARR through engagement and service improvements.,240000.0,resolved,narrative_sig_1005_1
-1006,2026-01-29,renewal_uncertainty,Renewal at Risk — Stratos AI Infrastructure,Renewal timeline uncertain due to unresolved issues.,-640000.0,in_progress,narrative_sig_1006_1
-1006,2026-02-05,engagement_decline,Engagement Declining — Stratos AI Infrastructure,Stakeholder engagement dropped significantly.,-320000.0,in_progress,narrative_sig_1006_1
-1006,2026-03-27,renewal_secured,Renewal Secured — Stratos AI Infrastructure,Renewal confirmed. Account committed for next term.,160000.0,resolved,narrative_sig_1006_1
-1006,2026-03-23,revenue_protected,Revenue Protected — Stratos AI Infrastructure,Intervention protected ARR through engagement and service improvements.,160000.0,resolved,narrative_sig_1006_1
-1007,2026-01-29,renewal_uncertainty,Renewal at Risk — CyberVault DC,Renewal timeline uncertain due to unresolved issues.,-580000.0,in_progress,narrative_sig_1007_1
-1007,2026-02-05,engagement_decline,Engagement Declining — CyberVault DC,Stakeholder engagement dropped significantly.,-290000.0,in_progress,narrative_sig_1007_1
-1007,2026-03-26,renewal_secured,Renewal Secured — CyberVault DC,Renewal confirmed. Account committed for next term.,145000.0,resolved,narrative_sig_1007_1
-1007,2026-03-22,revenue_protected,Revenue Protected — CyberVault DC,Intervention protected ARR through engagement and service improvements.,145000.0,resolved,narrative_sig_1007_1
-1008,2026-03-14,renewal_secured,Renewal Secured — Atlas Computing Group,Renewal confirmed. Account committed for next term.,255000.0,resolved,narrative_sig_1008_1
-1008,2026-03-02,expansion_approved,Expansion Approved — Atlas Computing Group,Account approved additional capacity and new product modules.,1020000.0,in_progress,narrative_sig_1008_1
-1009,2026-03-14,renewal_secured,Renewal Secured — Pinnacle Systems,Renewal confirmed. Account committed for next term.,190000.0,resolved,narrative_sig_1009_1
-1009,2026-01-22,expansion_approved,Expansion Approved — Pinnacle Systems,Account approved additional capacity and new product modules.,760000.0,in_progress,narrative_sig_1009_1
-1010,2026-03-14,renewal_secured,Renewal Secured — Helix Data Corp,Renewal confirmed. Account committed for next term.,130000.0,resolved,narrative_sig_1010_1
-1010,2026-01-01,expansion_approved,Expansion Approved — Helix Data Corp,Account approved additional capacity and new product modules.,520000.0,in_progress,narrative_sig_1010_1
-1011,2026-03-14,renewal_secured,Renewal Secured — Fortress Colocation,Renewal confirmed. Account committed for next term.,170000.0,resolved,narrative_sig_1011_1
-1011,2026-02-14,expansion_approved,Expansion Approved — Fortress Colocation,Account approved additional capacity and new product modules.,680000.0,in_progress,narrative_sig_1011_1
-1012,2026-03-14,renewal_secured,Renewal Secured — NexGen AI Labs,Renewal confirmed. Account committed for next term.,105000.0,resolved,narrative_sig_1012_1
-1012,2026-02-20,expansion_approved,Expansion Approved — NexGen AI Labs,Account approved additional capacity and new product modules.,420000.0,in_progress,narrative_sig_1012_1
-1013,2026-03-14,renewal_secured,Renewal Secured — Redline Infrastructure,Renewal confirmed. Account committed for next term.,90000.0,resolved,narrative_sig_1013_1
-1013,2026-01-22,expansion_approved,Expansion Approved — Redline Infrastructure,Account approved additional capacity and new product modules.,360000.0,in_progress,narrative_sig_1013_1
-1014,2026-03-14,renewal_secured,Renewal Secured — Cumulus Edge Computing,Renewal confirmed. Account committed for next term.,75000.0,resolved,narrative_sig_1014_1
-1014,2026-01-27,expansion_approved,Expansion Approved — Cumulus Edge Computing,Account approved additional capacity and new product modules.,300000.0,in_progress,narrative_sig_1014_1
-1015,2026-03-14,renewal_secured,Renewal Secured — SkyBridge Networks,Renewal confirmed. Account committed for next term.,60000.0,resolved,narrative_sig_1015_1
-1015,2026-01-08,expansion_approved,Expansion Approved — SkyBridge Networks,Account approved additional capacity and new product modules.,240000.0,in_progress,narrative_sig_1015_1
-1016,2026-03-14,renewal_secured,Renewal Secured — IronClad Systems,Renewal confirmed. Account committed for next term.,95000.0,resolved,narrative_sig_1016_1
-1016,2026-03-11,expansion_approved,Expansion Approved — IronClad Systems,Account approved additional capacity and new product modules.,380000.0,in_progress,narrative_sig_1016_1
-1017,2026-03-14,renewal_secured,Renewal Secured — TerraScale Solutions,Renewal confirmed. Account committed for next term.,80000.0,resolved,narrative_sig_1017_1
-1017,2026-03-21,expansion_approved,Expansion Approved — TerraScale Solutions,Account approved additional capacity and new product modules.,320000.0,in_progress,narrative_sig_1017_1
-1018,2026-03-14,renewal_secured,Renewal Secured — Velocity AI Compute,Renewal confirmed. Account committed for next term.,55000.0,resolved,narrative_sig_1018_1
-1018,2026-03-01,expansion_approved,Expansion Approved — Velocity AI Compute,Account approved additional capacity and new product modules.,220000.0,in_progress,narrative_sig_1018_1
+source_account_id,outcome_date,outcome_type,title,description,evidence,revenue_value,status,linked_signal_id
+1001,2026-01-29,revenue_at_risk,Revenue at Risk — Titan Hyperscale Labs,Account showing signs of churn. ARR at risk.,Account showing signs of churn. ARR at risk.,-4100000.0,open,narrative_sig_1001_1
+1001,2026-02-05,engagement_decline,Engagement Declining — Titan Hyperscale Labs,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-820000.0,in_progress,narrative_sig_1001_1
+1001,2026-03-27,churn_averted,Churn Risk Averted — Titan Hyperscale Labs,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,3280000.0,resolved,narrative_sig_1001_1
+1001,2026-03-27,revenue_protected,Revenue Protected — Titan Hyperscale Labs,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,410000.0,resolved,narrative_sig_1001_1
+1001,2026-03-22,renewal_secured,Renewal Secured — Titan Hyperscale Labs,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,410000.0,resolved,narrative_sig_1001_1
+1002,2026-01-29,revenue_at_risk,Revenue at Risk — Meridian Cloud Services,Account showing signs of churn. ARR at risk.,Account showing signs of churn. ARR at risk.,-2900000.0,open,narrative_sig_1002_1
+1002,2026-02-05,capacity_constraint,Capacity Issues — Meridian Cloud Services,Infrastructure capacity constraints impacting service quality.,Infrastructure capacity constraints impacting service quality.,-870000.0,in_progress,narrative_sig_1002_1
+1002,2026-03-23,churn_averted,Churn Risk Averted — Meridian Cloud Services,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,2320000.0,resolved,narrative_sig_1002_1
+1002,2026-03-25,revenue_protected,Revenue Protected — Meridian Cloud Services,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,290000.0,resolved,narrative_sig_1002_1
+1002,2026-03-23,renewal_secured,Renewal Secured — Meridian Cloud Services,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,290000.0,resolved,narrative_sig_1002_1
+1003,2026-01-29,partial_recovery,Partial Recovery — Apex Compute Holdings,Services stabilizing following initial response.,Services stabilizing following initial response.,-410000.0,in_progress,narrative_sig_1003_1
+1003,2026-02-12,revenue_protected,Revenue Protected — Apex Compute Holdings,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,205000.0,resolved,narrative_sig_1003_1
+1003,2026-03-25,capacity_constraint,Capacity Issues — Apex Compute Holdings,Infrastructure capacity constraints impacting service quality.,Infrastructure capacity constraints impacting service quality.,-615000.0,in_progress,narrative_sig_1003_1
+1003,2026-03-27,churn_averted,Churn Risk Averted — Apex Compute Holdings,Retention plan executed. Account committed to renewal.,Retention plan executed. Account committed to renewal.,1640000.0,resolved,narrative_sig_1003_1
+1003,2026-03-25,renewal_secured,Renewal Secured — Apex Compute Holdings,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,205000.0,resolved,narrative_sig_1003_1
+1004,2026-01-29,renewal_uncertainty,Renewal at Risk — Pacific Data Systems,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-1300000.0,in_progress,narrative_sig_1004_1
+1004,2026-02-05,engagement_decline,Engagement Declining — Pacific Data Systems,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-650000.0,in_progress,narrative_sig_1004_1
+1004,2026-03-23,renewal_secured,Renewal Secured — Pacific Data Systems,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,325000.0,resolved,narrative_sig_1004_1
+1004,2026-03-29,revenue_protected,Revenue Protected — Pacific Data Systems,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,325000.0,resolved,narrative_sig_1004_1
+1005,2026-01-29,renewal_uncertainty,Renewal at Risk — Quantum Edge Networks,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-960000.0,in_progress,narrative_sig_1005_1
+1005,2026-02-05,engagement_decline,Engagement Declining — Quantum Edge Networks,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-480000.0,in_progress,narrative_sig_1005_1
+1005,2026-03-24,renewal_secured,Renewal Secured — Quantum Edge Networks,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,240000.0,resolved,narrative_sig_1005_1
+1005,2026-03-26,revenue_protected,Revenue Protected — Quantum Edge Networks,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,240000.0,resolved,narrative_sig_1005_1
+1006,2026-01-29,renewal_uncertainty,Renewal at Risk — Stratos AI Infrastructure,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-640000.0,in_progress,narrative_sig_1006_1
+1006,2026-02-05,engagement_decline,Engagement Declining — Stratos AI Infrastructure,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-320000.0,in_progress,narrative_sig_1006_1
+1006,2026-03-27,renewal_secured,Renewal Secured — Stratos AI Infrastructure,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,160000.0,resolved,narrative_sig_1006_1
+1006,2026-03-23,revenue_protected,Revenue Protected — Stratos AI Infrastructure,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,160000.0,resolved,narrative_sig_1006_1
+1007,2026-01-29,renewal_uncertainty,Renewal at Risk — CyberVault DC,Renewal timeline uncertain due to unresolved issues.,Renewal timeline uncertain due to unresolved issues.,-580000.0,in_progress,narrative_sig_1007_1
+1007,2026-02-05,engagement_decline,Engagement Declining — CyberVault DC,Stakeholder engagement dropped significantly.,Stakeholder engagement dropped significantly.,-290000.0,in_progress,narrative_sig_1007_1
+1007,2026-03-26,renewal_secured,Renewal Secured — CyberVault DC,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,145000.0,resolved,narrative_sig_1007_1
+1007,2026-03-22,revenue_protected,Revenue Protected — CyberVault DC,Intervention protected ARR through engagement and service improvements.,Intervention protected ARR through engagement and service improvements.,145000.0,resolved,narrative_sig_1007_1
+1008,2026-03-14,renewal_secured,Renewal Secured — Atlas Computing Group,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,255000.0,resolved,narrative_sig_1008_1
+1008,2026-03-02,expansion_approved,Expansion Approved — Atlas Computing Group,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,1020000.0,in_progress,narrative_sig_1008_1
+1009,2026-03-14,renewal_secured,Renewal Secured — Pinnacle Systems,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,190000.0,resolved,narrative_sig_1009_1
+1009,2026-01-22,expansion_approved,Expansion Approved — Pinnacle Systems,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,760000.0,in_progress,narrative_sig_1009_1
+1010,2026-03-14,renewal_secured,Renewal Secured — Helix Data Corp,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,130000.0,resolved,narrative_sig_1010_1
+1010,2026-01-01,expansion_approved,Expansion Approved — Helix Data Corp,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,520000.0,in_progress,narrative_sig_1010_1
+1011,2026-03-14,renewal_secured,Renewal Secured — Fortress Colocation,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,170000.0,resolved,narrative_sig_1011_1
+1011,2026-02-14,expansion_approved,Expansion Approved — Fortress Colocation,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,680000.0,in_progress,narrative_sig_1011_1
+1012,2026-03-14,renewal_secured,Renewal Secured — NexGen AI Labs,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,105000.0,resolved,narrative_sig_1012_1
+1012,2026-02-20,expansion_approved,Expansion Approved — NexGen AI Labs,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,420000.0,in_progress,narrative_sig_1012_1
+1013,2026-03-14,renewal_secured,Renewal Secured — Redline Infrastructure,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,90000.0,resolved,narrative_sig_1013_1
+1013,2026-01-22,expansion_approved,Expansion Approved — Redline Infrastructure,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,360000.0,in_progress,narrative_sig_1013_1
+1014,2026-03-14,renewal_secured,Renewal Secured — Cumulus Edge Computing,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,75000.0,resolved,narrative_sig_1014_1
+1014,2026-01-27,expansion_approved,Expansion Approved — Cumulus Edge Computing,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,300000.0,in_progress,narrative_sig_1014_1
+1015,2026-03-14,renewal_secured,Renewal Secured — SkyBridge Networks,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,60000.0,resolved,narrative_sig_1015_1
+1015,2026-01-08,expansion_approved,Expansion Approved — SkyBridge Networks,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,240000.0,in_progress,narrative_sig_1015_1
+1016,2026-03-14,renewal_secured,Renewal Secured — IronClad Systems,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,95000.0,resolved,narrative_sig_1016_1
+1016,2026-03-11,expansion_approved,Expansion Approved — IronClad Systems,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,380000.0,in_progress,narrative_sig_1016_1
+1017,2026-03-14,renewal_secured,Renewal Secured — TerraScale Solutions,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,80000.0,resolved,narrative_sig_1017_1
+1017,2026-03-21,expansion_approved,Expansion Approved — TerraScale Solutions,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,320000.0,in_progress,narrative_sig_1017_1
+1018,2026-03-14,renewal_secured,Renewal Secured — Velocity AI Compute,Renewal confirmed. Account committed for next term.,Renewal confirmed. Account committed for next term.,55000.0,resolved,narrative_sig_1018_1
+1018,2026-03-01,expansion_approved,Expansion Approved — Velocity AI Compute,Account approved additional capacity and new product modules.,Account approved additional capacity and new product modules.,220000.0,in_progress,narrative_sig_1018_1

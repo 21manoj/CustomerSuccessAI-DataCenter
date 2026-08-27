@@ -2565,7 +2565,7 @@ class ManifestCSVGenerator:
         w = csv.writer(out)
         w.writerow([
             'source_account_id', 'outcome_date', 'outcome_type', 'title',
-            'description', 'revenue_value', 'status', 'linked_signal_id',
+            'description', 'evidence', 'revenue_value', 'status', 'linked_signal_id',
         ])
 
         phase_prefix = f'{self.phase}_' if self.phase else ''
@@ -2669,6 +2669,15 @@ class ManifestCSVGenerator:
                     aid, outcome_date, otype,
                     f'{title_tpl} — {acct["name"]}',
                     desc_tpl,
+                    # `evidence`: the platform's I3' unearned-confidence clamp
+                    # (WS-2 2f) downgrades any OUTCOME node arriving with no
+                    # evidence content to confidence=0.3, tier=2 — below the
+                    # 0.5 threshold get_revenue_at_risk() filters on. Without
+                    # this, every load-driver outcome would silently drop out
+                    # of revenue-at-risk/-protected aggregates. desc_tpl is
+                    # already genuine narrative justification for this
+                    # outcome, not fabricated content — reuse it.
+                    desc_tpl,
                     round(impact, 2),
                     status,
                     first_sig,
@@ -2685,6 +2694,7 @@ class ManifestCSVGenerator:
                     aid, ro_date, ro['type'],
                     f'{ro["type"].replace("_", " ").title()} — {acct["name"]}',
                     ro.get('description', ''),
+                    ro.get('description', ''),  # evidence — see comment above
                     round(ro['amount'], 2),
                     'resolved',
                     first_sig,
@@ -2724,6 +2734,7 @@ class ManifestCSVGenerator:
                         aid, outcome_date, ro_type,
                         f'{ro_title} — {acct["name"]}',
                         ro_desc,
+                        ro_desc,  # evidence — see comment above
                         round(rev_impact, 2),
                         ro_status,
                         auto_sig_ref,
@@ -2781,6 +2792,7 @@ class ManifestCSVGenerator:
                 aid, evt_date, otype,
                 f'{title} — {acct["name"]}',
                 f'{desc} {lc.get("reason", "")}',
+                f'{desc} {lc.get("reason", "")}',  # evidence — see comment above
                 round(rev, 2),
                 status,
                 '',  # linked_signal_id
