@@ -279,7 +279,10 @@ def test_customer_playbook_api_seed_no_direct_vertical_import():
 def test_ask_ai_helpers_get_playbook_config_resolves_per_vertical():
     """Behavioral proof of the helper _seed_system_playbooks now delegates
     to: dc2_s and saas_premium get their own native PLAYBOOK_CONFIG,
-    datacenter_v1 (no playbook catalog of its own yet) gets a safe no-op —
+    datacenter_v1 gets its own real PLAYBOOK_CONFIG (added Aug 27 2026,
+    found live on customer 408 — see test_mcp_server_and_ask_ai_helpers_
+    playbook_config.py for the full incident), and a vertical with no
+    vertical_config.py at all (healthcare_provider) gets a safe no-op —
     calling the REAL, already-existing _ask_ai_helpers.py function, not a
     reimplementation. No DB needed — _get_playbook_config takes a vertical
     string directly.
@@ -288,7 +291,8 @@ def test_ask_ai_helpers_get_playbook_config_resolves_per_vertical():
 
     dc2s_cfg, dc2s_trigger = _get_playbook_config('dc2_s')
     saas_cfg, saas_trigger = _get_playbook_config('saas_premium')
-    other_cfg, other_trigger = _get_playbook_config('datacenter_v1')
+    dc_v1_cfg, dc_v1_trigger = _get_playbook_config('datacenter_v1')
+    unsupported_cfg, unsupported_trigger = _get_playbook_config('healthcare_provider')
 
     assert dc2s_cfg and callable(dc2s_trigger)
     assert saas_cfg and callable(saas_trigger)
@@ -296,11 +300,16 @@ def test_ask_ai_helpers_get_playbook_config_resolves_per_vertical():
         "dc2_s and saas_premium playbook configs are identical — still "
         "silently serving the same catalog."
     )
-    assert other_cfg == {}, (
-        "datacenter_v1 should get a safe no-op (no PLAYBOOK_CONFIG of its "
-        "own), not a silent dc2_s substitution."
+    assert dc_v1_cfg and dc_v1_cfg != dc2s_cfg, (
+        "datacenter_v1 should get its own real PLAYBOOK_CONFIG, not a "
+        "silent dc2_s substitution and not an empty stub."
     )
-    assert other_trigger('anything', {}) is False
+    assert callable(dc_v1_trigger) and dc_v1_trigger() is False
+    assert unsupported_cfg == {}, (
+        "healthcare_provider (no vertical_config.py at all yet) should get "
+        "a safe no-op, not a silent dc2_s substitution."
+    )
+    assert unsupported_trigger('anything', {}) is False
 
 
 # ──────────────────────────────────────────────────────────────────────────

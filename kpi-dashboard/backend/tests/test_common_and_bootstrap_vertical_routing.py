@@ -336,10 +336,16 @@ def test_get_playbook_config_parity_for_dc2s_and_saas_premium():
     assert callable(dc2s_trigger) and callable(saas_trigger)
 
 
-def test_get_playbook_config_other_vertical_gets_safe_empty_not_dc2s():
-    """The bug this fix closed: any vertical besides dc2_s/saas_premium
-    used to silently receive dc2_s's PLAYBOOK_CONFIG. Now it must get a
-    safe, explicit empty default instead.
+def test_get_playbook_config_datacenter_v1_gets_its_own_not_dc2s():
+    """The original bug this closed (Aug 21 2026): any vertical besides
+    dc2_s/saas_premium used to silently receive dc2_s's PLAYBOOK_CONFIG.
+    datacenter_v1 now has its own real PLAYBOOK_CONFIG (added Aug 27 2026,
+    found live on customer 408 — playbook-close was resolving this vertical
+    correctly, then silently getting {} back and reporting 0 CSM hours for
+    every execution) — the invariant that matters is "never dc2_s's data",
+    not "always empty". datacenter_v1 happens to reuse some of the same
+    PB-NN id strings as dc2_s (e.g. PB-05); their definitions differ per
+    vertical, so whole-dict inequality is the real check, not key absence.
     """
     from mcp_server.common import get_playbook_config
 
@@ -347,8 +353,26 @@ def test_get_playbook_config_other_vertical_gets_safe_empty_not_dc2s():
 
     cfg, trigger = get_playbook_config("datacenter_v1")
 
-    assert cfg == {}, f"Expected empty playbook config for datacenter_v1, got {cfg!r}"
-    assert cfg != dc2s_pb
+    assert cfg != {}, "datacenter_v1 has a real PLAYBOOK_CONFIG now — must not be empty"
+    assert cfg != dc2s_pb, "must be datacenter_v1's own config, never a silent dc2_s substitution"
+    assert "PB-01" in cfg and cfg["PB-01"]["name"] == "Provisioning Acceleration"
+    assert callable(trigger)
+    # datacenter_v1/vertical_config.py has no should_trigger_playbook of its
+    # own yet — falls back to a no-op trigger, not a crash or dc2_s's logic.
+    assert trigger() is False
+
+
+def test_get_playbook_config_vertical_with_no_config_module_gets_safe_empty():
+    """A vertical with no verticals/<vertical>/vertical_config.py at all
+    (healthcare_provider, manufacturing_iot as of Aug 27 2026) must still
+    get the safe empty no-op — this is the case the original "safe empty"
+    test was really protecting once datacenter_v1 got its own real config.
+    """
+    from mcp_server.common import get_playbook_config
+
+    cfg, trigger = get_playbook_config("healthcare_provider")
+
+    assert cfg == {}
     assert callable(trigger)
     assert trigger() is False
 
