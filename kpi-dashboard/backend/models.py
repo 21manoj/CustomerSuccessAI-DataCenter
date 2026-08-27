@@ -826,7 +826,22 @@ class ContextEdge(db.Model):
 
     # Weight and confidence
     weight = db.Column(db.Numeric(3, 2), nullable=False, default=1.0)  # 0.00-1.00
-    confidence = db.Column(db.Numeric(3, 2), default=1.0)
+    # No column-level default: WS-2 2c (utils/edge_factory.py) writes an
+    # explicit confidence=None for inferred edges (no calibrated point
+    # estimate), and SQLAlchemy's client-side ColumnDefault fires at flush
+    # time even when the value was explicitly set to None — silently
+    # replacing it with 1.0 and defeating the entire point of 2c (a
+    # fabricated point estimate disguised as a real one). Verified live on
+    # customer 408 (2026-08-27): confidence stayed None through every step
+    # of create_inferred_edge()/upsert_edge() up to the exact line
+    # constructing this model, then became 1.0 on db.session.flush().
+    # Every caller that WANTS a default already gets one from a
+    # function-level parameter default (add_edge/upsert_edge both default
+    # confidence=1.0 in their own signatures, and every direct ContextEdge()
+    # construction elsewhere in the codebase passes confidence explicitly)
+    # — this column-level default was redundant with those and is the sole
+    # source of the bug. Removing it changes no other caller's behavior.
+    confidence = db.Column(db.Numeric(3, 2))
 
     # Revenue context on the edge itself
     revenue_impact = db.Column(db.Numeric(15, 2))        # $ impact of this causal link
