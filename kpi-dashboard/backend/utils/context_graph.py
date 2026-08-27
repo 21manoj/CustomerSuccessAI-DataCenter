@@ -117,6 +117,87 @@ def get_edges(
         return outgoing + incoming
 
 
+def get_pillars_with_observed_evidence(
+    customer_id: int,
+    account_ids: Optional[List[int]] = None,
+) -> set:
+    """Which pillar_codes a customer's context graph actually backs with
+    real (OBSERVED-tier) evidence.
+
+    Read-side counterpart to utils/edge_factory.py (write-only today, see
+    its module docstring) and item 25's Po1 re-tiering fix in
+    executive_dashboard_api.py's `_get_po1_benchmark_metrics` — that code
+    needs to know, per pillar, whether a customer has grounded evidence
+    before promoting a Power-of-1 metric's provenance tier above BENCHMARK.
+
+    Nodes/edges opt into this by tagging themselves with which pillar they
+    evidence via `properties['pillar_code']`, using the same P1..Pn
+    vocabulary as PillarScore / KPIScore / outcome_roi_api's
+    pillar_metric_map — this is NOT a second pillar taxonomy, just a
+    reference to the one that already exists. A row with no pillar_code
+    tag never counts for any pillar (fail closed).
+
+    Evidence-tier resolution, per utils.provenance's observed/inferred/
+    synthetic vocabulary (see that module's docstring for how this axis
+    composes with utils.value_provenance's display tiers):
+      - ContextNode: `properties['evidence_tier']` if explicitly stamped,
+        else `provenance.normalize(node.source)` — covers the 'observed'
+        literal written by real CSV-ingest paths (e.g.
+        mcp_server/cs_pulse_onboarding.py) as well as the legacy
+        'customer'/'system' values.
+      - ContextEdge: `properties['evidence_tier']` if stamped (every edge
+        written via edge_factory.create_inferred_edge() carries one).
+        Edges have no `source` column to fall back to, and per
+        provenance.normalize's fail-closed rule a missing value must never
+        be read as the most-trusted one — so an untagged edge is simply
+        not counted, regardless of source_platform.
+
+    Args:
+        customer_id: required — returns an empty set if falsy.
+        account_ids: optional scope to a subset of the customer's
+            accounts; omit to consider every account.
+
+    Returns:
+        set of pillar_code strings, e.g. {'P1', 'P4'}. Empty if
+        customer_id is falsy or nothing qualifies.
+    """
+    from utils.provenance import OBSERVED, normalize as _normalize_source
+
+    if not customer_id:
+        return set()
+
+    pillars: set = set()
+
+    node_q = ContextNode.query.filter(ContextNode.customer_id == customer_id)
+    if account_ids:
+        node_q = node_q.filter(ContextNode.account_id.in_(account_ids))
+    for node in node_q.all():
+        props = node.properties or {}
+        pillar_code = props.get('pillar_code')
+        if not pillar_code:
+            continue
+        tier = props.get('evidence_tier') or _normalize_source(node.source)
+        if tier == OBSERVED:
+            pillars.add(pillar_code)
+
+    edge_q = db.session.query(ContextEdge).join(
+        ContextNode, ContextEdge.from_node_id == ContextNode.node_id,
+    ).filter(ContextEdge.customer_id == customer_id)
+    if account_ids:
+        edge_q = edge_q.filter(ContextNode.account_id.in_(account_ids))
+    for edge in edge_q.all():
+        props = edge.properties or {}
+        pillar_code = props.get('pillar_code')
+        if not pillar_code:
+            continue
+        # No fallback for edges: an untagged evidence_tier must fail
+        # closed, not be assumed trustworthy (see docstring above).
+        if props.get('evidence_tier') == OBSERVED:
+            pillars.add(pillar_code)
+
+    return pillars
+
+
 def get_causal_chain(
     node_id: int,
     direction: str = 'upstream',

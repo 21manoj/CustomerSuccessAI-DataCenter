@@ -30,11 +30,14 @@ except Exception:
     _budget_record = None
 
 from models import (
-    Account, HealthScore, PillarScore, KPIScore,
+    Account, Customer, HealthScore, PillarScore, KPIScore,
     ContextNode, ContextEdge, PlaybookExecutionV2, ROISnapshot,
 )
 import utils.health_thresholds as ht
-from utils.context_graph import aggregate_revenue_across_accounts, aggregate_revenue_with_provenance
+from utils.context_graph import (
+    aggregate_revenue_across_accounts, aggregate_revenue_with_provenance,
+    get_pillars_with_observed_evidence,
+)
 from utils.vertical_registry import get_vertical_for_customer, get_pillars
 from utils import value_provenance as _vp
 from power_of_1_model import dedupe_portfolio_dollar_impact
@@ -493,11 +496,97 @@ def _get_po1_benchmark_investment(total_arr):
         return round(total_arr * 0.005, 2)
 
 
-def _get_po1_benchmark_metrics(total_arr):
-    """Return Power-of-1 metrics as estimated baseline (no DB needed).
+# Item 25 (Po1 re-tiering): the only synthetic/load-driver data_origin value
+# actually written anywhere in the codebase today (grepped: load-driver/
+# cs_pulse_driver.py's register_customer(data_origin='synthetic_eval_profile'),
+# mirrored in load-driver/eval_profile/ground_truth.py). A synthetic tenant's
+# ARR-scaled benchmark cards must never claim more grounding than BENCHMARK,
+# no matter what its context graph looks like -- keep this a set so a future
+# second load-driver marker is a one-line addition, not a new branch.
+_SYNTHETIC_DATA_ORIGINS = {'synthetic_eval_profile'}
+
+
+def _is_synthetic_customer(customer_id):
+    """True if Customer.data_origin flags this tenant as synthetic/load-driver
+    generated (see _SYNTHETIC_DATA_ORIGINS)."""
+    if not customer_id:
+        return False
+    customer = Customer.query.filter_by(customer_id=customer_id).first()
+    return bool(customer and customer.data_origin in _SYNTHETIC_DATA_ORIGINS)
+
+
+def _metrics_with_observed_pillar_evidence(customer_id):
+    """Which Power-of-1 metric_ids a real customer's context graph actually
+    backs with OBSERVED-tier evidence (utils.provenance).
+
+    Returns the empty set (i.e. "promote nothing, stay BENCHMARK") for: no
+    customer_id, a synthetic/load-driver tenant, a customer with no
+    accounts, or a customer whose graph carries no observed evidence for
+    any pillar. This is deliberately conservative -- the pre-existing
+    all-BENCHMARK behavior is the safe default and only relaxes when there
+    is something concrete to point to.
+
+    Otherwise resolves the customer's vertical-specific pillar_code ->
+    metric_id map via outcome_roi_api's existing
+    `_pillar_metric_map_for_customer` (the one true pillar<->metric
+    mapping -- not duplicated here) and cross-references it against
+    utils.context_graph.get_pillars_with_observed_evidence.
+
+    `_pillar_metric_map_for_customer` resolves the vertical through
+    utils.vertical_registry.get_vertical_for_customer, which fails closed
+    (raises) when a customer has no CustomerConfig row / unset vertical.
+    That is the right behavior for callers that need the real vertical,
+    but here a missing/incomplete config must not take down the whole
+    Po1 benchmark card set -- caught and treated the same as "no
+    evidence found" (stay BENCHMARK), matching the pre-existing behavior
+    for exactly this kind of customer.
+    """
+    if not customer_id or _is_synthetic_customer(customer_id):
+        return set()
+
+    try:
+        accounts = _get_customer_accounts(customer_id)
+        if not accounts:
+            return set()
+        account_ids = [a.account_id for a in accounts]
+
+        observed_pillars = get_pillars_with_observed_evidence(customer_id, account_ids)
+        if not observed_pillars:
+            return set()
+
+        from outcome_roi_api import _pillar_metric_map_for_customer
+        pillar_metric_map, _nrr_synthesis = _pillar_metric_map_for_customer(customer_id)
+
+        return {
+            metric_id
+            for pillar_code, metric_id in pillar_metric_map.items()
+            if pillar_code in observed_pillars
+        }
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "item25_pillar_evidence_lookup_failed customer_id=%s -- "
+            "falling back to BENCHMARK for every metric", customer_id,
+            exc_info=True,
+        )
+        return set()
+
+
+def _get_po1_benchmark_metrics(total_arr, customer_id=None):
+    """Return Power-of-1 metrics as estimated baseline (no DB needed for the
+    ARR-scaled numbers themselves).
 
     Used when no ROISnapshot exists to populate the CFO Power-of-1 table
     with benchmark values and estimated dollar impacts.
+
+    Item 25 (Po1 re-tiering): every card used to get an unconditional
+    BENCHMARK tier, purely from ARR-scaled deck constants, with zero
+    awareness of whether the customer actually has real data backing that
+    metric. `customer_id` is optional (omit for the pure-ARR demo/no-tenant
+    path, e.g. /api/outcome-roi/demo) -- when present, a metric whose
+    mapped pillar has real OBSERVED-tier graph evidence
+    (_metrics_with_observed_pillar_evidence) is promoted to DERIVED;
+    everything else -- no customer_id, synthetic tenant, no evidence --
+    stays BENCHMARK exactly as before.
     """
     import json, os
     config_path = os.path.join(
@@ -508,6 +597,9 @@ def _get_po1_benchmark_metrics(total_arr):
             data = json.load(f)
         arr_base = data.get('_arr_base', 10_000_000)
         arr_scale = total_arr / arr_base if arr_base > 0 else 1
+
+        promoted_metric_ids = _metrics_with_observed_pillar_evidence(customer_id)
+
         metrics = []
         for mid, m in data.get('metrics', {}).items():
             impact = round(m.get('annual_impact_per_pct', 0) * arr_scale, 2)
@@ -518,6 +610,8 @@ def _get_po1_benchmark_metrics(total_arr):
                 current = round(baseline * 0.99, 1)  # 1% lower is better
             else:
                 current = round(baseline * 1.01, 1)  # 1% higher is better
+
+            is_promoted = mid in promoted_metric_ids
             metrics.append({
                 'metric_id': mid,
                 'display_name': m.get('display_name', mid),
@@ -525,11 +619,14 @@ def _get_po1_benchmark_metrics(total_arr):
                 'current': current,
                 'improvement_pct': 1.0,
                 'dollar_impact': impact,
-                'estimated': True,
-                # Deck benchmarks ARR-scaled — no customer measurement behind
-                # any of these values. Explicit tier alongside the legacy
-                # boolean so the frontend badge doesn't have to infer it.
-                'data_source': _vp.BENCHMARK,
+                # Legacy boolean kept for back-compat; False only when the
+                # tier below was actually promoted off real graph evidence.
+                'estimated': not is_promoted,
+                # Deck benchmarks ARR-scaled — BENCHMARK unless the
+                # customer's own context graph has real (observed-tier)
+                # evidence for the pillar this metric maps to, in which
+                # case it's DERIVED. See _metrics_with_observed_pillar_evidence.
+                'data_source': _vp.DERIVED if is_promoted else _vp.BENCHMARK,
             })
         return metrics
     except Exception:
@@ -1248,7 +1345,7 @@ def cfo_dashboard():
 
         # ── Power-of-1 benchmark fallback when no ROI snapshot ──
         if not power_of_1_metrics and total_arr > 0:
-            power_of_1_metrics = _get_po1_benchmark_metrics(total_arr)
+            power_of_1_metrics = _get_po1_benchmark_metrics(total_arr, customer_id)
             if estimated_investment > 0:
                 roi_impact = dedupe_portfolio_dollar_impact(power_of_1_metrics)
             for m in power_of_1_metrics:
@@ -1945,7 +2042,7 @@ def ceo_dashboard():
         if roi_snap:
             roi_pct = round(roi_snap.historical_roi_pct or roi_snap.combined_roi_pct or 0)
         if roi_pct == 0 and total_arr > 0:
-            po1_metrics = _get_po1_benchmark_metrics(total_arr)
+            po1_metrics = _get_po1_benchmark_metrics(total_arr, customer_id)
             po1_inv = _get_po1_benchmark_investment(total_arr)
             if po1_inv > 0:
                 po1_impact = dedupe_portfolio_dollar_impact(po1_metrics)

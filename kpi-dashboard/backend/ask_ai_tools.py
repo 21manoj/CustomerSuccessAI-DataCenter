@@ -1074,7 +1074,7 @@ def _execute_direct(tool_name: str, tool_input: dict, customer_id: int) -> dict:
                 _get_po1_benchmark_metrics,
             )
             investment = _get_po1_benchmark_investment(total_arr)
-            po1_metrics = _get_po1_benchmark_metrics(total_arr)
+            po1_metrics = _get_po1_benchmark_metrics(total_arr, customer_id)
             total_impact = sum(m.get('dollar_impact', 0) for m in po1_metrics)
             roi_pct = round((total_impact - investment) / investment * 100) if investment > 0 else 0
             payback_months = round(investment / (total_impact / 12), 1) if total_impact > 0 else 0
