@@ -25,6 +25,7 @@ from datetime import datetime, date
 from typing import Optional
 
 import utils.push_intelligence_config as pic
+from utils.provenance import INFERRED
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                         edge_type='LED_TO',
                         confidence=edge.confidence,
                         source_platform='urgent_signal_scanner',
-                        properties={'label': 'Revenue risk outcome triggered urgent alert'},
+                        properties={'label': 'Revenue risk outcome triggered urgent alert', 'evidence_tier': INFERRED},
                     ))
 
                     # Connect alert back to upstream SIGNAL nodes that caused the OUTCOME
@@ -258,7 +259,7 @@ def scan_for_urgent_signals(customer_id: int, account_id: int) -> list:
                                     edge_type='RELATES_TO',
                                     confidence=ue.confidence * 0.8 if ue.confidence else 0.6,
                                     source_platform='urgent_signal_scanner',
-                                    properties={'label': 'Upstream signal related to urgent alert'},
+                                    properties={'label': 'Upstream signal related to urgent alert', 'evidence_tier': INFERRED},
                                 ))
                     except Exception:
                         pass  # Non-fatal — upstream linking is best-effort

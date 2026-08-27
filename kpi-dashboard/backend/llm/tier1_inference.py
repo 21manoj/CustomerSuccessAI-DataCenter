@@ -24,6 +24,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
+from utils.provenance import INFERRED
+
 logger = logging.getLogger(__name__)
 
 # Model: Haiku for structured inference (fast, cheap, reliable JSON output)
@@ -771,7 +773,7 @@ def _write_simple_edges(
                     source_platform=source_platform,
                     created_by=created_by,
                     customer_id=customer_id,
-                    properties={'inferred_by': created_by, **(derivation or {})},
+                    properties={'inferred_by': created_by, 'evidence_tier': INFERRED, **(derivation or {})},
                 )
                 if created:
                     edge_count += 1
@@ -791,7 +793,7 @@ def _write_simple_edges(
                         source_platform=source_platform,
                         created_by=created_by,
                         customer_id=customer_id,
-                        properties={'inferred_by': created_by, **(derivation or {})},
+                        properties={'inferred_by': created_by, 'evidence_tier': INFERRED, **(derivation or {})},
                     )
                     if created:
                         edge_count += 1
@@ -869,6 +871,7 @@ def _write_explicit_edges(
                     'inferred_by': created_by,
                     'label': edge_spec.get('label', ''),
                     'input_refs': [edge_spec.get('from_ref', ''), edge_spec.get('to_ref', '')],
+                    'evidence_tier': INFERRED,
                     **(derivation or {}),
                 },
             )
@@ -902,6 +905,7 @@ def _write_explicit_edges(
                     'label': edge_spec.get('label', ''),
                     'edge_class': 'signal_to_signal',
                     'input_refs': [edge_spec.get('from_signal_ref', ''), edge_spec.get('to_signal_ref', '')],
+                    'evidence_tier': INFERRED,
                     **(derivation or {}),
                 },
             )
@@ -934,7 +938,7 @@ def _write_explicit_edges(
                             source_platform=source_platform,
                             created_by=created_by,
                             customer_id=customer_id,
-                            properties={'inferred_by': created_by, 'fallback': True, **(derivation or {})},
+                            properties={'inferred_by': created_by, 'fallback': True, 'evidence_tier': INFERRED, **(derivation or {})},
                         )
                         if created:
                             edge_count += 1
@@ -954,7 +958,7 @@ def _write_explicit_edges(
                             source_platform=source_platform,
                             created_by=created_by,
                             customer_id=customer_id,
-                            properties={'inferred_by': created_by, 'fallback': True, **(derivation or {})},
+                            properties={'inferred_by': created_by, 'fallback': True, 'evidence_tier': INFERRED, **(derivation or {})},
                         )
                         if created:
                             edge_count += 1

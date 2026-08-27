@@ -363,6 +363,7 @@ def _run_journey_generation(customer_id: int) -> dict:
                                          .first())
                         if recent_signal:
                             from utils.context_graph import upsert_edge  # noqa: PLC0415
+                            from utils.provenance import INFERRED  # noqa: PLC0415
                             upsert_edge(
                                 from_node_id=recent_signal.node_id,
                                 to_node_id=arc_node.node_id,
@@ -383,6 +384,10 @@ def _run_journey_generation(customer_id: int) -> dict:
                                     # claim — recorded so consumers stop reading
                                     # it as calibrated (WS-1.2).
                                     'confidence_semantics': 'trajectory_rule_match_score',
+                                    # WS-2 2f/2g follow-up (§3 Q3): stamp our
+                                    # own epistemic tier explicitly instead of
+                                    # relying on the absent-key fallback.
+                                    'evidence_tier': INFERRED,
                                 },
                                 source_platform='wizard_a',
                                 created_by='wizard_a_journey',

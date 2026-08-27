@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import utils.push_intelligence_config as pic
+from utils.provenance import INFERRED
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ Be specific and action-oriented. Avoid generic advice."""
                     edge_type='LED_TO',
                     confidence=0.85,
                     source_platform='signal_analyst',
-                    properties={'label': f'Signal led to health drop insight'},
+                    properties={'label': f'Signal led to health drop insight', 'evidence_tier': INFERRED},
                 ))
 
             # Connect AI insight → downstream DECISION nodes (if any exist for this account)
@@ -237,7 +238,7 @@ Be specific and action-oriented. Avoid generic advice."""
                     edge_type='TRIGGERED',
                     confidence=0.7,
                     source_platform='signal_analyst',
-                    properties={'label': 'AI insight informed decision'},
+                    properties={'label': 'AI insight informed decision', 'evidence_tier': INFERRED},
                 ))
             db.session.commit()
         except Exception as graph_err:
@@ -493,7 +494,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     confidence=1.0,
                     customer_id=customer_id,
                     source_platform='signal_analyst',
-                    properties={'label': f'Proactive detection: {signal_type}'},
+                    properties={'label': f'Proactive detection: {signal_type}', 'evidence_tier': INFERRED},
                 ))
 
             # Create DECISION node for ALL high-risk signals (not just stakeholder types)
@@ -529,7 +530,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                     edge_type='TRIGGERED',
                     confidence=0.9,
                     source_platform='signal_analyst',
-                    properties={'label': f'{signal_type} triggered response decision'},
+                    properties={'label': f'{signal_type} triggered response decision', 'evidence_tier': INFERRED},
                 ))
 
                 # Link stakeholders via INVOLVES (for all signal types — stakeholders
@@ -556,7 +557,7 @@ Be specific, predictive, and urgent. This is a pre-emptive intervention window."
                             edge_type='INVOLVES',
                             confidence=0.7,
                             source_platform='signal_analyst',
-                            properties={'label': f'{sh.title or "Stakeholder"} involved'},
+                            properties={'label': f'{sh.title or "Stakeholder"} involved', 'evidence_tier': INFERRED},
                         ))
 
             db.session.commit()
