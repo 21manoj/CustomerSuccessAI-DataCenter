@@ -982,12 +982,15 @@ def upsert_edge(
         (ContextEdge, created: bool) — True if new, False if updated OR rejected.
         When rejected, the first element is None.
     """
-    # I4 clamp
+    # I4 clamp. clamp_confidence(None) returns None unchanged — an explicit
+    # confidence=None (WS-2 2c's EdgeFactory: an inferred edge with no
+    # calibrated point estimate) must stay NULL, not get promoted to a
+    # fabricated 1.0. "Not provided" is already covered by this function's
+    # own confidence=1.0 default parameter, so there is no ambiguity to
+    # resolve here — a caller who writes confidence=None means it.
     try:
         from utils.context_graph_invariants import clamp_confidence
-        confidence = clamp_confidence(confidence) if confidence is not None else 1.0
-        if confidence is None:
-            confidence = 1.0
+        confidence = clamp_confidence(confidence)
     except Exception:
         pass
 

@@ -343,25 +343,28 @@ class CSPulseClient:
         admin_name: str,
         email: str,
         password: str,
-        vertical: str = "dc2_s"
+        vertical: str = "dc2_s",
+        data_origin: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Register a new customer
 
+        data_origin: WS-2 2a tenant-level tag (e.g. 'synthetic_eval_profile'
+            for load-driver/eval_profile tenants). Omitted for real customers.
+
         Returns:
             Response with customer_id, user_id, uuids, or None on error
         """
-        response = self.post(
-            '/api/register',
-            {
-                'company_name': company_name,
-                'admin_name': admin_name,
-                'email': email,
-                'password': password,
-                'vertical': vertical
-            },
-            skip_auth_check=True
-        )
+        body = {
+            'company_name': company_name,
+            'admin_name': admin_name,
+            'email': email,
+            'password': password,
+            'vertical': vertical,
+        }
+        if data_origin:
+            body['data_origin'] = data_origin
+        response = self.post('/api/register', body, skip_auth_check=True)
         return response
 
     def complete_onboarding(

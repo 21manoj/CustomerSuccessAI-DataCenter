@@ -18,6 +18,12 @@ class Customer(db.Model):
     # UUID migration columns (added by phase1a_add_uuid_columns.py)
     uuid = db.Column(db.String(60), nullable=True, unique=True)  # e.g. saas_cust_019c3409-...
     vertical = db.Column(db.String(20), nullable=True)  # saas, dc, msp
+    # WS-2 2a: NULL = real customer data. Non-NULL tags the tenant's data as
+    # generated rather than customer-asserted (e.g. 'synthetic_eval_profile'
+    # for load-driver/eval_profile tenants) — one value per tenant, since a
+    # tenant's data source doesn't vary row-by-row the way an individual
+    # node/edge's observed/inferred/synthetic provenance does.
+    data_origin = db.Column(db.String(30), nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 

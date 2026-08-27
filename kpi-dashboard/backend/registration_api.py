@@ -103,6 +103,12 @@ def register_customer():
             customer.uuid = customer_uuid
         if hasattr(Customer, 'vertical'):
             customer.vertical = vertical  # Store canonical name (saas_premium), not prefix (saas)
+        # WS-2 2a: caller-declared data origin (e.g. load-driver's eval-profile
+        # registration passes 'synthetic_eval_profile'). Absent for every
+        # normal customer signup, which is what NULL means.
+        data_origin = (data.get('data_origin') or '').strip()
+        if data_origin and hasattr(Customer, 'data_origin'):
+            customer.data_origin = data_origin
         db.session.add(customer)
         db.session.flush()
 
