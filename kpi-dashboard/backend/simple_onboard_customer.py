@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app_v3_minimal import app, db
 from models import Customer, CustomerConfig, Account, DC2SKPI
 from utils.config_loader import ConfigLoader
-from verticals.dc2_s.vertical_loader import DC2SVertical
+from utils.vertical_registry import get_kpis
 
 def log(message):
     """Simple logging"""
@@ -57,8 +57,7 @@ def create_customer_config(customer_id, num_enabled_kpis=15):
     log(f"Creating CustomerConfig with {num_enabled_kpis} enabled KPIs...")
     
     # Load vertical KPIs
-    vertical = DC2SVertical()
-    all_kpis = vertical.kpis
+    all_kpis = [{'code': code, **kpi_def} for code, kpi_def in get_kpis('dc2_s').items()]
     
     # Select KPIs to enable (evenly across pillars)
     enabled_kpis = []
