@@ -979,6 +979,255 @@ def test_mod004_revenue_filter_excludes_unearned_outcomes(ctx):
 
 
 # ═════════════════════════════════════════════════════════════════════
+# I3'-E — Unearned-confidence clamp extended to edges (WS-2 2f, shadow mode)
+# Not an invariant in INVARIANTS_REGISTRY — same unregistered write-time-
+# hook status as I3' above. Ship state per docs/WS2_2F_2G_SCOPING.md §3 Q3:
+# SHADOW MODE — the write path logs + stamps a non-authoritative
+# `would_be_clamped` marker but must NOT mutate confidence / evidence_tier
+# / the real `evidence_clamped` key unless EDGE_CLAMP_ENFORCE is flipped.
+# ═════════════════════════════════════════════════════════════════════
+
+
+def test_unearned_clamp_edge_clean_causal_with_evidence_not_flagged():
+    """CAUSED_BY edge with real evidence content → not flagged, unchanged."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='CAUSED_BY',
+        evidence_tier='inferred',
+        derivation='system.self.playbook_auto_trigger',
+        properties={'evidence': 'ticket #4471 escalation log, timestamped'},
+        confidence=0.9,
+    )
+    assert would_clamp is False
+    assert would_be_conf == 0.9
+    assert reason is None
+
+
+def test_unearned_clamp_edge_dirty_absent_evidence_tier_flags():
+    """LED_TO edge with NO evidence_tier key at all and no evidence content
+    → flagged (absence is in-scope per §3 Q3, not exempted)."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='LED_TO',
+        evidence_tier=None,  # key absent entirely
+        derivation=None,
+        properties={},
+        confidence=0.9,
+    )
+    assert would_clamp is True
+    assert would_be_conf == 0.3
+    assert reason is not None
+
+
+def test_unearned_clamp_edge_dirty_explicit_inferred_tag_flags_identically():
+    """Same as the absence case but with evidence_tier explicitly set to
+    'inferred' — confirms explicit-tag and absent-key paths trigger
+    identically (both are 'unearned' per the invariant statement)."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='LED_TO',
+        evidence_tier='inferred',
+        derivation=None,
+        properties={},
+        confidence=0.9,
+    )
+    assert would_clamp is True
+    assert would_be_conf == 0.3
+
+    # 'unknown' tier (the csv_import interim tier) triggers identically too.
+    would_clamp2, would_be_conf2, _ = check_unearned_confidence_edge(
+        edge_type='LED_TO',
+        evidence_tier='unknown',
+        derivation=None,
+        properties={},
+        confidence=0.9,
+    )
+    assert would_clamp2 is True
+    assert would_be_conf2 == 0.3
+
+
+def test_unearned_clamp_edge_system_self_derivation_does_not_count_as_evidence():
+    """An edge with derivation='system.self.playbook_close_linker' and no
+    evidence property still gets flagged — system.self is the platform
+    reacting to its own inference, not a logged external fact."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='TRIGGERED',
+        evidence_tier=None,
+        derivation='system.self.playbook_close_linker',
+        properties={},
+        confidence=0.7,
+    )
+    assert would_clamp is True
+    assert would_be_conf == 0.3
+
+
+def test_unearned_clamp_edge_system_external_derivation_counts_as_evidence():
+    """A (hypothetical, forward-compatible) system.external.* derivation
+    DOES count as evidence even with no properties.evidence — the
+    system.self/system.external distinction must be honored both ways."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='TRIGGERED',
+        evidence_tier='inferred',
+        derivation='system.external.sor_sync',
+        properties={},
+        confidence=0.7,
+    )
+    assert would_clamp is False
+    assert would_be_conf == 0.7
+
+
+def test_unearned_clamp_edge_non_causal_type_never_flagged():
+    """INVOLVES (non-causal) is out of scope regardless of tier/evidence —
+    mirrors I2's existing non-causal exclusion."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='INVOLVES',
+        evidence_tier=None,
+        derivation=None,
+        properties={},
+        confidence=0.9,
+    )
+    assert would_clamp is False
+    assert would_be_conf == 0.9
+
+
+def test_unearned_clamp_edge_confidence_none_stays_none():
+    """EdgeFactory-written inferred edges have confidence=None by design —
+    nothing to lower. would_be_confidence must stay None, not become 0.3."""
+    from utils.context_graph_invariants import check_unearned_confidence_edge
+    would_clamp, would_be_conf, reason = check_unearned_confidence_edge(
+        edge_type='LED_TO',
+        evidence_tier='inferred',
+        derivation=None,
+        properties={},
+        confidence=None,
+    )
+    assert would_clamp is True
+    assert would_be_conf is None
+
+
+def test_upsert_edge_shadow_mode_does_not_mutate_real_fields(ctx):
+    """Integration: upsert_edge on a dirty (unearned) LED_TO edge, in
+    default SHADOW mode, stamps the non-authoritative `would_be_clamped`
+    marker but leaves confidence/evidence_tier/evidence_clamped on the
+    actual persisted row completely untouched. This is the single most
+    important correctness property of the shadow-mode rollout — accidental
+    real-field mutation in shadow mode would be a silent regression."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        import utils.context_graph_invariants as inv
+        assert inv.EDGE_CLAMP_ENFORCE is False, (
+            'EDGE_CLAMP_ENFORCE must default to False (shadow mode) — '
+            'this test assumes the shipped default.'
+        )
+        from utils.context_graph import upsert_edge
+
+        s = _make_node(ctx, node_type='SIGNAL', node_subtype='escalation')
+        o = _make_node(ctx, node_type='OUTCOME', node_subtype='churn_lost',
+                       revenue_impact=-100_000, revenue_impact_type='lost')
+        db.session.commit()
+
+        edge, created = upsert_edge(
+            from_node_id=s.node_id,
+            to_node_id=o.node_id,
+            edge_type='LED_TO',
+            confidence=0.9,
+            source_platform='llm_enrichment',
+            created_by='llm_enrichment',
+            customer_id=ctx['customer_id'],
+            properties={},  # no evidence_tier, no evidence — the dirty case
+        )
+        db.session.commit()
+
+        assert created is True
+        assert edge is not None
+
+        reloaded = db.session.get(ContextEdge, edge.edge_id)
+        # Shadow marker DOES fire.
+        assert reloaded.properties.get('would_be_clamped') is True
+        assert 'would_be_clamped_reason' in reloaded.properties
+        # Real fields are UNTOUCHED — this is the shadow-mode contract.
+        assert float(reloaded.confidence) == 0.9, (
+            'Shadow mode must not mutate real confidence'
+        )
+        assert reloaded.properties.get('evidence_tier') is None, (
+            'Shadow mode must not stamp/mutate evidence_tier'
+        )
+        assert reloaded.properties.get('evidence_clamped') is None, (
+            'Shadow mode must not stamp the authoritative evidence_clamped key'
+        )
+
+
+def test_upsert_edge_shadow_mode_clean_edge_no_marker(ctx):
+    """Integration: a CAUSED_BY edge with real evidence content does NOT
+    get the shadow marker, and confidence is unchanged."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        from utils.context_graph import upsert_edge
+
+        s = _make_node(ctx, node_type='SIGNAL', node_subtype='escalation')
+        o = _make_node(ctx, node_type='OUTCOME', node_subtype='churn_lost',
+                       revenue_impact=-100_000, revenue_impact_type='lost')
+        db.session.commit()
+
+        edge, created = upsert_edge(
+            from_node_id=s.node_id,
+            to_node_id=o.node_id,
+            edge_type='CAUSED_BY',
+            confidence=0.9,
+            source_platform='llm_enrichment',
+            created_by='llm_enrichment',
+            customer_id=ctx['customer_id'],
+            properties={'evidence': 'ticket #4471 escalation log, timestamped'},
+        )
+        db.session.commit()
+
+        assert created is True
+        reloaded = db.session.get(ContextEdge, edge.edge_id)
+        assert 'would_be_clamped' not in reloaded.properties
+        assert float(reloaded.confidence) == 0.9
+
+
+def test_upsert_edge_enforce_mode_mutates_real_fields(ctx, monkeypatch):
+    """Integration: with EDGE_CLAMP_ENFORCE monkeypatched to True, the same
+    dirty case DOES mutate real confidence<=0.3 and stamps the real
+    evidence_clamped=True — proving the enforcement code path is fully
+    correct even though it ships off by default."""
+    with app.app_context():
+        _clear_graph(ctx['customer_id'])
+        import utils.context_graph_invariants as inv
+        monkeypatch.setattr(inv, 'EDGE_CLAMP_ENFORCE', True)
+        from utils.context_graph import upsert_edge
+
+        s = _make_node(ctx, node_type='SIGNAL', node_subtype='escalation')
+        o = _make_node(ctx, node_type='OUTCOME', node_subtype='churn_lost',
+                       revenue_impact=-100_000, revenue_impact_type='lost')
+        db.session.commit()
+
+        edge, created = upsert_edge(
+            from_node_id=s.node_id,
+            to_node_id=o.node_id,
+            edge_type='LED_TO',
+            confidence=0.9,
+            source_platform='llm_enrichment',
+            created_by='llm_enrichment',
+            customer_id=ctx['customer_id'],
+            properties={},  # no evidence_tier, no evidence — the dirty case
+        )
+        db.session.commit()
+
+        assert created is True
+        reloaded = db.session.get(ContextEdge, edge.edge_id)
+        assert float(reloaded.confidence) <= 0.3
+        assert reloaded.properties.get('evidence_clamped') is True
+        assert 'evidence_clamped_reason' in reloaded.properties
+        # Enforce mode should not ALSO leave the shadow-only marker behind.
+        assert reloaded.properties.get('would_be_clamped') is not True
+
+
+# ═════════════════════════════════════════════════════════════════════
 # Must-have-before-Beta tests (added Apr 22 2026)
 # ═════════════════════════════════════════════════════════════════════
 

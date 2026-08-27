@@ -1455,6 +1455,131 @@ def clamp_unearned_confidence(
     return new_conf, new_props, _UNEARNED_CLAMP_TIER, True
 
 
+# ─────────────────────────────────────────────────────────────────────
+# I3'-E — Unearned-confidence clamp, extended to edges (WS-2 2f, Aug 2026)
+# ─────────────────────────────────────────────────────────────────────
+# Extends I3' (above) from OUTCOME nodes to causal-type edges. Full
+# reasoning + citations: docs/WS2_2F_2G_SCOPING.md §1.5-1.6 and §3 Q3 —
+# this comment is a pointer, not a restatement.
+#
+# Scope: causal edge types only (CAUSAL_EDGE_TYPES) — mirrors I2's own
+# non-causal exclusion (see validate_edge_pre_commit above). INVOLVES,
+# BELONGS_TO, BENCHMARKED_BY, SOURCED_FROM never make an evidentiary
+# claim and are out of scope.
+#
+# Trigger ("unearned") — BOTH conditions:
+#   1. evidence_tier (properties['evidence_tier'] — not a real column)
+#      is 'inferred', 'unknown', OR ABSENT ENTIRELY. Absence is
+#      deliberately IN SCOPE, not exempted (§3 Q3 decision): grepping
+#      every edge writer found ~100% of the live population
+#      (llm_enrichment, wizard_a, llm_inference, signal_analyst,
+#      urgent_signal_scanner) never stamps evidence_tier at all —
+#      exempting absence would make this invariant check almost nothing.
+#   2. No evidence content: properties.evidence / evidence_list is
+#      empty/absent, AND `derivation` (if present) does not resolve to
+#      a system.external logged fact per utils/edge_factory.py's
+#      vocabulary — system.self.* derivations (AUTO_TRIGGER_DERIVATION,
+#      CLOSE_LINK_DERIVATION) are the platform reacting to its own
+#      inference/trigger and do NOT count as evidence.
+#
+# Rollout: SHADOW MODE ONLY. EDGE_CLAMP_ENFORCE defaults to False —
+# given this fires on ~3,287 edges' worth of writers going forward, the
+# write path computes and logs what WOULD be clamped and stamps a
+# non-authoritative properties['would_be_clamped'] marker, without
+# touching the real confidence / evidence_tier / evidence_clamped
+# fields, until volume is confirmed safe. Flipping EDGE_CLAMP_ENFORCE to
+# True is the ONLY step needed to go from shadow to enforce — see
+# utils/context_graph.py's upsert_edge() for the dispatch.
+#
+# Unlike node-side I3', ContextEdge has no `tier` column (models.py) to
+# force — the only real field enforcement can mutate is `confidence`
+# (and only when it isn't already None; EdgeFactory-written inferred
+# edges are NULL confidence by design — nothing to lower).
+#
+# Unregistered by design, mirroring I3' itself: NOT added to
+# INVARIANTS_REGISTRY, NOT part of the post-commit audit sweep (same
+# precedent as I7, "lives in tests, not here").
+
+EDGE_CLAMP_ENFORCE = False  # SHADOW MODE. The ONLY change needed to move
+# I3'-E from shadow-mode (log + non-authoritative marker only) to full
+# enforcement (real confidence clamp + real evidence_clamped stamp) is
+# flipping this to True, once shadow-mode volume is confirmed safe per
+# docs/WS2_2F_2G_SCOPING.md §3 Q3. Do not add any other gate.
+
+_EDGE_UNEARNED_TIERS = {'inferred', 'unknown', None, ''}
+
+
+def _edge_derivation_is_system_external(derivation: Optional[str]) -> bool:
+    """True iff `derivation` resolves to a system.external logged fact.
+
+    Per utils/edge_factory.py's vocabulary: system.self.* derivations
+    (AUTO_TRIGGER_DERIVATION, CLOSE_LINK_DERIVATION) are the platform
+    reacting to its own prior inference/trigger — NOT evidence.
+    system.external.* would be a genuinely external logged fact (an SoR
+    sync, a recorded trigger condition) and DOES count as evidence. No
+    writer stamps system.external.* yet — it's named in
+    edge_factory.py's docstring as the counterpart category, not a
+    value any writer emits today — so this check is forward-compatible
+    with the day one does, not dead code for a hypothetical.
+    """
+    if not isinstance(derivation, str):
+        return False
+    return derivation.startswith('system.external')
+
+
+def check_unearned_confidence_edge(
+    edge_type: str,
+    evidence_tier: Optional[str],
+    derivation: Optional[str],
+    properties: Optional[Dict[str, Any]],
+    confidence: Optional[float],
+) -> tuple:
+    """Check (does NOT apply) whether a causal edge write trips I3'-E.
+
+    Pure function — never mutates `properties`, never reads
+    EDGE_CLAMP_ENFORCE. The caller (upsert_edge) decides, based on that
+    flag, whether to stamp a shadow marker or perform the real mutation.
+
+    Returns (would_clamp, would_be_confidence, reason):
+      - would_clamp: bool
+      - would_be_confidence: the confidence value enforcement WOULD
+        write (None if confidence is already None — an EdgeFactory
+        inferred edge has nothing to lower)
+      - reason: human-readable explanation, or None when would_clamp is
+        False
+
+    Non-causal edge types always pass through unchanged — only
+    CAUSAL_EDGE_TYPES make an evidentiary claim (mirrors I2's scope).
+    """
+    if edge_type not in CAUSAL_EDGE_TYPES:
+        return False, confidence, None
+
+    tier = evidence_tier.strip().lower() if isinstance(evidence_tier, str) else evidence_tier
+    if tier not in _EDGE_UNEARNED_TIERS:
+        # An explicit non-inferred/unknown tier (e.g. 'observed', 'asserted')
+        # — already earned, not this invariant's concern.
+        return False, confidence, None
+
+    if _has_evidence(properties) or _edge_derivation_is_system_external(derivation):
+        # Earned claim — pass through untouched.
+        return False, confidence, None
+
+    # Unearned — compute what enforcement WOULD do (does not apply it).
+    try:
+        cur_conf = float(confidence) if confidence is not None else None
+    except (TypeError, ValueError):
+        cur_conf = None
+    would_be_conf = None if cur_conf is None else min(cur_conf, _UNEARNED_CLAMP_FLOOR)
+
+    tier_display = evidence_tier if evidence_tier is not None else '<absent>'
+    reason = (
+        f'{edge_type} edge has evidence_tier={tier_display!r} and no '
+        f'evidence content (derivation={derivation!r}) — confidence '
+        f'would move from {cur_conf} to {would_be_conf}'
+    )
+    return True, would_be_conf, reason
+
+
 def log_violations_summary(violations: List[Violation], customer_id: int) -> Dict[str, Any]:
     """Log a one-line WARN summary + per-invariant counts. Return the summary dict."""
     if not violations:

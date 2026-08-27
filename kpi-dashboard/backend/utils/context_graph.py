@@ -31,6 +31,14 @@ _seen_rejections: set = set()
 _unearned_clamp_logger = logging.getLogger('cs_pulse.unearned_confidence_clamp')
 _seen_unearned_clamps: set = set()
 
+# Dedicated logger for the edge-side extension of the unearned-confidence
+# clamp (I3'-E, WS-2 2f — SHADOW MODE, see context_graph_invariants.py's
+# EDGE_CLAMP_ENFORCE). Deliberately a SEPARATE dedup set from the node-side
+# one above — edges and nodes are different populations and sharing a set
+# would let one starve the other's first-occurrence alert.
+_edge_unearned_clamp_logger = logging.getLogger('cs_pulse.unearned_confidence_clamp_edge')
+_seen_edge_unearned_clamps: set = set()
+
 
 # ─── Node Queries ────────────────────────────────────────────────────────────
 
@@ -1114,6 +1122,63 @@ def upsert_edge(
     except Exception:
         # Never fail ingest on invariant module errors — log and proceed.
         pass
+
+    # I3'-E pre-commit clamp (causal edge without evidence → unearned).
+    # SHADOW MODE by default (context_graph_invariants.EDGE_CLAMP_ENFORCE):
+    # computes what WOULD be clamped and stamps a non-authoritative
+    # properties['would_be_clamped'] marker, without touching the real
+    # confidence/evidence_tier/evidence_clamped fields. Flipping
+    # EDGE_CLAMP_ENFORCE to True switches this block to the real mutation
+    # (confidence capped, properties['evidence_clamped'] stamped) — see
+    # context_graph_invariants.py's I3'-E section for the full rationale.
+    try:
+        from utils.context_graph_invariants import (
+            check_unearned_confidence_edge,
+            EDGE_CLAMP_ENFORCE,
+        )
+        _edge_props = kwargs.get('properties')
+        _evidence_tier = _edge_props.get('evidence_tier') if isinstance(_edge_props, dict) else None
+        _derivation = _edge_props.get('derivation') if isinstance(_edge_props, dict) else None
+        would_clamp, would_be_conf, clamp_reason = check_unearned_confidence_edge(
+            edge_type=edge_type,
+            evidence_tier=_evidence_tier,
+            derivation=_derivation,
+            properties=_edge_props,
+            confidence=confidence,
+        )
+        if would_clamp:
+            _edge_clamp_key = (source_platform, edge_type, _derivation)
+            _mode = 'enforce' if EDGE_CLAMP_ENFORCE else 'shadow'
+            if _edge_clamp_key not in _seen_edge_unearned_clamps:
+                _seen_edge_unearned_clamps.add(_edge_clamp_key)
+                _edge_unearned_clamp_logger.warning(
+                    "event=unearned_confidence_clamp_edge first_seen=true "
+                    "mode=%s edge_type=%s source_platform=%s derivation=%s "
+                    "evidence_tier=%s customer_id=%s confidence=%s "
+                    "would_be_confidence=%s",
+                    _mode, edge_type, source_platform, _derivation,
+                    _evidence_tier, customer_id, confidence, would_be_conf,
+                )
+            else:
+                logger.debug(
+                    "[invariants] I3'-E unearned-confidence edge clamp "
+                    "(%s): %s via %s confidence %s -> %s",
+                    _mode, edge_type, source_platform, confidence, would_be_conf,
+                )
+
+            new_edge_props = dict(_edge_props) if isinstance(_edge_props, dict) else {}
+            if EDGE_CLAMP_ENFORCE:
+                confidence = would_be_conf
+                new_edge_props['evidence_clamped'] = True
+                new_edge_props['evidence_clamped_reason'] = clamp_reason
+            else:
+                new_edge_props['would_be_clamped'] = True
+                new_edge_props['would_be_clamped_reason'] = (
+                    f'[SHADOW — not enforced, EDGE_CLAMP_ENFORCE=False] {clamp_reason}'
+                )
+            kwargs['properties'] = new_edge_props
+    except Exception as _e:
+        logger.debug(f"[invariants] I3'-E edge clamp pass-through (error): {_e}")
 
     existing = ContextEdge.query.filter_by(
         from_node_id=from_node_id,
