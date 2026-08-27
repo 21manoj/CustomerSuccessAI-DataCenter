@@ -1665,6 +1665,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                 if not outcomes_path.exists():
                     outcomes_path = data_dir / 'context_graph' / 'outcomes.csv'
                 if outcomes_path.exists() and not _skip_cg_reload:
+                    from utils.context_graph_invariants import clamp_unearned_confidence
                     df_o = pd.read_csv(str(outcomes_path))
                     # Write-time duplicate guard (2026-08-24): this loop did a
                     # raw INSERT per row with no idempotency — source_event_id
@@ -1711,6 +1712,32 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         if _o_key in _existing_outcomes:
                             continue  # exact duplicate already present — skip
                         _existing_outcomes.add(_o_key)
+                        # WS-2 2f (I3' extension, csv_import blind spot,
+                        # 2026-08-27): this loop constructs ContextNode
+                        # directly rather than calling upsert_node() —
+                        # deliberately, since source_event_id is degenerate
+                        # here (see the dedup comment above) and
+                        # upsert_node's cross-row dedup on that key would
+                        # silently overwrite distinct same-type outcomes
+                        # instead of skipping true duplicates, reopening the
+                        # 2026-08-24 accumulation bug in a worse (data-loss)
+                        # form. That bypass also means this write never got
+                        # the I3' unearned-confidence clamp that upsert_node
+                        # applies to every other OUTCOME write — an OUTCOME
+                        # with no evidence and no source_ref has no basis to
+                        # claim Tier-1/full confidence. Apply the same clamp
+                        # function directly instead of rerouting the write.
+                        _o_props = {'evidence': str(row.get('evidence', '')),
+                                    'confidence': str(row.get('confidence', ''))}
+                        _o_source_platform = str(row.get('source_platform', 'csv_import'))
+                        _o_conf, _o_props, _o_tier, _o_clamped = clamp_unearned_confidence(
+                            node_type='OUTCOME',
+                            source_platform=_o_source_platform,
+                            source_ref=None,  # never set by this writer
+                            confidence=1.0,   # ContextNode.confidence column default
+                            properties=_o_props,
+                            tier=1,           # this writer's prior hardcoded tier
+                        )
                         _db.session.add(ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
@@ -1719,10 +1746,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                             title=_o_title,
                             revenue_impact=rev_impact,
                             revenue_impact_type=outcome_type,
-                            properties={'evidence': str(row.get('evidence', '')),
-                                        'confidence': str(row.get('confidence', ''))},
-                            tier=1, occurred_at=out_occurred_at,
-                            source_platform=str(row.get('source_platform', 'csv_import')),
+                            properties=_o_props,
+                            tier=_o_tier, confidence=_o_conf, occurred_at=out_occurred_at,
+                            source_platform=_o_source_platform,
                             source_event_id=outcome_src_id,
                         ))
                     _db.session.flush()
