@@ -2883,21 +2883,20 @@ const CFODashboard: React.FC = () => {
                               <div className="text-white font-medium truncate max-w-[180px]">{a.account_name}</div>
                             </td>
                             <td className="text-center py-2 px-2">
-                              {hasActual ? (
-                                <span
-                                  className="text-[8px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400"
-                                  title="Playbook execution rows for this account"
-                                >
-                                  actual
-                                </span>
-                              ) : (
-                                <span
-                                  className="text-[8px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-700/40 text-gray-500"
-                                  title="ARR-weighted benchmark allocation until playbooks close"
-                                >
-                                  benchmark
-                                </span>
-                              )}
+                              {/* Normalized to the shared ProvenanceTierBadge (was a
+                                  bespoke span here) so this table's tier colors match
+                                  every other dollar tile on the dashboard. showMeasured
+                                  forces the badge to render for 'actual' too — this
+                                  table's whole point is the actual/benchmark contrast,
+                                  not the "unmarked = trustworthy" convention used
+                                  elsewhere. Underlying hasActual logic is unchanged. */}
+                              <ProvenanceTierBadge
+                                tier={hasActual ? 'measured' : 'benchmark'}
+                                detail={hasActual ? 'Playbook execution rows for this account' : 'ARR-weighted benchmark allocation until playbooks close'}
+                                compact
+                                dark
+                                showMeasured
+                              />
                             </td>
                             <td className="text-right py-2 px-2 text-gray-400">{formatCompact(a.arr)}</td>
                             <td className={`text-right py-2 px-2 font-medium ${healthColor}`}>{a.health_score.toFixed(0)}</td>
