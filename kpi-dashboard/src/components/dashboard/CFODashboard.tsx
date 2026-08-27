@@ -73,6 +73,16 @@ interface PowerOf1Row {
   improvement_direction: 'up' | 'down';
   dollar_impact: number;
   color: string;
+  /**
+   * Per-metric provenance tier, threaded through from the backend's
+   * power_of_1_metrics[].data_source (executive_dashboard_api.py). Varies
+   * per row/per customer: 'benchmark' when no ROISnapshot exists yet
+   * (pure ARR-scaled industry constants), 'derived' or a derived/default
+   * blend once a real snapshot backs the dollar_impact figure. Previously
+   * dropped in the API-response transform, so every row rendered under a
+   * single hardcoded "benchmark" banner even when backed by real data.
+   */
+  data_source?: ProvenanceTier;
 }
 
 interface PillarInvestment {
@@ -615,6 +625,7 @@ const PowerOf1Table: React.FC<{ rows: PowerOf1Row[]; total: number }> = ({ rows,
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: row.color }} />
                   <span className="text-gray-300 text-xs font-medium">{row.metric}</span>
+                  <ProvenanceTierBadge tier={row.data_source} compact dark />
                 </div>
               </td>
               <td className="text-right px-4 py-3 text-xs text-gray-500 font-mono">{row.baseline}</td>
@@ -1931,6 +1942,7 @@ const CFODashboard: React.FC = () => {
               improvement_direction: (directionDown ? 'down' : 'up') as 'up' | 'down',
               dollar_impact: m.dollar_impact || 0,
               color: m.dollar_impact > 200000 ? '#22c55e' : m.dollar_impact > 100000 ? '#06b6d4' : '#eab308',
+              data_source: m.data_source as ProvenanceTier | undefined,
             };
           });
 
@@ -2782,11 +2794,17 @@ const CFODashboard: React.FC = () => {
             </button>
             {showFutureROI && (
               <div className="mt-4 space-y-6">
-                {/* CFO-4: tables in this section are Power-of-1 benchmark
-                    projections, not customer-data dollars. Single banner
-                    disclosure here is sufficient — every dollar inside is
-                    benchmark-sourced. */}
-                <SourceLabel source="benchmark" className="px-1" />
+                {/* CFO-4: this banner previously claimed every dollar below
+                    was benchmark-sourced unconditionally — false once a
+                    real ROISnapshot exists (rows go 'derived', see
+                    executive_dashboard_api.py's power_of_1_metrics
+                    data_source). Per-row tier badges in PowerOf1Table now
+                    carry the accurate per-metric signal; only show this
+                    blanket banner when every row genuinely is the
+                    benchmark fallback (no snapshot yet). */}
+                {d.power_of_1.length > 0 && d.power_of_1.every(m => m.data_source === 'benchmark') && (
+                  <SourceLabel source="benchmark" className="px-1" />
+                )}
                 {/* Power of 1 Metrics Table */}
                 <PowerOf1Table rows={d.power_of_1} total={d.power_of_1_total} />
 
