@@ -1,0 +1,208 @@
+{
+  "world_id": "datacenter_v1_world_a",
+  "vertical": "datacenter_v1",
+  "description": "Baseline datacenter_v1 world. Two independent real causal chains (a relationship-driven commercial chain and a technical-reliability chain), one latent-confounded pair, one lag-window violation, one genuine negative control. Vocabulary sourced from kpi-dashboard/backend/config/taxonomy_datacenter_v1.json's revenue_buckets.at_risk/expansion lists \u2014 not invented.",
+  "observed_vocabulary": {
+    "signal_types": [
+      "champion_change",
+      "engagement_gap",
+      "expansion_review_cancelled"
+    ],
+    "outcome_types": {
+      "commitment_ramp_miss": "at_risk",
+      "throughput_below_spec": "at_risk",
+      "interconnect_bottleneck": "at_risk",
+      "reliability_sla_breach": "at_risk",
+      "runway_risk": "at_risk",
+      "payment_delinquency": "at_risk",
+      "power_capacity_constraint": "at_risk",
+      "thermal_event": "at_risk"
+    }
+  },
+  "latents": [
+    "L_org_restructure"
+  ],
+  "source_systems": [
+    "crm",
+    "product_telemetry",
+    "support_ticketing"
+  ],
+  "admission_lag_window_days": 30,
+  "dag": [
+    {
+      "edge_id": "e1",
+      "from": "champion_change",
+      "to": "engagement_gap",
+      "lag_days_mean": 10,
+      "lag_days_std": 3,
+      "strength": 0.65,
+      "source_system": "crm"
+    },
+    {
+      "edge_id": "e2",
+      "from": "engagement_gap",
+      "to": "expansion_review_cancelled",
+      "lag_days_mean": 6,
+      "lag_days_std": 2,
+      "strength": 0.7,
+      "source_system": "crm",
+      "note": "TRUE mediator. per_type_observation_rate for this type is deliberately low (0.15) \u2014 this is the hidden link behind the unobserved_intermediate absence below."
+    },
+    {
+      "edge_id": "e3",
+      "from": "expansion_review_cancelled",
+      "to": "commitment_ramp_miss",
+      "lag_days_mean": 8,
+      "lag_days_std": 3,
+      "strength": 0.75,
+      "source_system": "product_telemetry"
+    },
+    {
+      "edge_id": "e4",
+      "from": "interconnect_bottleneck",
+      "to": "throughput_below_spec",
+      "lag_days_mean": 5,
+      "lag_days_std": 2,
+      "strength": 0.8,
+      "source_system": "product_telemetry"
+    },
+    {
+      "edge_id": "e5",
+      "from": "throughput_below_spec",
+      "to": "reliability_sla_breach",
+      "lag_days_mean": 12,
+      "lag_days_std": 4,
+      "strength": 0.6,
+      "source_system": "support_ticketing"
+    },
+    {
+      "edge_id": "e6",
+      "from": "power_capacity_constraint",
+      "to": "thermal_event",
+      "lag_days_mean": 41,
+      "lag_days_std": 3,
+      "strength": 0.7,
+      "source_system": "product_telemetry",
+      "note": "Real edge, but lag exceeds admission_lag_window_days (30) \u2014 the beyond_lag_window absence."
+    },
+    {
+      "edge_id": "e7_a",
+      "from": "L_org_restructure",
+      "to": "runway_risk",
+      "lag_days_mean": 9,
+      "lag_days_std": 3,
+      "strength": 0.72,
+      "source_system": "crm",
+      "latent_edge": true
+    },
+    {
+      "edge_id": "e7_b",
+      "from": "L_org_restructure",
+      "to": "payment_delinquency",
+      "lag_days_mean": 15,
+      "lag_days_std": 4,
+      "strength": 0.68,
+      "source_system": "support_ticketing",
+      "latent_edge": true
+    }
+  ],
+  "template_disagreements": [],
+  "absences": [
+    {
+      "pair": [
+        "champion_change",
+        "power_capacity_constraint"
+      ],
+      "kind": "no_relationship"
+    },
+    {
+      "pair": [
+        "engagement_gap",
+        "commitment_ramp_miss"
+      ],
+      "kind": "unobserved_intermediate",
+      "hidden_event": "expansion_review_cancelled",
+      "dropped_by": "per_type_observation_rate"
+    },
+    {
+      "pair": [
+        "runway_risk",
+        "payment_delinquency"
+      ],
+      "kind": "latent_common_cause",
+      "via": "L_org_restructure"
+    },
+    {
+      "pair": [
+        "power_capacity_constraint",
+        "thermal_event"
+      ],
+      "kind": "beyond_lag_window",
+      "true_lag_days": 41
+    }
+  ],
+  "account_archetypes": [
+    {
+      "archetype_id": "commercial_chain",
+      "active_edges": [
+        "e1",
+        "e2",
+        "e3"
+      ],
+      "arr_range": [
+        2000000,
+        9000000
+      ],
+      "weight": 3
+    },
+    {
+      "archetype_id": "technical_chain",
+      "active_edges": [
+        "e4",
+        "e5"
+      ],
+      "arr_range": [
+        1500000,
+        8000000
+      ],
+      "weight": 3
+    },
+    {
+      "archetype_id": "beyond_lag_window_case",
+      "active_edges": [
+        "e6"
+      ],
+      "arr_range": [
+        3000000,
+        6000000
+      ],
+      "weight": 1
+    },
+    {
+      "archetype_id": "latent_confound_case",
+      "active_edges": [
+        "e7_a",
+        "e7_b"
+      ],
+      "arr_range": [
+        2500000,
+        7000000
+      ],
+      "weight": 2
+    },
+    {
+      "archetype_id": "no_arc",
+      "active_edges": [],
+      "arr_range": [
+        1000000,
+        5000000
+      ],
+      "weight": 2,
+      "note": "Zero DAG edges fire. AT-4 target \u2014 must receive no arc from discovery/classification."
+    }
+  ],
+  "revenue_model": {
+    "per_account_bound": 1.5,
+    "note": "No account's outcome dollars exceed 1.5x its own ARR in the eval window. Gross flows (churn+renewal+expansion) can exceed 1.0x legitimately but not by much within one TTM window."
+  }
+}

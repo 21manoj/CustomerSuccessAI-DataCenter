@@ -327,6 +327,92 @@ def run_manifest(args):
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Eval profile (Track D, fix-load-generator-prompt-v2.md)
+# ═══════════════════════════════════════════════════════════════════════
+
+_ARC_TYPE_KEYS = ('arc_types', 'arc_type', 'story_arc')
+
+
+def _manifest_declares_arc_types(manifest: dict) -> list:
+    """Scan a --manifest-style JSON for any per-account arc-declaring key.
+    Eval-profile worlds must be generated FROM a world DAG, never from an
+    arc name — a manifest that declares one is exactly the circularity
+    fix-load-generator-prompt-v2.md's 'THE ARCHITECTURAL CHANGE' section
+    forbids (worlds generated from arcs make discovery recover the arcs).
+    Returns the offending (account_name, key) pairs, empty if clean."""
+    hits = []
+    if any(k in manifest for k in _ARC_TYPE_KEYS):
+        hits.append(('<manifest root>', [k for k in _ARC_TYPE_KEYS if k in manifest]))
+    for acct in manifest.get('accounts', []):
+        found = [k for k in _ARC_TYPE_KEYS if k in acct]
+        if found:
+            hits.append((acct.get('name', '<unnamed>'), found))
+    return hits
+
+
+def run_eval_profile(args):
+    """--profile eval: generate a tenant from a world DAG's true causal
+    structure + observation dropout, emitting ground_truth.json and
+    run_manifest.json alongside the same CSV shapes process_data() ingests.
+
+    Deliberately does NOT go through scenarios/scenario_manifest.py or
+    ManifestCSVGenerator — see eval_profile/__init__.py's independence
+    guard. If --manifest is also passed (e.g. reused for account_count or
+    other knobs in a future extension), it is scanned and REJECTED if it
+    declares arc_types/story_arc — raise, don't silently ignore.
+    """
+    if args.manifest:
+        manifest_path = Path(args.manifest)
+        if manifest_path.exists():
+            with open(manifest_path) as f:
+                manifest = json.load(f)
+            hits = _manifest_declares_arc_types(manifest)
+            if hits:
+                logger.error(
+                    "--profile eval: manifest declares arc-type fields — HARD ERROR "
+                    "(fix-load-generator-prompt-v2.md: eval worlds are generated from a "
+                    "world DAG, never from an arc name):"
+                )
+                for name, keys in hits:
+                    logger.error(f"    {name}: {keys}")
+                sys.exit(1)
+
+    if not args.world_id:
+        logger.error("--profile eval requires --world-id (see eval_profile/worlds/<vertical>/*.json)")
+        sys.exit(1)
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent / 'eval_profile'))
+    import generate as eval_generate  # noqa: E402
+
+    knobs = {}
+    if args.account_count is not None:
+        knobs['account_count'] = args.account_count
+
+    out_dir = args.generate_only or f'/tmp/eval_profile_{args.world_id}_{args.seed}'
+    logger.info(f"{'='*60}")
+    logger.info(f"CS Pulse Driver V3 — Eval Profile Mode")
+    logger.info(f"{'='*60}")
+    logger.info(f"  World:   {args.world_id}")
+    logger.info(f"  Seed:    {args.seed}")
+    logger.info(f"  Out:     {out_dir}")
+
+    result = eval_generate.generate_eval_tenant(
+        args.world_id, args.seed, out_dir, knobs=knobs or None,
+    )
+    logger.info(f"  Accounts: {result['accounts']['count']} "
+                f"(with_no_arc: {len(result['accounts']['with_no_arc'])})")
+    logger.info(f"  Revenue model: ratio_to_arr={result['revenue_model']['ratio_to_arr']} "
+                f"violations={len(result['revenue_model']['violations'])}")
+    if result['revenue_model']['violations']:
+        logger.error("  AT-8 VIOLATED — revenue bound exceeded, this should be unreachable")
+        sys.exit(1)
+    logger.info(f"{'='*60}")
+    if not args.generate_only:
+        logger.info("  (--generate-only not passed; eval-profile CSV upload to a live "
+                     "customer is not wired up yet — CSVs + ground_truth.json written to disk only)")
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Scenario mode (legacy — delegates to LoadDriver)
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -514,13 +600,35 @@ Examples:
         help='Seconds to wait for signal enrichment (default: 60)',
     )
 
+    # ── Eval profile (Track D, fix-load-generator-prompt-v2.md) ──
+    parser.add_argument(
+        '--profile',
+        choices=['demo', 'eval'],
+        default='demo',
+        help='demo (default): current --manifest behaviour, unchanged (AT-0). '
+             'eval: worlds with known causal structure, messiness live, '
+             'ground_truth.json + run_manifest.json emitted. Requires --world-id, '
+             'not --manifest.',
+    )
+    parser.add_argument(
+        '--world-id',
+        help='World id for --profile eval (e.g. datacenter_v1_world_a). '
+             'See eval_profile/worlds/<vertical>/*.json.',
+    )
+    parser.add_argument(
+        '--account-count', type=int, default=None,
+        help='--profile eval only: number of accounts to generate (default: world knob default).',
+    )
+
     args = parser.parse_args()
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Route to correct mode
-    if args.manifest:
+    if args.profile == 'eval':
+        run_eval_profile(args)
+    elif args.manifest:
         run_manifest(args)
     elif args.scenarios:
         run_scenarios(args)

@@ -1,0 +1,199 @@
+{
+  "world_id": "saas_premium_world_a",
+  "vertical": "saas_premium",
+  "description": "saas_premium's taxonomy overlay (config/taxonomy_saas_premium.json) declares an EMPTY revenue_buckets vocabulary -- it has no vertical-specific outcome subtypes today, unlike datacenter_v1. This world honestly uses the generic subtype vocabulary that is actually canonical for saas_premium (from utils/context_graph.py's classifier sets and executive_dashboard_api.py's STORY_ARC_PATTERNS), rather than inventing SaaS-flavored strings the platform doesn't really use. That gap itself is the 'check vertical vocabularies first' finding from fix-load-generator-prompt-v2.md -- not fixed here, just not papered over.",
+  "observed_vocabulary": {
+    "signal_types": [
+      "champion_loss",
+      "nps_decline",
+      "engagement_drop",
+      "usage_decline",
+      "upsell_opportunity"
+    ],
+    "outcome_types": {
+      "revenue_at_risk": "at_risk",
+      "churn_risk": "at_risk",
+      "renewal_uncertainty": "at_risk",
+      "engagement_decline": "at_risk",
+      "churn_lost": "lost",
+      "contraction": "lost",
+      "expansion_closed": "expansion",
+      "revenue_growth": "expansion"
+    }
+  },
+  "latents": [
+    "L_budget_freeze"
+  ],
+  "source_systems": [
+    "crm",
+    "product_analytics",
+    "support_desk"
+  ],
+  "admission_lag_window_days": 30,
+  "dag": [
+    {
+      "edge_id": "e1",
+      "from": "champion_loss",
+      "to": "engagement_drop",
+      "lag_days_mean": 9,
+      "lag_days_std": 3,
+      "strength": 0.68,
+      "source_system": "crm"
+    },
+    {
+      "edge_id": "e2",
+      "from": "engagement_drop",
+      "to": "usage_decline",
+      "lag_days_mean": 7,
+      "lag_days_std": 2,
+      "strength": 0.72,
+      "source_system": "product_analytics",
+      "note": "TRUE mediator toward churn_risk. per_type_observation_rate low (0.15) -- unobserved_intermediate absence."
+    },
+    {
+      "edge_id": "e3",
+      "from": "usage_decline",
+      "to": "churn_risk",
+      "lag_days_mean": 10,
+      "lag_days_std": 3,
+      "strength": 0.7,
+      "source_system": "product_analytics"
+    },
+    {
+      "edge_id": "e4",
+      "from": "nps_decline",
+      "to": "renewal_uncertainty",
+      "lag_days_mean": 44,
+      "lag_days_std": 4,
+      "strength": 0.55,
+      "source_system": "support_desk",
+      "note": "Real edge, lag exceeds admission_lag_window_days (30) -- beyond_lag_window absence."
+    },
+    {
+      "edge_id": "e5",
+      "from": "upsell_opportunity",
+      "to": "expansion_closed",
+      "lag_days_mean": 21,
+      "lag_days_std": 6,
+      "strength": 0.6,
+      "source_system": "crm"
+    },
+    {
+      "edge_id": "e6_a",
+      "from": "L_budget_freeze",
+      "to": "renewal_uncertainty",
+      "lag_days_mean": 8,
+      "lag_days_std": 3,
+      "strength": 0.66,
+      "source_system": "crm",
+      "latent_edge": true
+    },
+    {
+      "edge_id": "e6_b",
+      "from": "L_budget_freeze",
+      "to": "contraction",
+      "lag_days_mean": 25,
+      "lag_days_std": 5,
+      "strength": 0.58,
+      "source_system": "support_desk",
+      "latent_edge": true
+    }
+  ],
+  "template_disagreements": [],
+  "absences": [
+    {
+      "pair": [
+        "champion_loss",
+        "upsell_opportunity"
+      ],
+      "kind": "no_relationship"
+    },
+    {
+      "pair": [
+        "engagement_drop",
+        "churn_risk"
+      ],
+      "kind": "unobserved_intermediate",
+      "hidden_event": "usage_decline",
+      "dropped_by": "per_type_observation_rate"
+    },
+    {
+      "pair": [
+        "renewal_uncertainty",
+        "contraction"
+      ],
+      "kind": "latent_common_cause",
+      "via": "L_budget_freeze"
+    },
+    {
+      "pair": [
+        "nps_decline",
+        "renewal_uncertainty"
+      ],
+      "kind": "beyond_lag_window",
+      "true_lag_days": 44
+    }
+  ],
+  "account_archetypes": [
+    {
+      "archetype_id": "champion_loss_chain",
+      "active_edges": [
+        "e1",
+        "e2",
+        "e3"
+      ],
+      "arr_range": [
+        500000,
+        4000000
+      ],
+      "weight": 3
+    },
+    {
+      "archetype_id": "beyond_lag_window_case",
+      "active_edges": [
+        "e4"
+      ],
+      "arr_range": [
+        400000,
+        2500000
+      ],
+      "weight": 1
+    },
+    {
+      "archetype_id": "expansion_chain",
+      "active_edges": [
+        "e5"
+      ],
+      "arr_range": [
+        800000,
+        5000000
+      ],
+      "weight": 3
+    },
+    {
+      "archetype_id": "latent_budget_case",
+      "active_edges": [
+        "e6_a",
+        "e6_b"
+      ],
+      "arr_range": [
+        600000,
+        3500000
+      ],
+      "weight": 2
+    },
+    {
+      "archetype_id": "no_arc",
+      "active_edges": [],
+      "arr_range": [
+        300000,
+        2000000
+      ],
+      "weight": 2
+    }
+  ],
+  "revenue_model": {
+    "per_account_bound": 1.5,
+    "note": "Same platform-wide bound as the datacenter_v1 worlds (AT-8)."
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "world_id": "saas_premium_world_b",
+  "vertical": "saas_premium",
+  "description": "Contradicts ARC_TEMPLATES on purpose, mirroring datacenter_v1_world_b's structure for saas_premium's (currently generic) vocabulary. ARC_TEMPLATES.silent_churn/exec_sponsor_change assume disengagement is DOWNSTREAM of a relationship-event trigger and route every chain through a decision step before any outcome; this world reverses that direction on one edge and adds a real risk-to-expansion edge no template models.",
+
+  "observed_vocabulary": {
+    "signal_types": ["nps_decline", "engagement_drop", "usage_decline", "upsell_opportunity"],
+    "outcome_types": {
+      "churn_risk": "at_risk",
+      "renewal_uncertainty": "at_risk",
+      "engagement_decline": "at_risk",
+      "contraction": "lost",
+      "expansion_closed": "expansion",
+      "revenue_growth": "expansion"
+    }
+  },
+
+  "latents": ["L_seasonal_budget"],
+
+  "source_systems": ["crm", "product_analytics", "support_desk"],
+
+  "admission_lag_window_days": 30,
+
+  "dag": [
+    {
+      "edge_id": "e1", "from": "usage_decline", "to": "engagement_drop",
+      "lag_days_mean": 8, "lag_days_std": 3, "strength": 0.58,
+      "source_system": "product_analytics",
+      "note": "REVERSED vs ARC_TEMPLATES.silent_churn's assumed direction (engagement decline precedes usage decline). Here reduced usage precedes and drives the engagement drop, not the other way around -- a product-led-decline story, not a relationship-led one."
+    },
+    {
+      "edge_id": "e2", "from": "engagement_drop", "to": "churn_risk",
+      "lag_days_mean": 12, "lag_days_std": 4, "strength": 0.62,
+      "source_system": "crm"
+    },
+    {
+      "edge_id": "e3", "from": "nps_decline", "to": "upsell_opportunity",
+      "lag_days_mean": 18, "lag_days_std": 5, "strength": 0.40,
+      "source_system": "crm",
+      "note": "REAL EDGE NO TEMPLATE CONTAINS. An unhappy customer's team sometimes seeks a different (cheaper/better-fit) package from the same vendor rather than leaving outright -- a dissatisfaction-to-upsell-inquiry link no ARC_TEMPLATES arc models (all templates route dissatisfaction only toward at-risk/lost outcomes)."
+    },
+    {
+      "edge_id": "e4_a", "from": "L_seasonal_budget", "to": "renewal_uncertainty",
+      "lag_days_mean": 10, "lag_days_std": 3, "strength": 0.60,
+      "source_system": "crm", "latent_edge": true
+    },
+    {
+      "edge_id": "e4_b", "from": "L_seasonal_budget", "to": "contraction",
+      "lag_days_mean": 22, "lag_days_std": 5, "strength": 0.55,
+      "source_system": "support_desk", "latent_edge": true
+    }
+  ],
+
+  "template_disagreements": [
+    {
+      "edge": ["engagement_drop", "usage_decline"],
+      "disagreement_type": "reversed",
+      "template": "silent_churn",
+      "template_edge": "engagement decline precedes usage decline (relationship-led disengagement)",
+      "this_world": "usage_decline -> engagement_drop (product-led: reduced usage drives the engagement drop)"
+    },
+    {
+      "edge": ["nps_decline", "upsell_opportunity"],
+      "disagreement_type": "real_edge_no_template_contains",
+      "template": "(none -- no ARC_TEMPLATES arc connects dissatisfaction to an upsell/expansion signal)",
+      "this_world": "nps_decline -> upsell_opportunity, edge_id e3"
+    },
+    {
+      "edge": ["nps_decline", "engagement_drop"],
+      "disagreement_type": "asserted_edge_absent",
+      "template": "silent_churn",
+      "template_edge": "NPS decline treated as part of the same disengagement chain as engagement/usage decline",
+      "this_world": "no edge between these two types in this world's true DAG -- see no_relationship absence below"
+    }
+  ],
+
+  "absences": [
+    { "pair": ["nps_decline", "engagement_drop"], "kind": "no_relationship" },
+    { "pair": ["usage_decline", "churn_risk"], "kind": "unobserved_intermediate",
+      "hidden_event": "engagement_drop", "dropped_by": "per_type_observation_rate" },
+    { "pair": ["renewal_uncertainty", "contraction"], "kind": "latent_common_cause", "via": "L_seasonal_budget" },
+    { "pair": ["nps_decline", "upsell_opportunity"], "kind": "beyond_lag_window", "true_lag_days": 18,
+      "note": "Real and admitted at this world's window (30d) -- boundary-case control, mirrors world_b's own note. See eval_profile/event_engine.py for the actual admission check." }
+  ],
+
+  "account_archetypes": [
+    {
+      "archetype_id": "product_led_decline_chain",
+      "active_edges": ["e1", "e2"],
+      "arr_range": [500000, 3500000],
+      "weight": 3
+    },
+    {
+      "archetype_id": "dissatisfaction_to_upsell_chain",
+      "active_edges": ["e3"],
+      "arr_range": [600000, 4500000],
+      "weight": 2
+    },
+    {
+      "archetype_id": "latent_seasonal_case",
+      "active_edges": ["e4_a", "e4_b"],
+      "arr_range": [500000, 3000000],
+      "weight": 2
+    },
+    {
+      "archetype_id": "no_arc",
+      "active_edges": [],
+      "arr_range": [300000, 2000000],
+      "weight": 2
+    }
+  ],
+
+  "revenue_model": {
+    "per_account_bound": 1.5,
+    "note": "Same platform-wide bound (AT-8)."
+  }
+}

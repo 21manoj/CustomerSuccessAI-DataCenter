@@ -1,0 +1,218 @@
+{
+  "world_id": "datacenter_v1_world_b",
+  "vertical": "datacenter_v1",
+  "description": "Contradicts ARC_TEMPLATES on purpose (see template_disagreements). Every ARC_TEMPLATES arc (crisis_recovery, exec_sponsor_change, competitive_displacement, ...) assumes a relationship-event-precedes-disengagement direction and routes every signal chain through a decision/intervention step before any outcome. This world reverses the first assumption on one edge, omits an edge a technical-escalation-style template prior would expect, and adds a real edge no template contains at all. AT-1 requires: discovery run against this world's output must recover THIS world's schema, not the templates'.",
+  "observed_vocabulary": {
+    "signal_types": [
+      "champion_change",
+      "engagement_gap",
+      "expansion_review_cancelled"
+    ],
+    "outcome_types": {
+      "commitment_ramp_miss": "at_risk",
+      "throughput_below_spec": "at_risk",
+      "interconnect_bottleneck": "at_risk",
+      "reliability_sla_breach": "at_risk",
+      "runway_risk": "at_risk",
+      "payment_delinquency": "at_risk",
+      "thermal_event": "at_risk",
+      "reservation_expansion_interest": "expansion"
+    }
+  },
+  "latents": [
+    "L_budget_cycle"
+  ],
+  "source_systems": [
+    "crm",
+    "product_telemetry",
+    "support_ticketing"
+  ],
+  "admission_lag_window_days": 30,
+  "dag": [
+    {
+      "edge_id": "e1",
+      "from": "engagement_gap",
+      "to": "champion_change",
+      "lag_days_mean": 11,
+      "lag_days_std": 3,
+      "strength": 0.6,
+      "source_system": "crm",
+      "note": "REVERSED vs ARC_TEMPLATES.exec_sponsor_change (which asserts champion_change -> engagement_gap, i.e. departure causes the gap). Here disengagement precedes and causes the departure, not the other way around."
+    },
+    {
+      "edge_id": "e2",
+      "from": "champion_change",
+      "to": "runway_risk",
+      "lag_days_mean": 14,
+      "lag_days_std": 4,
+      "strength": 0.55,
+      "source_system": "crm"
+    },
+    {
+      "edge_id": "e3",
+      "from": "thermal_event",
+      "to": "reservation_expansion_interest",
+      "lag_days_mean": 20,
+      "lag_days_std": 5,
+      "strength": 0.45,
+      "source_system": "product_telemetry",
+      "note": "REAL EDGE NO TEMPLATE CONTAINS. Every ARC_TEMPLATES arc only connects a risk-signal chain to at_risk/protected outcomes, never to an expansion outcome. Here a thermal/power constraint drives a real expansion interest (racing to lock in priority allocation before a capacity crunch) -- a risk-to-expansion link no template models at all."
+    },
+    {
+      "edge_id": "e4",
+      "from": "expansion_review_cancelled",
+      "to": "commitment_ramp_miss",
+      "lag_days_mean": 7,
+      "lag_days_std": 2,
+      "strength": 0.7,
+      "source_system": "product_telemetry"
+    },
+    {
+      "edge_id": "e5_a",
+      "from": "L_budget_cycle",
+      "to": "payment_delinquency",
+      "lag_days_mean": 12,
+      "lag_days_std": 3,
+      "strength": 0.65,
+      "source_system": "support_ticketing",
+      "latent_edge": true
+    },
+    {
+      "edge_id": "e5_b",
+      "from": "L_budget_cycle",
+      "to": "commitment_ramp_miss",
+      "lag_days_mean": 18,
+      "lag_days_std": 4,
+      "strength": 0.6,
+      "source_system": "product_telemetry",
+      "latent_edge": true
+    }
+  ],
+  "template_disagreements": [
+    {
+      "edge": [
+        "champion_change",
+        "engagement_gap"
+      ],
+      "disagreement_type": "reversed",
+      "template": "exec_sponsor_change",
+      "template_edge": "signal:2 -> signal:3 (champion departure led to engagement gap)",
+      "this_world": "engagement_gap -> champion_change (disengagement caused the departure)"
+    },
+    {
+      "edge": [
+        "interconnect_bottleneck",
+        "reliability_sla_breach"
+      ],
+      "disagreement_type": "asserted_edge_absent",
+      "template": "crisis_recovery",
+      "template_edge": "signal:3 -> signal:4 (technical signal escalates to critical incident)",
+      "this_world": "no edge between these two types at all in this world's true DAG -- see no_relationship absence below"
+    },
+    {
+      "edge": [
+        "thermal_event",
+        "reservation_expansion_interest"
+      ],
+      "disagreement_type": "real_edge_no_template_contains",
+      "template": "(none -- no ARC_TEMPLATES arc connects a risk-chain signal to an expansion outcome)",
+      "this_world": "thermal_event -> reservation_expansion_interest, edge_id e3"
+    }
+  ],
+  "absences": [
+    {
+      "pair": [
+        "interconnect_bottleneck",
+        "reliability_sla_breach"
+      ],
+      "kind": "no_relationship"
+    },
+    {
+      "pair": [
+        "champion_change",
+        "commitment_ramp_miss"
+      ],
+      "kind": "unobserved_intermediate",
+      "hidden_event": "expansion_review_cancelled",
+      "dropped_by": "per_type_observation_rate"
+    },
+    {
+      "pair": [
+        "payment_delinquency",
+        "commitment_ramp_miss"
+      ],
+      "kind": "latent_common_cause",
+      "via": "L_budget_cycle"
+    },
+    {
+      "pair": [
+        "thermal_event",
+        "reservation_expansion_interest"
+      ],
+      "kind": "beyond_lag_window",
+      "true_lag_days": 20,
+      "note": "Real and admitted at this world's window (30d) -- included as a control that this pair is NOT beyond-lag here, contrast with world_a's genuinely-excluded case. See eval_profile/event_engine.py: only pairs whose true_lag exceeds admission_lag_window_days are actually scored as beyond_lag_window; this entry documents the boundary case."
+    }
+  ],
+  "account_archetypes": [
+    {
+      "archetype_id": "reversed_relationship_chain",
+      "active_edges": [
+        "e1",
+        "e2"
+      ],
+      "arr_range": [
+        2000000,
+        8000000
+      ],
+      "weight": 3
+    },
+    {
+      "archetype_id": "risk_to_expansion_chain",
+      "active_edges": [
+        "e3"
+      ],
+      "arr_range": [
+        3000000,
+        9000000
+      ],
+      "weight": 2
+    },
+    {
+      "archetype_id": "unobserved_intermediate_case",
+      "active_edges": [
+        "e4"
+      ],
+      "arr_range": [
+        1500000,
+        6000000
+      ],
+      "weight": 2
+    },
+    {
+      "archetype_id": "latent_budget_case",
+      "active_edges": [
+        "e5_a",
+        "e5_b"
+      ],
+      "arr_range": [
+        2500000,
+        7000000
+      ],
+      "weight": 2
+    },
+    {
+      "archetype_id": "no_arc",
+      "active_edges": [],
+      "arr_range": [
+        1000000,
+        5000000
+      ],
+      "weight": 2
+    }
+  ],
+  "revenue_model": {
+    "per_account_bound": 1.5,
+    "note": "Same bound as world_a -- the platform invariant (AT-8), not a per-world choice."
+  }
+}
