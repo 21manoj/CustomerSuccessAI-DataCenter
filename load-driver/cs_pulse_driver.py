@@ -407,9 +407,113 @@ def run_eval_profile(args):
         logger.error("  AT-8 VIOLATED — revenue bound exceeded, this should be unreachable")
         sys.exit(1)
     logger.info(f"{'='*60}")
-    if not args.generate_only:
-        logger.info("  (--generate-only not passed; eval-profile CSV upload to a live "
-                     "customer is not wired up yet — CSVs + ground_truth.json written to disk only)")
+
+    if not args.register:
+        logger.info("  (--register not passed; CSVs + ground_truth.json written to disk only — "
+                     "pass --register to create a live customer and upload through the real "
+                     "onboarding pipeline, exercising Tier1/Wizard A against this ground truth)")
+        return
+
+    # ── Live upload: register + upload the SAME 4 CSVs generate_eval_tenant
+    # just wrote, through the real onboarding pipeline. Deliberately mirrors
+    # run_manifest()'s online-mode flow (registration, complete_onboarding,
+    # upload_csv, process_data) rather than reusing ScenarioManifest, which
+    # would pull scenarios/scenario_manifest.py into an eval-profile code
+    # path — the same independence the generator itself keeps.
+    base_url = args.base_url
+    password = args.password or os.getenv('CS_PULSE_ADMIN_PASSWORD', 'test123')
+    email = args.email or os.getenv('CS_PULSE_ADMIN_EMAIL', 'admin@sacme.com')
+    vertical = args.world_id.split('_world_')[0]  # e.g. datacenter_v1_world_a -> datacenter_v1
+    company_name = f"Eval Profile {args.world_id} seed{args.seed}"
+
+    logger.info(f"  Server:    {base_url}")
+    logger.info("\n  Registering new customer...")
+    reg_client = CSPulseClient(base_url=base_url, timeout=30)
+    resp = reg_client.register_customer(
+        company_name=company_name,
+        admin_name='Eval Admin',
+        email=email,
+        password=password,
+        vertical=vertical,
+    )
+    if not (resp and resp.get('customer_id')):
+        logger.error(f"  Registration failed: {resp}")
+        sys.exit(1)
+    customer_id = int(resp['customer_id'])
+    api_key = resp.get('api_key', '')
+    logger.info(f"  Registered: customer_id={customer_id}")
+    if api_key:
+        logger.info(f"  API Key: {api_key}")
+        logger.info("  ⚠️  Save this key — it is returned ONCE and required for MCP access.")
+
+    reg_client.email = email
+    reg_client.password = password
+    reg_client.customer_id = customer_id
+    if not reg_client.login():
+        logger.warning("  Post-registration login failed — trying onboarding without session")
+
+    logger.info(f"  Provisioning onboarding (POST /api/onboarding/complete, num_accounts=0)...")
+    complete = reg_client.complete_onboarding(
+        customer_id=customer_id,
+        customer_name=company_name,
+        vertical=vertical,
+        num_accounts=0,  # accounts come from account_details.csv, not placeholders
+        onboarding_mode='custom',
+    )
+    if not complete or not complete.get('success'):
+        logger.error(f"  Onboarding complete failed (needed before CSV upload): {complete}")
+        sys.exit(1)
+    logger.info(f"  Onboarding provisioned: {complete.get('message', 'ok')!r}")
+
+    client = CSPulseClient(
+        base_url=base_url, email=email, password=password,
+        api_key=api_key or None, customer_id=customer_id, timeout=60,
+    )
+    if not client.health_check():
+        logger.error(f"  Server not reachable: {base_url}")
+        sys.exit(1)
+
+    # SAME 4-CSV canonical shape the "no_11_csv" onboarding pattern calls
+    # for (no decisions.csv, no signal_edges.csv) — this lets Tier1 LLM
+    # inference fire server-side on the real pipeline, which is the entire
+    # point: score what the LIVE platform infers against ground_truth.json,
+    # not what this generator already knows to be true.
+    upload_map = [
+        ('account_details', 'account_details.csv'),
+        ('kpi_measurements', 'kpi_measurements.csv'),
+        ('enhanced_signals', 'qualitative_signals.csv'),
+        ('outcomes', 'outcomes.csv'),
+    ]
+    logger.info("  Step: upload CSVs")
+    out_path = Path(out_dir)
+    upload_results = {}
+    for file_type, filename in upload_map:
+        csv_content = (out_path / filename).read_text()
+        resp = client.upload_csv(
+            customer_id=customer_id, file_type=file_type,
+            csv_content=csv_content, filename=filename,
+        )
+        ok = bool(resp and resp.get('status') == 'success')
+        upload_results[file_type] = 'success' if ok else f'failed: {str(resp)[:80]}'
+        logger.info(f"    {file_type}: {'uploaded' if ok else upload_results[file_type]}")
+    if not any(v == 'success' for v in upload_results.values()):
+        logger.error("  All CSV uploads failed")
+        sys.exit(1)
+
+    logger.info("  Step: process-data")
+    process_resp = client.process_data(
+        customer_id=customer_id, vertical=vertical,
+        skip_wizard_b=True, skip_wizard_c=False, strict_kpi_ranges=False,
+    )
+    if not (process_resp and process_resp.get('status') in ('success', 'warning')):
+        logger.error(f"  process-data failed: {str(process_resp)[:200]}")
+        sys.exit(1)
+    logger.info(f"  process-data: {process_resp.get('status')}")
+
+    logger.info(f"{'='*60}")
+    logger.info(f"  LIVE eval-profile tenant ready: customer_id={customer_id}")
+    logger.info(f"  ground_truth.json: {out_path / 'ground_truth.json'}")
+    logger.info(f"{'='*60}")
 
 
 # ═══════════════════════════════════════════════════════════════════════

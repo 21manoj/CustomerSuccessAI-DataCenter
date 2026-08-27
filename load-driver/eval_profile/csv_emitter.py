@@ -62,29 +62,55 @@ def _account_id(idx: int) -> int:
     return 1001 + idx
 
 
+_ACCOUNT_DETAILS_COLUMNS = [
+    'source_account_id', 'customer_id', 'account_name', 'industry', 'region',
+    'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
+    'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid',
+    'csm_manager', 'executive_sponsor',
+    'primary_champion_name', 'primary_champion_title',
+    'primary_champion_email', 'primary_champion_engagement_score',
+    'products', 'product_count', 'stakeholder_count',
+    'employee_count', 'founded_year', 'headquarters', 'website', 'description',
+]
+
+
 def emit_account_details_csv(world: dict, accounts: list, customer_name: str) -> str:
+    """Column values are built as a {column_name: value} dict and read back
+    through _ACCOUNT_DETAILS_COLUMNS — a positional list here previously
+    drifted by one (an extra blank pushed product_count's slot to receive
+    the string '[]' meant for 'products', and shifted every int-typed field
+    after it into blanks pandas reads as NaN server-side: 'cannot convert
+    float NaN to integer' on /api/onboarding/process-data, caught live on
+    customer_id=404, 2026-08-27). Int-typed columns get 0, never '', to
+    close off that whole failure class rather than just this one instance."""
     out = io.StringIO()
     w = csv.writer(out)
-    w.writerow([
-        'source_account_id', 'customer_id', 'account_name', 'industry', 'region',
-        'vertical', 'tier', 'arr', 'revenue', 'contract_start', 'contract_end',
-        'renewal_date', 'csm_name', 'csm_email', 'account_status', 'uuid',
-        'csm_manager', 'executive_sponsor',
-        'primary_champion_name', 'primary_champion_title',
-        'primary_champion_email', 'primary_champion_engagement_score',
-        'products', 'product_count', 'stakeholder_count',
-        'employee_count', 'founded_year', 'headquarters', 'website', 'description',
-    ])
+    w.writerow(_ACCOUNT_DETAILS_COLUMNS)
     for a in accounts:
         aid = _account_id(a.account_idx)
-        w.writerow([
-            aid, '', f'{customer_name} Account {aid}', 'Technology', 'North America',
-            world['vertical'], 'Enterprise' if a.arr >= 5_000_000 else 'Mid-Market',
-            round(a.arr), round(a.arr), '2025-01-01', '2026-01-01', '2026-01-01',
-            'Eval CSM', 'eval-csm@example.com', 'active', '',
-            'Eval Manager', '', '', '', '', '', '',
-            '[]', 0, 0, '', '', '', '', f'Eval-profile account, archetype={a.archetype_id}',
-        ])
+        row = {
+            'source_account_id': aid, 'customer_id': '',
+            'account_name': f'{customer_name} Account {aid}',
+            'industry': 'Technology', 'region': 'North America',
+            'vertical': world['vertical'],
+            'tier': 'Enterprise' if a.arr >= 5_000_000 else 'Mid-Market',
+            'arr': round(a.arr), 'revenue': round(a.arr),
+            'contract_start': '2025-01-01', 'contract_end': '2026-01-01',
+            'renewal_date': '2026-01-01',
+            'csm_name': 'Eval CSM', 'csm_email': 'eval-csm@example.com',
+            'account_status': 'active', 'uuid': '',
+            'csm_manager': 'Eval Manager', 'executive_sponsor': '',
+            'primary_champion_name': '', 'primary_champion_title': '',
+            'primary_champion_email': '', 'primary_champion_engagement_score': '',
+            'products': '[]', 'product_count': 0, 'stakeholder_count': 0,
+            'employee_count': 0, 'founded_year': 0,
+            'headquarters': '', 'website': '',
+            'description': f'Eval-profile account, archetype={a.archetype_id}',
+        }
+        assert set(row.keys()) == set(_ACCOUNT_DETAILS_COLUMNS), (
+            set(row.keys()) ^ set(_ACCOUNT_DETAILS_COLUMNS)
+        )
+        w.writerow([row[col] for col in _ACCOUNT_DETAILS_COLUMNS])
     return out.getvalue()
 
 

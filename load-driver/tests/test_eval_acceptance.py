@@ -11,6 +11,8 @@ tests/test_admission_ratchet.py). See fix-load-generator-prompt-v2.md's own
 Skipping with a clear reason, pointing at the real dependency, is the honest
 version of "generator's output side is ready; the consuming side isn't built."
 """
+import csv
+import io
 import sys
 from pathlib import Path
 
@@ -24,6 +26,52 @@ if str(EVAL_PROFILE) not in sys.path:
 import world_schema  # noqa: E402
 import generate as eval_generate  # noqa: E402
 import score_run  # noqa: E402
+import csv_emitter  # noqa: E402
+
+
+class TestCSVColumnAlignment:
+    """Guard against the class of bug caught live on EC2 customer_id=404
+    (2026-08-27): emit_account_details_csv's row values silently drifted by
+    one position (an extra blank string), so product_count received the
+    string '[]' meant for 'products' and every int-typed column after it got
+    shifted into blanks — pandas reads those as NaN, and
+    /api/onboarding/process-data crashed with 'cannot convert float NaN to
+    integer'. Every emitted CSV's every row must have exactly as many values
+    as its header, and no field name containing '_count'/'_score' (this
+    generator's only genuinely int-typed columns) may hold a non-numeric
+    string like '[]' or ''."""
+
+    def test_account_details_row_length_matches_header(self):
+        import world_schema as ws
+        world = ws.load_world('datacenter_v1_world_a')
+        import event_engine
+        from datetime import datetime
+        accounts = event_engine.generate_accounts(world, 1, 5, datetime(2025, 1, 1))
+        csv_text = csv_emitter.emit_account_details_csv(world, accounts, 'Test')
+        rows = list(csv.reader(io.StringIO(csv_text)))
+        header = rows[0]
+        for row in rows[1:]:
+            assert len(row) == len(header), (
+                f"row has {len(row)} values, header has {len(header)}: {dict(zip(header, row))}"
+            )
+
+    def test_no_count_or_score_column_holds_a_bracketed_string(self):
+        import world_schema as ws
+        world = ws.load_world('datacenter_v1_world_a')
+        import event_engine
+        from datetime import datetime
+        accounts = event_engine.generate_accounts(world, 1, 5, datetime(2025, 1, 1))
+        csv_text = csv_emitter.emit_account_details_csv(world, accounts, 'Test')
+        rows = list(csv.DictReader(io.StringIO(csv_text)))
+        int_like_cols = [c for c in rows[0].keys() if '_count' in c or '_score' in c]
+        assert int_like_cols, "expected at least one _count/_score column to check"
+        for row in rows:
+            for col in int_like_cols:
+                val = row[col]
+                assert val == '' or val.lstrip('-').isdigit(), (
+                    f"{col}={val!r} is not blank or a plain integer — "
+                    f"likely a column-alignment drift (see class docstring)"
+                )
 
 
 @pytest.fixture(scope='module')
