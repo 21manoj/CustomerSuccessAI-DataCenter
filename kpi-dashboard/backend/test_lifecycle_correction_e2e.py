@@ -69,10 +69,10 @@ PILLAR_CODES = ['P3', 'P4', 'P1', 'P5', 'P2']
 
 # Pillar weights loaded from canonical source (must sum to 1.0)
 try:
-    from verticals.dc2_s.kpi_definitions import DC2S_PILLARS
+    from utils.vertical_registry import get_pillars
     PILLAR_WEIGHTS = {
         pid: info.get('weight_l2', 0.20)
-        for pid, info in DC2S_PILLARS.items()
+        for pid, info in get_pillars('dc2_s').items()
     }
 except ImportError:
     PILLAR_WEIGHTS = {'P3': 0.25, 'P4': 0.15, 'P1': 0.15, 'P5': 0.25, 'P2': 0.20}
