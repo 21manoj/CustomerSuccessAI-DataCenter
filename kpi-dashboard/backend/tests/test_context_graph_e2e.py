@@ -92,8 +92,8 @@ def main():
     log("\n--- Step 1: Create Customer (10 accounts, 15 KPIs) ---")
 
     # First, pick 15 KPIs from catalog
-    from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-    all_kpi_codes = list(DC2S_KPIS.keys())
+    from utils.vertical_registry import get_kpis
+    all_kpi_codes = list(get_kpis('dc2_s').keys())
     selected_kpis = all_kpi_codes[:NUM_KPIS]
     log(f"  Selected {len(selected_kpis)} KPIs: {selected_kpis}")
 
