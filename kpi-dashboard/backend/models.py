@@ -904,8 +904,16 @@ class QueryAudit(db.Model):
     ip_address = db.Column(db.String(45))  # IPv4 or IPv6
     user_agent = db.Column(db.String(500))
     
-    # Relationships
-    customer = db.relationship('Customer', backref='query_audits')
+    # Relationships. customer_id is NOT NULL, and the tenant-cascade-FK
+    # migration (migrations/add_tenant_cascade_fks.py) adds an ON DELETE
+    # CASCADE at the DB level to every table it discovers with a customer_id
+    # column, including this one. Same bug/fix as ActivityLog.customer_rel —
+    # passive_deletes=True is needed on BOTH sides (db.backref(...), not a
+    # plain string) or session.delete(customer) crashes nullifying this FK.
+    customer = db.relationship(
+        'Customer', backref=db.backref('query_audits', passive_deletes=True),
+        passive_deletes=True,
+    )
     user = db.relationship('User', backref='query_audits')
 
 class ActivityLog(db.Model):
@@ -943,8 +951,26 @@ class ActivityLog(db.Model):
     # Timestamp
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False, index=True)
     
-    # Relationships
-    customer_rel = db.relationship('Customer', backref='activity_logs')
+    # Relationships. customer_id is NOT NULL with an ON DELETE CASCADE FK
+    # (DB-level, correct) — without passive_deletes=True on BOTH sides,
+    # SQLAlchemy's default session.delete(customer) tries to nullify child
+    # rows itself before the DB cascade ever runs, crashing on the NOT NULL
+    # constraint (IntegrityError, live 2026-08-27: "null value in column
+    # customer_id ... violates not-null constraint" — worked around with raw
+    # SQL DELETE FROM customers every time this session instead of fixing
+    # the actual mismatch). Setting passive_deletes=True only on THIS side
+    # (customer_rel) was not sufficient and still crashed on retest — a
+    # plain string backref='activity_logs' auto-creates a SEPARATE mirrored
+    # relationship (Customer.activity_logs) with its own default config, and
+    # session.delete(customer) walks cascades from the Customer side, i.e.
+    # through that auto-created backref, not through customer_rel. Passing
+    # db.backref('activity_logs', passive_deletes=True) sets the flag on
+    # BOTH the forward relationship and its mirror. user_rel's FK is
+    # nullable (ON DELETE SET NULL) so it doesn't need this.
+    customer_rel = db.relationship(
+        'Customer', backref=db.backref('activity_logs', passive_deletes=True),
+        passive_deletes=True,
+    )
     user_rel = db.relationship('User', backref='activity_logs')
     
     # Property aliases for backward compatibility
@@ -997,8 +1023,14 @@ class CustomerWorkflowConfig(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=False)
     
-    # Relationships
-    customer_rel = db.relationship('Customer', backref='workflow_config')
+    # Relationships. Same bug/fix as ActivityLog.customer_rel above —
+    # passive_deletes=True is needed on BOTH sides (db.backref(...), not a
+    # plain string) or session.delete(customer) still crashes on this NOT
+    # NULL, ON DELETE CASCADE customer_id.
+    customer_rel = db.relationship(
+        'Customer', backref=db.backref('workflow_config', passive_deletes=True),
+        passive_deletes=True,
+    )
     
     # Unique constraint: one config per customer
     __table_args__ = (

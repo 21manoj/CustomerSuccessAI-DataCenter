@@ -79,6 +79,71 @@ def test_non_postgres_is_a_noop():
     )
 
 
+def test_customer_relationships_use_passive_deletes():
+    """The DB-level ON DELETE CASCADE this migration adds is only half the
+    fix — SQLAlchemy's ORM-level session.delete(customer) has its own,
+    independent cascade behavior for any relationship() it manages, and by
+    default (no passive_deletes) it tries to NULL each child's FK itself
+    before the DB cascade ever runs. For a NOT NULL FK (activity_logs,
+    query_audits, customer_workflow_configs all are), that crashes with
+    IntegrityError — worked around with raw SQL DELETE every time this
+    session instead of fixing the actual mismatch (2026-08-27).
+
+    Setting passive_deletes=True only on the child->Customer side is NOT
+    enough and still crashed on live retest: a plain string
+    backref='activity_logs' auto-creates a SEPARATE mirrored relationship
+    (Customer.activity_logs) with its own default config, and
+    session.delete(customer) walks cascades from the Customer side — i.e.
+    through that auto-created mirror, not through the side passive_deletes
+    was set on. The fix needs db.backref('activity_logs',
+    passive_deletes=True), which sets the flag on BOTH sides. This test
+    checks both: the outer relationship() call AND, if backref= is present,
+    that it's a db.backref(...) call (not a bare string) carrying its own
+    passive_deletes=True.
+
+    Every db.relationship('Customer', ...) in models.py must pass this. New
+    ones must too, or they silently reintroduce the same crash."""
+    src = (BACKEND / "models.py").read_text()
+    tree = ast.parse(src)
+    missing = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == 'relationship'):
+            continue
+        args_str = [a.value for a in node.args if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+        if 'Customer' not in args_str:
+            continue
+
+        kw_by_name = {kw.arg: kw.value for kw in node.keywords}
+        problems = []
+        if 'passive_deletes' not in kw_by_name:
+            problems.append('outer relationship() missing passive_deletes=True')
+
+        backref_val = kw_by_name.get('backref')
+        if backref_val is None:
+            pass  # no backref at all — nothing on the Customer side to check
+        elif isinstance(backref_val, ast.Constant):
+            problems.append(
+                f"backref={backref_val.value!r} is a plain string — must be "
+                f"db.backref({backref_val.value!r}, passive_deletes=True) or "
+                f"the auto-created Customer-side mirror won't get the flag"
+            )
+        elif isinstance(backref_val, ast.Call):
+            backref_kw_names = {kw.arg for kw in backref_val.keywords}
+            if 'passive_deletes' not in backref_kw_names:
+                problems.append('db.backref(...) call missing passive_deletes=True')
+
+        if problems:
+            missing.append((node.lineno, problems))
+
+    assert not missing, (
+        f"db.relationship('Customer', ...) not fully passive_deletes-safe "
+        f"(line, problems): {missing}"
+    )
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])
