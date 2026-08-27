@@ -268,8 +268,25 @@ def get_playbook_config(vertical: str):
     if vertical == 'dc2_s':
         from verticals.dc2_s.vertical_config import PLAYBOOK_CONFIG, should_trigger_playbook
         return PLAYBOOK_CONFIG, should_trigger_playbook
+    if vertical == 'datacenter_v1':
+        # datacenter_v1/vertical_config.py defines PLAYBOOK_CONFIG (PB-01
+        # etc.) but has no should_trigger_playbook of its own yet — fall
+        # back to a no-op trigger rather than fail the whole lookup (Aug 27
+        # 2026, found live on customer 408: playbook-close was resolving
+        # this correctly-named vertical, then silently getting {} back and
+        # reporting 0 CSM hours for every execution).
+        try:
+            from verticals.datacenter_v1.vertical_config import PLAYBOOK_CONFIG
+        except ImportError:
+            return {}, lambda *a, **kw: False
+        try:
+            from verticals.datacenter_v1.vertical_config import should_trigger_playbook
+        except ImportError:
+            should_trigger_playbook = lambda *a, **kw: False
+        return PLAYBOOK_CONFIG, should_trigger_playbook
     # No generic playbook-config equivalent exists yet for other
-    # verticals (e.g. datacenter_v1) — return a safe no-op rather than
+    # verticals (e.g. healthcare_provider, manufacturing_iot — no
+    # vertical_config.py at all yet) — return a safe no-op rather than
     # crashing onboarding or silently borrowing dc2_s's playbooks.
     return {}, lambda *a, **kw: False
 

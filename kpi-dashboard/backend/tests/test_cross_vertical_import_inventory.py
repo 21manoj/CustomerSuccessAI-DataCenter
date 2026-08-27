@@ -463,11 +463,24 @@ def _scan_violations():
 # sync by design); and (d) debug_import.py, a throwaway diagnostic script
 # whose entire purpose is proving the raw `verticals.dc2_s` import path
 # resolves — genericizing it would defeat its diagnostic purpose.
-# Net: 67 - 22 = 45 sites across 21 files.
+# Net: 67 - 22 = 45 sites across 21 files, + 4 new deliberate datacenter_v1
+# entries added Aug 27 2026 (fix for the empty-PLAYBOOK_CONFIG bug found
+# live on customer 408) = 49.
 # ──────────────────────────────────────────────────────────────────────────
 BASELINE = {
     ('_ask_ai_helpers.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('_ask_ai_helpers.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
+    # datacenter_v1 coverage added Aug 27 2026 (found live on customer 408:
+    # playbook-close resolved the vertical correctly, then silently got {}
+    # back and reported 0 CSM hours). Explicitly gated, same pattern as the
+    # dc2_s/saas_premium entries above — not the "silently defaults to one
+    # vertical" bug class this ratchet exists to catch. Split into two
+    # separate try/except imports (not one combined tuple like the entries
+    # above) because datacenter_v1/vertical_config.py has PLAYBOOK_CONFIG but
+    # no should_trigger_playbook yet; a combined import would raise on the
+    # missing name and lose the PLAYBOOK_CONFIG data that does exist.
+    ('_ask_ai_helpers.py', 'verticals.datacenter_v1.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
+    ('_ask_ai_helpers.py', 'verticals.datacenter_v1.vertical_config', ('should_trigger_playbook',)): 1,
     ('api_v1_generic_handlers.py', 'verticals.dc2_s.api_routes', ('calculate_kpi_health', 'get_weights_for_customer', 'get_precalculated_scores', '_get_trailing_kpi_values', '_filter_user_accounts', '_sync_journey_phase')): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_csm_daily_actions',)): 1,
     ('api_v1_routes.py', 'verticals.dc2_s.api_routes', ('get_dc2s_account_detail',)): 1,
@@ -491,6 +504,12 @@ BASELINE = {
     ('debug_import.py', 'verticals.dc2_s', ('DC2S_KPIS',)): 1,
     ('mcp_server/common.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
     ('mcp_server/common.py', 'verticals.saas_premium.vertical_config', ('PLAYBOOK_CONFIG', 'should_trigger_playbook')): 1,
+    # datacenter_v1 coverage added Aug 27 2026 — same fix and same reasoning
+    # as the _ask_ai_helpers.py entries above (this is the canonical
+    # implementation; _ask_ai_helpers.py mirrors it inline for its own
+    # no-fastmcp-dependency constraint).
+    ('mcp_server/common.py', 'verticals.datacenter_v1.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
+    ('mcp_server/common.py', 'verticals.datacenter_v1.vertical_config', ('should_trigger_playbook',)): 1,
     ('mcp_server/cs_pulse_admin.py', 'verticals.dc2_s.api_routes', ('_compute_impact_score', '_compute_effort_score', '_determine_urgency')): 1,
     ('mcp_server/cs_pulse_admin.py', 'verticals.dc2_s.api_routes', ('_get_roi_context',)): 1,
     ('playbook_cost_bridge.py', 'verticals.dc2_s.vertical_config', ('PLAYBOOK_CONFIG',)): 1,
@@ -550,7 +569,7 @@ BASELINE = {
     ('utils/vpcs_dashboard_helpers.py', 'verticals.dc2_s.api_routes', ('get_precalculated_scores',)): 1,
 }
 
-assert sum(BASELINE.values()) == 45, (
+assert sum(BASELINE.values()) == 49, (
     "BASELINE literal was hand-edited inconsistently with its own comment "
     "— fix the count or the entries."
 )
