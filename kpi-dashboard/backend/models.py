@@ -862,6 +862,18 @@ class ContextEdge(db.Model):
     # Lifecycle
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
+    # WS-2 2g — supersession. NULL (the default, no backfill) means "this
+    # edge is live." A non-NULL value is the edge_id of the edge that
+    # superseded it — set by utils.supersession.apply_supersession(), called
+    # from upsert_edge() as a new edge is written on the same
+    # (from_node_id, to_node_id, edge_type) triple. Plain typed column, no FK
+    # constraint (matches how Customer.data_origin was added — see
+    # migrations/add_data_origin_to_customers.py): every edge-reading
+    # function's hot-path predicate is `WHERE superseded_by IS NULL`, which
+    # needs to be indexable, so this is a real column rather than a
+    # properties-JSON key. Forward-only: no backfill of existing rows.
+    superseded_by = db.Column(db.Integer, nullable=True)
+
     # Relationships
     from_node = db.relationship('ContextNode', foreign_keys=[from_node_id], backref='outgoing_edges')
     to_node = db.relationship('ContextNode', foreign_keys=[to_node_id], backref='incoming_edges')
@@ -871,6 +883,7 @@ class ContextEdge(db.Model):
         db.Index('idx_ctx_edge_to', 'to_node_id', 'edge_type'),
         db.Index('idx_ctx_edge_type', 'edge_type'),
         db.Index('idx_ctx_edge_pair', 'from_node_id', 'to_node_id', 'edge_type'),
+        db.Index('idx_ctx_edge_superseded_by', 'superseded_by'),
     )
 
     def to_dict(self):
@@ -887,6 +900,7 @@ class ContextEdge(db.Model):
             'source_platform': self.source_platform,
             'created_by': self.created_by,
             'occurred_at': self.occurred_at.isoformat() if self.occurred_at else None,
+            'superseded_by': self.superseded_by,
         }
 
 

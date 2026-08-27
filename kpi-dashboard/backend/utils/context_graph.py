@@ -244,6 +244,12 @@ def get_causal_chain(
                 filters = [
                     ContextEdge.to_node_id == nid,
                     ContextEdge.edge_type.in_(CAUSAL_EDGE_TYPES),
+                    # WS-2 2g — drop superseded edges (F2): without this, a
+                    # duplicate/contradictory edge on the same triple
+                    # (e.g. a stale wizard_a inference a later observed
+                    # edge superseded) returns its node a second time and
+                    # any consumer aggregating over the chain double-counts.
+                    ContextEdge.superseded_by.is_(None),
                 ]
                 if customer_id is not None:
                     filters.append(ContextEdge.customer_id == customer_id)
@@ -265,6 +271,9 @@ def get_causal_chain(
                 filters = [
                     ContextEdge.from_node_id == nid,
                     ContextEdge.edge_type.in_(CAUSAL_EDGE_TYPES),
+                    # WS-2 2g — see the mirrored comment in the 'upstream'
+                    # branch above.
+                    ContextEdge.superseded_by.is_(None),
                 ]
                 if customer_id is not None:
                     filters.append(ContextEdge.customer_id == customer_id)
@@ -1212,4 +1221,31 @@ def upsert_edge(
     )
     db.session.add(edge)
     db.session.flush()
+
+    # WS-2 2g — supersession. This is a THIRD kind of write-time behavior,
+    # distinct from both the I1/I2/I4 pre-commit gate above (which REJECTS
+    # the incoming write) and the dedup match above it (which UPDATES the
+    # incoming write's OWN matching row). Supersession instead MUTATES A
+    # DIFFERENT, EXISTING row — setting its superseded_by to this new
+    # edge's id — as a side effect of this new edge being created. It
+    # deliberately does NOT match on source_platform the way dedup does
+    # above: dedup lets different writers (wizard_a, llm_enrichment,
+    # csv_import, ...) coexist as separate rows on purpose; supersession is
+    # the second, looser matching semantic that decides, once a tier
+    # ordering exists between those rows, that one of them should stop
+    # being live. See utils/supersession.py for the full tier-ordering /
+    # writer-priority rule this applies. Never runs on the dedup
+    # update-in-place branch above — there is no "different, existing" row
+    # to compare against in that case, since the write updates its own row.
+    try:
+        from utils.supersession import apply_supersession
+        apply_supersession(edge)
+    except Exception:
+        logger.exception(
+            '[supersession] failed to apply supersession for new edge %s '
+            '(from_node=%s to_node=%s edge_type=%s) — edge write itself '
+            'still succeeds',
+            edge.edge_id, from_node_id, to_node_id, edge_type,
+        )
+
     return (edge, True)
