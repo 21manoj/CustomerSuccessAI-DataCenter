@@ -8,10 +8,17 @@
       "port": 3002
     },
     {
+      "name": "frontend-ec2",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd kpi-dashboard && unset REACT_APP_API_URL; PORT=3003 BROWSER=none VERIFY_PROXY_TARGET=http://3.218.251.181 npx react-scripts start"],
+      "port": 3003
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd kpi-dashboard/backend && FEATURE_CONTEXT_GRAPH=true DATABASE_URL=${DATABASE_URL:-postgresql://dcuser:dcpass123@localhost:5432/cs_pulse_datacenter} python3 app_v3_minimal.py --port 5059"],
-      "port": 5059
+      "port": 5059,
+      "autoPort": false
     },
     {
       "name": "test-runner-backend",
