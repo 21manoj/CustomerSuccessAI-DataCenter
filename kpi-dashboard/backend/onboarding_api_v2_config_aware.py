@@ -1489,18 +1489,35 @@ def ingest_context_graph_csvs(customer_id: int, data_dir: Path, engine) -> Dict[
                     except (ValueError, TypeError):
                         pass
 
+                    _raw_etype = row.get('edge_type', 'CORRELATES_WITH')
+                    if _raw_etype is None or (isinstance(_raw_etype, float) and pd.isna(_raw_etype)):
+                        edge_type = 'CORRELATES_WITH'
+                    else:
+                        edge_type = str(_raw_etype).strip()
+
                     props = _sanitize_props({
                         'from_signal_ref': from_ref,
                         'to_signal_ref': to_ref,
                         'evidence': row.get('evidence', ''),
                         'created_by': row.get('created_by', 'csv_import'),
                     })
-
-                    _raw_etype = row.get('edge_type', 'CORRELATES_WITH')
-                    if _raw_etype is None or (isinstance(_raw_etype, float) and pd.isna(_raw_etype)):
-                        edge_type = 'CORRELATES_WITH'
-                    else:
-                        edge_type = str(_raw_etype).strip()
+                    # WS-2 adjudication matrix Hold 2 (2026-08-24, cells 1-3:
+                    # csv_import x LED_TO/TRIGGERED/CAUSED_BY): the platform
+                    # cannot tell the load-driver from a human uploader at
+                    # write time (same API, same credentials class), so
+                    # `asserted` isn't determinable yet. Interim: stamp
+                    # evidence_tier=unknown + a derivation explaining why,
+                    # until Customer.data_origin (WS-2 2a) lets a future pass
+                    # re-tier by authenticated principal. Forward-only —
+                    # existing rows are untouched by this change. Scoped to
+                    # the three causal-claim edge types the matrix actually
+                    # adjudicated; other csv_import edge types (e.g.
+                    # CORRELATES_WITH/INFLUENCED) are unaffected.
+                    if edge_type in ('LED_TO', 'TRIGGERED', 'CAUSED_BY'):
+                        from utils.provenance import UNKNOWN as _EVIDENCE_TIER_UNKNOWN
+                        from utils.edge_factory import CSV_IMPORT_DERIVATION as _CSV_IMPORT_DERIVATION
+                        props['evidence_tier'] = _EVIDENCE_TIER_UNKNOWN
+                        props['derivation'] = _CSV_IMPORT_DERIVATION
 
                     # If row has a specific account_id, resolve for that account only.
                     # Otherwise (arc-level edges), replicate for each account.

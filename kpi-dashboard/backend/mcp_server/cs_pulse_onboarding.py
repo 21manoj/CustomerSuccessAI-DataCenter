@@ -2023,6 +2023,18 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
 
                         return title_to_node.get(ref_str)
 
+                    # WS-2 adjudication matrix Hold 2 (2026-08-24, cells 1-3:
+                    # csv_import x LED_TO/TRIGGERED/CAUSED_BY): the platform
+                    # cannot tell the load-driver from a human uploader at
+                    # write time (same API, same credentials class), so
+                    # `asserted` isn't determinable yet. Interim: stamp
+                    # evidence_tier=unknown + a derivation explaining why,
+                    # until Customer.data_origin (WS-2 2a) lets a future pass
+                    # re-tier by authenticated principal. Forward-only —
+                    # existing rows are untouched by this change.
+                    from utils.provenance import UNKNOWN as _EVIDENCE_TIER_UNKNOWN
+                    from utils.edge_factory import CSV_IMPORT_DERIVATION as _CSV_IMPORT_DERIVATION
+
                     edges_created = 0
                     for _, row in df_se.iterrows():
                         edge_acct = _resolve_acct_id(row)
@@ -2037,7 +2049,11 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                                 confidence=float(row.get('confidence', 1.0)) if row.get('confidence') else 1.0,
                                 source_platform=str(row.get('source_platform', 'csv_import')),
                                 created_by=str(row.get('created_by', 'process_data')),
-                                properties={'evidence': str(row.get('evidence', ''))},
+                                properties={
+                                    'evidence': str(row.get('evidence', '')),
+                                    'evidence_tier': _EVIDENCE_TIER_UNKNOWN,
+                                    'derivation': _CSV_IMPORT_DERIVATION,
+                                },
                             )
                             rev = row.get('revenue_impact')
                             if rev and str(rev) != 'nan':

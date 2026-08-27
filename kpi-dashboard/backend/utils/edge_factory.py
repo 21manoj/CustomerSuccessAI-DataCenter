@@ -38,6 +38,15 @@ AUTO_TRIGGER_DERIVATION = 'system.self.playbook_auto_trigger'
 # logged causal fact either.
 CLOSE_LINK_DERIVATION = 'system.self.playbook_close_linker'
 
+# Cells 1-3 (csv_import x LED_TO/TRIGGERED/CAUSED_BY, WS-2 matrix Hold 2):
+# neither system.self (the platform is not reacting to its own inference
+# here) nor system.external (the platform did not itself log this as a
+# fact — someone uploaded signal_edges.csv and claimed it). It's a third,
+# distinct shape: an unattributed external claim via the upload path, held
+# at `unknown` until Customer.data_origin lets a future pass re-tier it by
+# authenticated principal.
+CSV_IMPORT_DERIVATION = 'csv_import.unattributed'
+
 
 def create_inferred_edge(
     from_node_id: int,

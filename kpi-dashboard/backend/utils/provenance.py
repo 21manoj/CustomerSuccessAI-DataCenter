@@ -39,6 +39,32 @@ SYNTHETIC = 'synthetic'
 ALL_SOURCES: tuple[str, ...] = (OBSERVED, INFERRED, SYNTHETIC)
 TRUSTWORTHY_SOURCES: tuple[str, ...] = (OBSERVED, INFERRED)
 
+# Edge-only interim tier (WS-2 adjudication matrix Hold 2, signed 2026-08-24).
+# Cells 1-3 (csv_import x LED_TO/TRIGGERED/CAUSED_BY) were provisionally
+# called `asserted` (a human claimed this causal link), but `asserted` is not
+# determinable at write time — the platform cannot distinguish the
+# load-driver from a human uploader (same API, same credentials class). The
+# tier becomes meaningful only once a `data_origin` field capturing the
+# *authenticated principal* at upload time lands in the write path and rows
+# start arriving with it (Customer.data_origin, WS-2 2a). Until then,
+# csv-path writers stamp UNKNOWN — the honest tier for "someone claimed
+# this and we can't say who."
+#
+# UNKNOWN is deliberately NOT added to ALL_SOURCES/TRUSTWORTHY_SOURCES: those
+# tuples describe ContextNode.source (a node-level fact/inference axis).
+# UNKNOWN describes ContextEdge properties['evidence_tier'] on the csv_import
+# causal-claim edges — a different axis entirely.
+#
+# It is also, by construction, never the same representation as quarantine.
+# Quarantine (WS-2 2e, not yet shipped) means EXCLUSION — "nothing can be
+# reconstructed" — and today is represented by a NULL source_platform / the
+# complete absence of an evidence_tier property. UNKNOWN is always an
+# explicit, non-NULL string stamped by a writer that knows exactly which
+# path produced the row; it must never collapse into that NULL/absent
+# representation, or the 49 remaining NULL-source quarantine rows stop being
+# distinguishable from the csv path's interim state (Hold 2 follow-up).
+UNKNOWN = 'unknown'
+
 # Edge-confidence threshold for Wizard B/C correlation reads.
 # Below this, an edge is treated as too uncertain to inform learning.
 DEFAULT_EDGE_CONFIDENCE_THRESHOLD = 0.6
