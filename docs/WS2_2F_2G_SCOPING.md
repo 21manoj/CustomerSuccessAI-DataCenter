@@ -1,8 +1,16 @@
 # WS-2 2f/2g Scoping — I3′-on-edges + csv_import blind spot, and supersession
 
-**Status: first-draft scoping for human review, not an approved spec.** No code
-changes accompany this document. Citations are file:line as of `main` at
-`e8df3c16d` (2026-08-27).
+**Status (updated 2026-08-27, after a third review round): both blocking
+product decisions are now made — §3 Q1-Q4 all RESOLVED** (Q1/Q2 by
+investigation, Q3/Q4 by explicit human decision, see §0 and §2.3(c)/§3).
+2f's node-side writer-bypass fix is shipped (`fe1e56efd`). Remaining work
+is narrower engineering detail (§3 Q5-Q8: schema mechanics, the "every
+surface" audit, non-causal edge scope, registry-ID assignment) that the
+original review explicitly flagged as safe to leave to the implementer —
+this is no longer a "not an approved spec" first draft for 2f-edge/2g's
+core semantics, though no code for the edge-side clamp or supersession
+itself exists yet. Citations are file:line as of `main` at `e8df3c16d`
+(2026-08-27); the decisions above post-date that commit.
 
 **Important correction to the framing this doc was commissioned under:** the
 task brief states 2f/2g have "NO further specification anywhere in the repo,
@@ -222,8 +230,10 @@ Two edge-specific wrinkles that don't exist for nodes:
 
 > **I3′-E (proposed id, needs registry approval): every causal-type edge
 > (`CAUSED_BY`, `LED_TO`, `TRIGGERED`, `INDICATES`, `RESULTED_IN`) whose
-> `evidence_tier` (however it ends up stored — see open question in §3) is
-> `inferred` or `unknown`, AND which carries no evidence content
+> `evidence_tier` — read from `properties['evidence_tier']`, still not a
+> real column (§2.3a) — is `inferred`, `unknown`, OR **absent entirely**
+> (decided in §3 Q3: absence is in-scope, not exempted — it's ~100% of the
+> live graph today, not a rare case), AND which carries no evidence content
 > (`properties.evidence` / `properties.evidence_list` non-empty, OR a
 > `derivation` string that resolves to a `system.external` logged fact per
 > `edge_factory.py`'s vocabulary), gets its confidence-adjacent claim strength
@@ -359,22 +369,49 @@ That's not a contradiction, but it means 2g isn't just "add a trigger," it's
 ordering is established" — worth a comment at the call site so a future
 reader doesn't `git blame` their way into thinking one of the two is a bug.
 
-**(c) The tier-ordering rule itself.** F2 states it as one direction only:
-`observed`/`asserted` supersedes `inferred`. Left unstated: does `observed`
-supersede `asserted`? Does a *second* `inferred` edge on the same triple
-(e.g. `llm_enrichment` arriving after `wizard_a`, the live example in F2
-itself — both are `inferred` under the signed adjudication matrix, cells
-4-6 vs 7-10 in `adjudication_matrix.md:48-54`) supersede the first
-`inferred` edge, or do two `inferred` claims coexist because neither
-outranks the other? The live F2 example is actually this exact case
-(`wizard_a` 0.65 vs `llm_enrichment` 0.85, both `inferred`-tier per the
-signed matrix) — so the simplest reading of "observed/asserted supersedes
-inferred" would **not** resolve F2's own headline example, since neither
-edge in it is `observed` or `asserted`. Whoever builds this needs to decide
-whether there's a full tier ordering (`observed` > `asserted` > `inferred` >
-`unknown`, monotonic — newer wins only when strictly higher-tier) or some
-recency-within-tier rule too. This is the single most consequential open
-call in 2g and it is not resolved by either source document.
+**(c) RESOLVED WITH DECISION (2026-08-27).** F2 states the rule as one
+direction only (`observed`/`asserted` supersedes `inferred`), which doesn't
+even resolve F2's own headline example (`wizard_a` 0.65 vs `llm_enrichment`
+0.85, both `inferred`-tier per the signed matrix, cells 4-6 vs 7-10 in
+`adjudication_matrix.md:48-54`). Full decision, replacing the open question:
+
+- **Cross-tier: full monotonic ordering** — `observed > asserted > inferred
+  > unknown`. A newer edge supersedes an older one on the same triple only
+  when it's strictly higher tier. This just fills in the two tiers F2 left
+  unaddressed (`asserted` vs `observed`, `unknown`'s bottom position); it
+  isn't a new judgment call beyond what F2 already implied.
+- **Within `inferred` tier, different writers: an explicit, versioned
+  writer-priority list — not confidence, not raw recency.** Not confidence,
+  because `wizard_a`'s 0.65 and `llm_enrichment`'s 0.85 aren't established
+  as being on the same calibrated scale — ranking by them would compare
+  numbers that look comparable but aren't, worse than not comparing at
+  all. Not raw recency across writers, because a newer low-effort
+  automated pass shouldn't beat an older, more expensive inference just by
+  arriving second (recency is a valid tiebreak *within* one writer, not
+  across different methodologies). Writer-priority, because two automated
+  writers firing on the identical triple is redundant inference, not two
+  independent parties disagreeing — a dedup problem, which has a
+  principled solution: rank the methods once, apply consistently.
+  **First-pass ranking: `llm_enrichment > wizard_a`** (LLM enrichment makes
+  a case-specific judgment; template-based inference is generically
+  pattern-matched) — this resolves F2's own headline case. **This list is
+  a first-class, versioned artifact** that gets a line added every time
+  2c's EdgeFactory ships a new inferred-tier writer, not a one-time
+  decision baked into merge logic. **Undefined position on the list → no
+  supersession, both edges stay live** — fail safe, not fail by guessing.
+  The full list beyond this one pair is still an open engineering/product
+  task for whoever builds 2g, not something this scoping doc claims to
+  have completed.
+- **Same writer, same tier, re-fires on the same triple** (e.g. `wizard_a`
+  re-fires after a rescore): **recency wins.** Safe — it's the same method
+  updating its own prior read, not a contest between methods.
+- **`observed`/`asserted` ties do NOT auto-resolve — leave both live.** If
+  a CRM sync and a CSM's manual assertion genuinely disagree, that is a
+  real disagreement a human should see, not one a priority list should
+  hide by silently picking a winner. Deliberately not extending the
+  writer-priority pattern here: redundant automated inference and two
+  humans/systems making possibly-genuinely-different claims are different
+  risk profiles, and treating them the same would suppress real signal.
 
 **(d) Retirement, not deletion — but retired from what, exactly.** Both
 source docs agree superseded rows "stay in the table for audit" and "drop
@@ -450,25 +487,70 @@ supersession's downstream blast radius:
    edges in the WS-1 audit. Mechanism (b) (the OR-logic waiver) is real
    but currently unreached for this path — it becomes live the moment (a)
    is fixed, so both fixes are needed, in that order.
-3. **Where does `evidence_tier` live for the edge-side clamp to read?**
-   Today it's a `properties` JSON key stamped only by `EdgeFactory`
-   (`edge_factory.py:64`) — most edges (raw `upsert_edge` calls from
-   `wizard_a`, `llm_enrichment`, etc., that don't route through
-   `EdgeFactory`) have no `evidence_tier` in `properties` at all yet. Does
-   2f's edge-clamp treat "no evidence_tier key present" the same as
-   "inferred," or as "unknown" (a third state), or does it require the
-   larger 2a/2c schema-hardening work (making `evidence_tier` NOT NULL, per
-   `state-of-play.md`'s own description of that already-shipped item) to
-   land on *all* writers first, not just `EdgeFactory`'s? If 2a's "NOT NULL
-   enum" hasn't actually reached column status yet (§2.3a), this dependency
-   needs to be made explicit, not assumed satisfied.
-4. **Full tier-ordering for supersession** (§2.3c) — not resolved by either
-   source doc, and the one concrete example both docs cite (`wizard_a` vs
-   `llm_enrichment`, both `inferred`) isn't resolved by the one-directional
-   rule as literally stated ("observed/asserted supersedes inferred").
-   Someone needs to decide whether within-tier supersession (by recency, or
-   by a stated writer-priority list) is in scope for 2g or explicitly
-   deferred.
+3. **RESOLVED WITH DECISION (2026-08-27, third review round).** Quantified
+   first, then decided — this was upgraded from "open" because the answer
+   changes what I3′-E actually protects, not a detail to leave inline.
+
+   **Finding:** `evidence_tier` is not a DB column (confirmed: `models.py`'s
+   `ContextEdge` has no such field, only `properties` JSON) and `upsert_edge()`
+   itself never reads, defaults, or validates it — it flows through only if
+   a caller includes it. Grepping every edge-writing call site (not just
+   `edge_factory.py`) found only two writer classes ever stamp it: (a)
+   `create_inferred_edge()` (auto-trigger edges — 3 rows per the matrix —
+   and the close-linker, which now abstains entirely per Hold 4, so it
+   writes nothing new), and (b) the two csv_import writers fixed for Hold 2
+   (`fe1e56efd`, `5c3c5a935`), stamping `unknown` on new writes only.
+   Every other writer — `wizard_a_journey_db.py:366`, all of
+   `llm/tier1_inference.py` (llm_enrichment + llm_inference, the two
+   largest edge populations), signal_analyst, urgent_signal_scanner,
+   auto_linker — constructs a `properties` dict with `derivation`/
+   `inferred_by`/`confidence_semantics` keys but **never** `evidence_tier`.
+   Cross-referenced against the matrix's live-tenant edge count (~3,287:
+   llm_enrichment 2,002 + wizard_a 709 + playbook_execution 387 +
+   csv_import 155 + llm_inference 24 + urgent_signal_scanner 6 +
+   signal_analyst 4): **essentially 100% of today's live edge population
+   has no `evidence_tier` key at all.** This is the default state of the
+   graph, not an edge case.
+
+   **Decision:** treat "no `evidence_tier` key" as within I3′-E's trigger
+   set — the same enforcement path as an explicit `inferred`/`unknown` tag,
+   not exempted. Exempting untagged edges would make the invariant a
+   near-no-op (it would have ~nothing left to check), and would let the
+   highest-volume, least-verified writers (`llm_enrichment`, `wizard_a`,
+   `llm_inference`) sail through permanently precisely because they never
+   opted in to declaring their own epistemic status — recreating the same
+   bug class §1.4's node-side fix just closed, on a larger scale. §1.6's
+   invariant statement is updated accordingly — no more "however it ends
+   up stored" hedge.
+
+   **Rollout is a separate, explicit decision, not folded into the
+   semantics above:** given this fires on ~3,287 edges' worth of writers
+   going forward (not a handful), ship I3′-E in **shadow/log-only mode
+   first** — compute and log what would get clamped without mutating
+   `confidence`/`evidence_tier`/stamping `evidence_clamped`, for one deploy
+   cycle. Confirm actual volume and check no downstream consumer
+   (dashboards, the not-yet-built Evidence Density calc) breaks or looks
+   alarming before flipping to enforce.
+
+   **Companion follow-up, tracked separately, not bundled into 2f's PR:**
+   the durable fix isn't "the invariant tolerates absent keys" — it's that
+   `wizard_a_journey_db.py`, `llm/tier1_inference.py`, `signal_analyst`,
+   and `urgent_signal_scanner` should start explicitly stamping
+   `evidence_tier='inferred'` at write time, since that is their actual
+   epistemic status. Until that lands, "absent key" stays the permanent
+   ~100% baseline rather than shrinking as a legacy category.
+4. **RESOLVED WITH DECISION (2026-08-27) — see §2.3(c) for the full
+   decision.** Cross-tier: full monotonic `observed > asserted > inferred >
+   unknown`, strictly-higher-tier-only supersession. Within `inferred`,
+   different writers: an explicit versioned writer-priority list (first
+   entry: `llm_enrichment > wizard_a`), not confidence or raw recency;
+   undefined position on the list means no supersession (fail safe). Same
+   writer/same tier re-firing on a triple: recency wins. `observed`/
+   `asserted` ties: do not auto-resolve, surface the disagreement instead
+   of hiding it. Left explicitly open: the full inferred-tier priority
+   list beyond the one evidenced pair is real engineering/product work for
+   whoever builds 2g, to be maintained as a living artifact, not decided
+   here.
 5. **Schema mechanics**: real `superseded_by` column + Alembic migration, or
    a `properties.superseded_by` JSON convention consistent with today's
    `evidence_tier`/`derivation` storage (§2.3a)? This also interacts with
