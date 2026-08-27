@@ -104,11 +104,11 @@ def load_weights(customer_id):
 
     # Priority 3 (always): fill in from kpi_definitions as fallback for any missing KPIs
     try:
-        from verticals.dc2_s.kpi_definitions import DC2S_KPIS
-        for kpi_code, kpi_def in DC2S_KPIS.items():
+        from utils.vertical_registry import get_kpis
+        for kpi_code, kpi_def in get_kpis('dc2_s').items():
             if kpi_code not in kpi_l1_weights:
                 kpi_l1_weights[kpi_code] = kpi_def.get('weight_l1', 1.0 / 8)  # default equal
-    except ImportError:
+    except Exception:
         pass
 
     return pillar_weights, kpi_l1_weights
