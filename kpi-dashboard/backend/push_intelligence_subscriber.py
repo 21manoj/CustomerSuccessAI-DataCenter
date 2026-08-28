@@ -282,7 +282,16 @@ def evaluate_playbook_trigger_for_account(
     account_name = account.account_name or f'Account {account_id}'
 
     arc_type = account.arc_type
-    arc_confidence = account.arc_confidence or 0.5
+    arc_confidence = account.arc_confidence
+    # None means "Wizard A hasn't classified this account yet" -- not "classified
+    # at unknown confidence". Fabricating 0.5 here used to manufacture a real-
+    # looking confidence value for an unearned classification, feeding it into a
+    # live auto-trigger decision (state-of-play.md item 32). If arc_type is also
+    # unset, the fallback lookup below already returns None (defer to the next
+    # health-score event, by which time Wizard A will likely have run); this
+    # covers the case where arc_type resolved but confidence didn't.
+    if arc_type is not None and arc_confidence is None:
+        return None
 
     if not arc_type:
         # Fall back to latest arc_detection ContextNode
@@ -300,7 +309,9 @@ def evaluate_playbook_trigger_for_account(
         if not arc_node:
             return None
         arc_type = (arc_node.properties or {}).get('arc_type', 'unknown')
-        arc_confidence = (arc_node.properties or {}).get('confidence', 0.5)
+        arc_confidence = (arc_node.properties or {}).get('confidence')
+        if arc_confidence is None:
+            return None
 
     playbook_id = arc_playbook_map.get(arc_type)
     if not playbook_id:
