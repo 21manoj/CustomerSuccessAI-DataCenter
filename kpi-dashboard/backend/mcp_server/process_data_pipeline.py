@@ -222,6 +222,52 @@ def calculate_health_scores(
             f"customer {customer_id} (mode={mode})"
         )
 
+        # Item 28 fix (2026-08-29): this function writes health_scores via a
+        # raw engine connection (above), bypassing the ORM entirely --
+        # score_calculator.py's account_status sync (added 2026-04-20 for
+        # the exact same "stale at_risk flag on a healthy account" symptom)
+        # never runs for the pipeline that actually powers standard
+        # onboarding. Confirmed live and reproducing on every fresh tenant
+        # checked (411, 415). Same 3-rule mapping, applied here for exactly
+        # the accounts whose health was recalculated this run.
+        if changed_account_ids:
+            try:
+                from models import Account
+                _latest_rows = _db.session.execute(_db.text("""
+                    SELECT DISTINCT ON (account_id) account_id, health_status
+                    FROM health_scores
+                    WHERE account_id IN (SELECT account_id FROM accounts WHERE customer_id = :cid)
+                    ORDER BY account_id, measurement_month DESC
+                """), {"cid": customer_id}).fetchall()
+                _latest_status_by_acct = {
+                    int(r[0]): r[1] for r in _latest_rows if int(r[0]) in changed_account_ids
+                }
+                _accts = Account.query.filter(Account.account_id.in_(changed_account_ids)).all()
+                _synced = 0
+                for acct in _accts:
+                    if (acct.account_status or '').lower() == 'churned':
+                        continue  # terminal state, never overwritten
+                    new_hs = _latest_status_by_acct.get(acct.account_id)
+                    if not new_hs:
+                        continue
+                    target_status = (
+                        'active' if new_hs == 'healthy'
+                        else 'at_risk' if new_hs in ('at_risk', 'critical')
+                        else acct.account_status
+                    )
+                    if target_status != acct.account_status:
+                        acct.account_status = target_status
+                        _synced += 1
+                if _synced:
+                    _db.session.commit()
+                    logger.info(f"account_status synced for {_synced} accounts (customer {customer_id})")
+            except Exception as _sync_err:
+                logger.warning(f"account_status sync failed (non-fatal): {_sync_err}")
+                try:
+                    _db.session.rollback()
+                except Exception:
+                    pass
+
         step = f'health_scores_{mode}_{scores_written}_written'
         return step, changed_account_ids, timings
 
