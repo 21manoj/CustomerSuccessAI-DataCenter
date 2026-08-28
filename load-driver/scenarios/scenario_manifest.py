@@ -2788,6 +2788,16 @@ class ManifestCSVGenerator:
             lc_meta = self.LIFECYCLE_OUTCOME_META.get(otype, (otype, '', 'resolved'))
             title, desc, status = lc_meta
 
+            # Item 37b (2026-08-28): lifecycle outcomes (churn/expand/contract/
+            # renew/new) were the one outcome-writer path that hardcoded
+            # linked_signal_id blank, unlike the arc-spine/auto-recovery
+            # writers above. Owner decision: these should carry a real
+            # preceding-signal reference too, same idiom as `first_sig`
+            # elsewhere in this function -- first registered signal for the
+            # account, falling back to the same synthetic-but-consistent
+            # placeholder if none were registered.
+            lc_sig_ref = self._registry._signals.get(aid, [('', '')])[0][0] or f'{phase_prefix}sig_{aid}_1'
+
             w.writerow([
                 aid, evt_date, otype,
                 f'{title} — {acct["name"]}',
@@ -2795,7 +2805,7 @@ class ManifestCSVGenerator:
                 f'{desc} {lc.get("reason", "")}',  # evidence — see comment above
                 round(rev, 2),
                 status,
-                '',  # linked_signal_id
+                lc_sig_ref,
             ])
             self._registry.register_outcome(aid, otype, otype, evt_date)
             logger.debug("  Lifecycle outcome: %s %s rev=$%s", acct['name'], otype, f'{rev:,.0f}')

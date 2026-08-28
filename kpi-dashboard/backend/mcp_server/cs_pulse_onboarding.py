@@ -1686,6 +1686,17 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                              ("%.2f" % float(_n.revenue_impact)) if _n.revenue_impact is not None else 'None',
                              _n.revenue_impact_type)
                         )
+                    # Item 37a (2026-08-28): outcomes.csv's `linked_signal_id`
+                    # column carries a real, resolvable reference to the
+                    # signal that preceded this outcome (populated by the
+                    # load-driver's arc-spine/auto-recovery writers) but this
+                    # loop never read it or built an edge from it, leaving
+                    # every csv_import revenue-bearing OUTCOME node an I3
+                    # orphan (confirmed live, 95%+ orphan rate across 5
+                    # tenants). Collect (node, linked_signal_id) pairs here;
+                    # resolved into edges after the flush below gives each
+                    # node a real node_id.
+                    _pending_outcome_edges = []
                     for _, row in df_o.iterrows():
                         acct_id = _resolve_acct_id(row)
                         if not acct_id:
@@ -1738,7 +1749,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                             properties=_o_props,
                             tier=1,           # this writer's prior hardcoded tier
                         )
-                        _db.session.add(ContextNode(
+                        _outcome_node = ContextNode(
                             customer_id=customer_id, account_id=acct_id,
                             node_type='OUTCOME',
                             source='observed',
@@ -1750,8 +1761,55 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                             tier=_o_tier, confidence=_o_conf, occurred_at=out_occurred_at,
                             source_platform=_o_source_platform,
                             source_event_id=outcome_src_id,
-                        ))
+                        )
+                        _db.session.add(_outcome_node)
+                        _linked_sig = str(row.get('linked_signal_id', '')).strip()
+                        if _linked_sig and _linked_sig != 'nan':
+                            _pending_outcome_edges.append((_outcome_node, acct_id, _linked_sig))
                     _db.session.flush()
+
+                    # Item 37a: resolve each pending (node, linked_signal_id)
+                    # against a SIGNAL node in the same account and write a
+                    # real causal edge — same evidence_tier='unknown' +
+                    # CSV_IMPORT_DERIVATION convention Hold 2 already
+                    # established for signal_edges.csv, since the platform
+                    # can't yet tell a load-driver upload from a human one at
+                    # write time (WS-2 adjudication matrix).
+                    if _pending_outcome_edges:
+                        from utils.provenance import UNKNOWN as _EVIDENCE_TIER_UNKNOWN
+                        from utils.edge_factory import CSV_IMPORT_DERIVATION as _CSV_IMPORT_DERIVATION
+                        _sig_lookup = {
+                            (n.account_id, n.source_event_id): n.node_id
+                            for n in ContextNode.query.filter(
+                                ContextNode.customer_id == customer_id,
+                                ContextNode.node_type == 'SIGNAL',
+                                ContextNode.account_id.in_({a for _, a, _ in _pending_outcome_edges}),
+                            ).all()
+                            if n.source_event_id
+                        }
+                        _outcome_edges_created = 0
+                        for _onode, _oacct, _osig in _pending_outcome_edges:
+                            _from_id = _sig_lookup.get((_oacct, _osig))
+                            if not _from_id or not _onode.node_id:
+                                continue
+                            _db.session.add(ContextEdge(
+                                customer_id=customer_id,
+                                from_node_id=_from_id, to_node_id=_onode.node_id,
+                                edge_type='LED_TO',
+                                weight=1.0, confidence=1.0,
+                                source_platform='csv_import',
+                                created_by='process_data',
+                                properties={
+                                    'evidence': f'linked_signal_id={_osig}',
+                                    'evidence_tier': _EVIDENCE_TIER_UNKNOWN,
+                                    'derivation': _CSV_IMPORT_DERIVATION,
+                                },
+                            ))
+                            _outcome_edges_created += 1
+                        if _outcome_edges_created:
+                            _db.session.flush()
+                        steps_completed.append(f'outcome_edges_loaded_{_outcome_edges_created}')
+
                     steps_completed.append('outcomes_loaded')
 
                 # Decisions
