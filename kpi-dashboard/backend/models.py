@@ -84,8 +84,15 @@ class CustomerConfig(db.Model):
     # NEW DC2_S FIELDS (ADDED FOR PHASE 1 MIGRATION)
     # ============================================================
     
-    # Vertical identifier
-    vertical = db.Column(db.String(50), default='saas_premium')  # 'saas_premium' or 'dc2_s'
+    # Vertical identifier. No default -- a silent fallback here (previously
+    # 'saas_premium', echoing the earlier dc2_s fallback this whole registry
+    # was refactored to remove) let a customer's actual requested vertical
+    # get silently discarded whenever a caller forgot to set this explicitly.
+    # utils.vertical_registry / _resolve_customer_vertical already fail
+    # closed on a NULL here (raise, not substitute) -- every writer must set
+    # this explicitly now, matching that same fail-closed contract instead
+    # of quietly working around it.
+    vertical = db.Column(db.String(50))  # 'saas_premium', 'dc2_s', 'datacenter_v1', ...
     
     # DC2_S Configuration (JSON blobs)
     dc2s_pillar_weights = db.Column(db.JSON, nullable=True)     # {"P1": 0.15, "P2": 0.20, ...}

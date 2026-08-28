@@ -143,6 +143,7 @@ def register_customer():
             
             config = CustomerConfig(
                 customer_id=customer_id,
+                vertical=vertical,
                 kpi_upload_mode='account_rollup',
                 category_weights=json.dumps(default_weights),
                 master_file_name=None
