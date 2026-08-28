@@ -394,6 +394,30 @@ def run_wizard_c(customer_id: int) -> dict:
                 significant_changes=significant_changes,
             )
             db.session.add(history)
+
+            # Governance log, not a gate (owner decision): initial weights are
+            # set in a human consulting session before a pillar/KPI enters the
+            # system, so Wizard C recalibrates within that agreed process, not
+            # around it. significant_changes was already computed above and
+            # persisted to WeightCalibrationHistory -- this just gives it a
+            # visible surface, since nothing read that field before now.
+            if significant_changes:
+                from models import Notification
+                db.session.add(Notification(
+                    customer_id=customer_id,
+                    type='weight_calibration_changed',
+                    priority='high' if any(abs(c['change_pct']) > 25 for c in significant_changes) else 'normal',
+                    payload={
+                        'title': f'Wizard C recalibrated {len(significant_changes)} KPI weights',
+                        'summary': ', '.join(
+                            f"{c['kpi_code']} {c['change_pct']:+.0f}%" for c in significant_changes[:5]
+                        ) + ('…' if len(significant_changes) > 5 else ''),
+                        'significant_changes': significant_changes[:10],
+                        'change_count': len(significant_changes),
+                        'sample_size': len(successful) + len(unsuccessful),
+                        'triggered_by': 'wizard_c',
+                    },
+                ))
         except Exception as _hist_err:
             logger.warning(f"Wizard C: failed to save calibration history: {_hist_err}")
     else:
@@ -501,6 +525,24 @@ def run_wizard_c(customer_id: int) -> dict:
                     vertical=vertical,
                 )
                 db.session.add(history)
+
+                if significant_changes:
+                    from models import Notification
+                    db.session.add(Notification(
+                        customer_id=customer_id,
+                        type='weight_calibration_changed',
+                        priority='high' if any(abs(c['change_pct']) > 25 for c in significant_changes) else 'normal',
+                        payload={
+                            'title': f'Wizard C recalibrated {len(significant_changes)} KPI weights',
+                            'summary': ', '.join(
+                                f"{c['kpi_code']} {c['change_pct']:+.0f}%" for c in significant_changes[:5]
+                            ) + ('…' if len(significant_changes) > 5 else ''),
+                            'significant_changes': significant_changes[:10],
+                            'change_count': len(significant_changes),
+                            'sample_size': len(successful) + len(unsuccessful),
+                            'triggered_by': 'wizard_c',
+                        },
+                    ))
             except Exception as _hist_err:
                 logger.warning(f"Wizard C (fallback): failed to save calibration history: {_hist_err}")
 

@@ -11,7 +11,7 @@ export interface Notification {
   id: number;
   customer_id: number;
   account_id?: number;
-  type: 'signal_insight' | 'playbook_triggered' | 'urgent_alert';
+  type: 'signal_insight' | 'playbook_triggered' | 'urgent_alert' | 'weight_calibration_changed';
   priority: 'normal' | 'high' | 'critical';
   payload: Record<string, any>;
   created_at: string;

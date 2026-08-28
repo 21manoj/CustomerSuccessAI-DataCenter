@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Bell, AlertTriangle, Zap, Sparkles, X, CheckCheck, Filter } from 'lucide-react';
+import { Bell, AlertTriangle, Zap, Sparkles, Scale, X, CheckCheck, Filter } from 'lucide-react';
 import type { Notification } from '../../hooks/useNotifications';
 
 interface NotificationBellProps {
@@ -21,6 +21,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   urgent_alert: <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />,
   playbook_triggered: <Zap className="w-4 h-4 text-blue-500 shrink-0" />,
   signal_insight: <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />,
+  weight_calibration_changed: <Scale className="w-4 h-4 text-purple-500 shrink-0" />,
 };
 
 const PRIORITY_DOT: Record<string, string> = {
@@ -29,13 +30,14 @@ const PRIORITY_DOT: Record<string, string> = {
   normal: 'bg-gray-300',
 };
 
-type FilterTab = 'all' | 'urgent_alert' | 'playbook_triggered' | 'signal_insight';
+type FilterTab = 'all' | 'urgent_alert' | 'playbook_triggered' | 'signal_insight' | 'weight_calibration_changed';
 
 const FILTER_TABS: Array<{ id: FilterTab; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'urgent_alert', label: 'Alerts' },
   { id: 'playbook_triggered', label: 'Playbooks' },
   { id: 'signal_insight', label: 'Signals' },
+  { id: 'weight_calibration_changed', label: 'Weights' },
 ];
 
 function timeAgo(iso: string): string {
