@@ -1526,7 +1526,12 @@ def _build_graph_enrichment(
             'title': n.title,
             'account_id': n.account_id,
             'account_name': account.account_name if account else str(n.account_id),
-            'revenue_impact': float(n.revenue_impact) if n.revenue_impact else 0,
+            # revenue_impact is an OUTCOME-specific field (WS-2 2f audit,
+            # 2026-08-27) -- a DECISION node genuinely has no dollar amount
+            # of its own, so `0` here would read as "this decision has zero
+            # revenue impact" rather than "not applicable." None + omitted
+            # from display is the honest value, not a fabricated zero.
+            'revenue_impact': float(n.revenue_impact) if n.revenue_impact is not None else None,
             'occurred_at': n.occurred_at.isoformat() if n.occurred_at else None,
             'node_subtype': n.node_subtype,
         })
