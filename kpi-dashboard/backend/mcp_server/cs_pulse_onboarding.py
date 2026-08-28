@@ -2092,81 +2092,18 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     _db.session.commit()
                     steps_completed.append(f'edges_loaded_{edges_created}')
 
-                # Item 38 fix (2026-08-29): this used to run immediately
-                # after stakeholders.csv loaded, ~250 lines before
-                # decisions.csv even opened -- so the DECISION-node query
-                # below always came back empty on a fresh registration, and
-                # STAKEHOLDER->DECISION INVOLVES edges almost never fired
-                # (confirmed live: 14/236 STAKEHOLDER nodes platform-wide had
-                # any edge at all). Moved here, after stakeholders, outcomes,
-                # decisions, AND signal_edges have all loaded, so both node
-                # types genuinely exist regardless of CSV processing order.
-                if not _skip_cg_reload:
-                    ROLE_DECISION_MAP = {
-                        'champion': ['renewal', 'champion', 'renewal_confirmed'],
-                        'executive_sponsor': ['escalation', 'executive_sponsor', 'playbook'],
-                        'technical_lead': ['technical', 'playbook', 'remediation'],
-                        'csm': ['playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
-                        'primary_contact': ['renewal', 'champion'],
-                    }
-
-                    try:
-                        _stakeholder_nodes = ContextNode.query.filter_by(
-                            customer_id=customer_id, node_type='STAKEHOLDER'
-                        ).all()
-                        _decision_nodes = ContextNode.query.filter_by(
-                            customer_id=customer_id, node_type='DECISION'
-                        ).all()
-
-                        _edges_created = 0
-                        for sn in _stakeholder_nodes:
-                            role = (sn.node_subtype or '').lower()
-                            match_subtypes = []
-                            for role_key, subtypes in ROLE_DECISION_MAP.items():
-                                if role_key in role:
-                                    match_subtypes = subtypes
-                                    break
-                            if not match_subtypes:
-                                match_subtypes = ['playbook', 'renewal']  # default
-
-                            for dn in _decision_nodes:
-                                if dn.account_id != sn.account_id:
-                                    continue
-                                dec_sub = (dn.node_subtype or '').lower()
-                                if any(ms in dec_sub for ms in match_subtypes):
-                                    existing = ContextEdge.query.filter_by(
-                                        from_node_id=sn.node_id, to_node_id=dn.node_id
-                                    ).first()
-                                    if not existing:
-                                        # WS-1 edge-provenance sweep (Aug 2026):
-                                        # was a raw constructor, NO source_platform.
-                                        from utils.context_graph import upsert_edge  # noqa: PLC0415
-                                        _e, _created_new = upsert_edge(
-                                            from_node_id=sn.node_id,
-                                            to_node_id=dn.node_id,
-                                            edge_type='INVOLVES',
-                                            confidence=0.8,
-                                            properties={
-                                                'source': 'role_match',
-                                                'stakeholder_role': role,
-                                                'derivation': 'process_data.stakeholder_role_match',
-                                                # Typed heuristic constant, not an
-                                                # epistemic estimate (WS-1.2).
-                                                'confidence_semantics': 'role_match_heuristic_constant',
-                                            },
-                                            source_platform='process_data',
-                                            created_by='stakeholder_decision_linker',
-                                            customer_id=customer_id,
-                                        )
-                                        if _created_new:
-                                            _edges_created += 1
-
-                        if _edges_created:
-                            _db.session.flush()
-                            steps_completed.append(f'stakeholder_edges_{_edges_created}')
-                    except Exception as _se:
-                        import logging as _slog
-                        _slog.getLogger(__name__).warning(f'Stakeholder edge creation: {_se}')
+                # Item 38 fix, corrected (2026-08-29): the stakeholder-decision
+                # linker itself was moved to run after decisions.csv loading in
+                # a first pass -- but for a STANDARD registration (the only 4
+                # CSVs load-driver ever uploads: account_details, kpi_measurements,
+                # qualitative_signals, outcomes), decisions.csv is never uploaded
+                # at all. The DECISION nodes that actually exist for these
+                # customers (escalation/expansion_strategy/renewal_strategy/etc.)
+                # come from Wizard A's utils/arc_decision_generator.py, which
+                # hasn't run yet at this point in the pipeline (Stage 3, later).
+                # Moved again, this time to right after run_wizard_a_step()
+                # below, where arc-generated DECISION nodes genuinely exist —
+                # see that call site for the actual linking logic now.
 
                 steps_completed.append('context_graph_loaded')
                 _step_timings_cg = round(_time.time() - _cg_load_t0, 2)
@@ -2274,6 +2211,82 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         if _wa_step:
             steps_completed.append(_wa_step)
         _step_timings['wizard_a'] = _wa_duration
+
+        # Item 38 (2026-08-29, corrected): link STAKEHOLDER nodes to DECISION
+        # nodes via INVOLVES edges. Must run here, after Wizard A -- the
+        # DECISION nodes for a standard registration (escalation/
+        # expansion_strategy/renewal_strategy/investment_approval/
+        # exec_engagement) come from utils/arc_decision_generator.py, called
+        # by Wizard A above, not from an uploaded decisions.csv (load-driver
+        # never uploads one for standard registration). An earlier version of
+        # this fix moved the linker to the end of the CSV-loading section,
+        # which still ran before Wizard A -- confirmed live that produced
+        # zero new matches against arc-generated decisions. Confirmed at
+        # scale before this fix: only 14/236 STAKEHOLDER nodes platform-wide
+        # (across 10 tenants) had ever gotten any INVOLVES edge.
+        from models import ContextNode as _CN, ContextEdge as _CE
+        _STAKEHOLDER_DECISION_MAP = {
+            'champion': ['renewal', 'champion', 'renewal_confirmed'],
+            'executive_sponsor': ['escalation', 'executive_sponsor', 'playbook'],
+            'technical_lead': ['technical', 'playbook', 'remediation'],
+            'csm': ['playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
+            'primary_contact': ['renewal', 'champion'],
+        }
+        try:
+            _stakeholder_nodes = _CN.query.filter_by(
+                customer_id=customer_id, node_type='STAKEHOLDER'
+            ).all()
+            _decision_nodes = _CN.query.filter_by(
+                customer_id=customer_id, node_type='DECISION'
+            ).all()
+
+            _stk_edges_created = 0
+            for sn in _stakeholder_nodes:
+                role = (sn.node_subtype or '').lower()
+                match_subtypes = []
+                for role_key, subtypes in _STAKEHOLDER_DECISION_MAP.items():
+                    if role_key in role:
+                        match_subtypes = subtypes
+                        break
+                if not match_subtypes:
+                    match_subtypes = ['playbook', 'renewal']  # default
+
+                for dn in _decision_nodes:
+                    if dn.account_id != sn.account_id:
+                        continue
+                    dec_sub = (dn.node_subtype or '').lower()
+                    if any(ms in dec_sub for ms in match_subtypes):
+                        existing = _CE.query.filter_by(
+                            from_node_id=sn.node_id, to_node_id=dn.node_id
+                        ).first()
+                        if not existing:
+                            from utils.context_graph import upsert_edge
+                            _e, _created_new = upsert_edge(
+                                from_node_id=sn.node_id,
+                                to_node_id=dn.node_id,
+                                edge_type='INVOLVES',
+                                confidence=0.8,
+                                properties={
+                                    'source': 'role_match',
+                                    'stakeholder_role': role,
+                                    'derivation': 'process_data.stakeholder_role_match',
+                                    # Typed heuristic constant, not an
+                                    # epistemic estimate (WS-1.2).
+                                    'confidence_semantics': 'role_match_heuristic_constant',
+                                },
+                                source_platform='process_data',
+                                created_by='stakeholder_decision_linker',
+                                customer_id=customer_id,
+                            )
+                            if _created_new:
+                                _stk_edges_created += 1
+
+            if _stk_edges_created:
+                _db.session.flush()
+                steps_completed.append(f'stakeholder_edges_{_stk_edges_created}')
+        except Exception as _se:
+            import logging as _log_stk
+            _log_stk.getLogger(__name__).warning(f'Stakeholder-decision edge creation failed (non-fatal): {_se}')
 
         # Stage 3a: LLM Tier 1 Inference (gated — only runs if WITH_LLM enabled + API key)
         _llm_step, _llm_duration = run_llm_tier1_inference(customer_id)
