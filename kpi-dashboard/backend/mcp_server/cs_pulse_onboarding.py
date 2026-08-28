@@ -2230,6 +2230,13 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
             'executive_sponsor': ['escalation', 'executive_sponsor', 'playbook'],
             'technical_lead': ['technical', 'playbook', 'remediation'],
             'csm': ['playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
+            # 'cs_manager' (the CSM's manager -- account_details.csv's
+            # csm_manager field, a distinct person from csm_name/'csm', not a
+            # duplicate spelling of it) had no key of its own before this and
+            # silently fell through to the generic default below. One level
+            # above csm in the account relationship, so its list is csm's
+            # plus escalation visibility.
+            'cs_manager': ['escalation', 'playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
             'primary_contact': ['renewal', 'champion'],
         }
         try:
