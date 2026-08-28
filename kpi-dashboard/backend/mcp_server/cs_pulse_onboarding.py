@@ -1592,73 +1592,9 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                         ))
                     _db.session.flush()
                     steps_completed.append('stakeholders_loaded')
-
-                    # Link stakeholders to decisions via INVOLVES edges
-                    ROLE_DECISION_MAP = {
-                        'champion': ['renewal', 'champion', 'renewal_confirmed'],
-                        'executive_sponsor': ['escalation', 'executive_sponsor', 'playbook'],
-                        'technical_lead': ['technical', 'playbook', 'remediation'],
-                        'csm': ['playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
-                        'primary_contact': ['renewal', 'champion'],
-                    }
-
-                    try:
-                        _stakeholder_nodes = ContextNode.query.filter_by(
-                            customer_id=customer_id, node_type='STAKEHOLDER'
-                        ).all()
-                        _decision_nodes = ContextNode.query.filter_by(
-                            customer_id=customer_id, node_type='DECISION'
-                        ).all()
-
-                        _edges_created = 0
-                        for sn in _stakeholder_nodes:
-                            role = (sn.node_subtype or '').lower()
-                            match_subtypes = []
-                            for role_key, subtypes in ROLE_DECISION_MAP.items():
-                                if role_key in role:
-                                    match_subtypes = subtypes
-                                    break
-                            if not match_subtypes:
-                                match_subtypes = ['playbook', 'renewal']  # default
-
-                            for dn in _decision_nodes:
-                                if dn.account_id != sn.account_id:
-                                    continue
-                                dec_sub = (dn.node_subtype or '').lower()
-                                if any(ms in dec_sub for ms in match_subtypes):
-                                    existing = ContextEdge.query.filter_by(
-                                        from_node_id=sn.node_id, to_node_id=dn.node_id
-                                    ).first()
-                                    if not existing:
-                                        # WS-1 edge-provenance sweep (Aug 2026):
-                                        # was a raw constructor, NO source_platform.
-                                        from utils.context_graph import upsert_edge  # noqa: PLC0415
-                                        _e, _created_new = upsert_edge(
-                                            from_node_id=sn.node_id,
-                                            to_node_id=dn.node_id,
-                                            edge_type='INVOLVES',
-                                            confidence=0.8,
-                                            properties={
-                                                'source': 'role_match',
-                                                'stakeholder_role': role,
-                                                'derivation': 'process_data.stakeholder_role_match',
-                                                # Typed heuristic constant, not an
-                                                # epistemic estimate (WS-1.2).
-                                                'confidence_semantics': 'role_match_heuristic_constant',
-                                            },
-                                            source_platform='process_data',
-                                            created_by='stakeholder_decision_linker',
-                                            customer_id=customer_id,
-                                        )
-                                        if _created_new:
-                                            _edges_created += 1
-
-                        if _edges_created:
-                            _db.session.flush()
-                            steps_completed.append(f'stakeholder_edges_{_edges_created}')
-                    except Exception as _se:
-                        import logging as _slog
-                        _slog.getLogger(__name__).warning(f'Stakeholder edge creation: {_se}')
+                    # Stakeholder->Decision INVOLVES linking moved to the end
+                    # of this try block (item 38, 2026-08-29) -- see comment
+                    # there for why.
 
                 # Outcomes
                 outcomes_path = data_dir / 'outcomes.csv'
@@ -2156,6 +2092,82 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                     _db.session.commit()
                     steps_completed.append(f'edges_loaded_{edges_created}')
 
+                # Item 38 fix (2026-08-29): this used to run immediately
+                # after stakeholders.csv loaded, ~250 lines before
+                # decisions.csv even opened -- so the DECISION-node query
+                # below always came back empty on a fresh registration, and
+                # STAKEHOLDER->DECISION INVOLVES edges almost never fired
+                # (confirmed live: 14/236 STAKEHOLDER nodes platform-wide had
+                # any edge at all). Moved here, after stakeholders, outcomes,
+                # decisions, AND signal_edges have all loaded, so both node
+                # types genuinely exist regardless of CSV processing order.
+                if not _skip_cg_reload:
+                    ROLE_DECISION_MAP = {
+                        'champion': ['renewal', 'champion', 'renewal_confirmed'],
+                        'executive_sponsor': ['escalation', 'executive_sponsor', 'playbook'],
+                        'technical_lead': ['technical', 'playbook', 'remediation'],
+                        'csm': ['playbook', 'intervention', 'playbook_crisis_recovery', 'playbook_exec_sponsor_change'],
+                        'primary_contact': ['renewal', 'champion'],
+                    }
+
+                    try:
+                        _stakeholder_nodes = ContextNode.query.filter_by(
+                            customer_id=customer_id, node_type='STAKEHOLDER'
+                        ).all()
+                        _decision_nodes = ContextNode.query.filter_by(
+                            customer_id=customer_id, node_type='DECISION'
+                        ).all()
+
+                        _edges_created = 0
+                        for sn in _stakeholder_nodes:
+                            role = (sn.node_subtype or '').lower()
+                            match_subtypes = []
+                            for role_key, subtypes in ROLE_DECISION_MAP.items():
+                                if role_key in role:
+                                    match_subtypes = subtypes
+                                    break
+                            if not match_subtypes:
+                                match_subtypes = ['playbook', 'renewal']  # default
+
+                            for dn in _decision_nodes:
+                                if dn.account_id != sn.account_id:
+                                    continue
+                                dec_sub = (dn.node_subtype or '').lower()
+                                if any(ms in dec_sub for ms in match_subtypes):
+                                    existing = ContextEdge.query.filter_by(
+                                        from_node_id=sn.node_id, to_node_id=dn.node_id
+                                    ).first()
+                                    if not existing:
+                                        # WS-1 edge-provenance sweep (Aug 2026):
+                                        # was a raw constructor, NO source_platform.
+                                        from utils.context_graph import upsert_edge  # noqa: PLC0415
+                                        _e, _created_new = upsert_edge(
+                                            from_node_id=sn.node_id,
+                                            to_node_id=dn.node_id,
+                                            edge_type='INVOLVES',
+                                            confidence=0.8,
+                                            properties={
+                                                'source': 'role_match',
+                                                'stakeholder_role': role,
+                                                'derivation': 'process_data.stakeholder_role_match',
+                                                # Typed heuristic constant, not an
+                                                # epistemic estimate (WS-1.2).
+                                                'confidence_semantics': 'role_match_heuristic_constant',
+                                            },
+                                            source_platform='process_data',
+                                            created_by='stakeholder_decision_linker',
+                                            customer_id=customer_id,
+                                        )
+                                        if _created_new:
+                                            _edges_created += 1
+
+                        if _edges_created:
+                            _db.session.flush()
+                            steps_completed.append(f'stakeholder_edges_{_edges_created}')
+                    except Exception as _se:
+                        import logging as _slog
+                        _slog.getLogger(__name__).warning(f'Stakeholder edge creation: {_se}')
+
                 steps_completed.append('context_graph_loaded')
                 _step_timings_cg = round(_time.time() - _cg_load_t0, 2)
             except Exception as e:
@@ -2258,7 +2270,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
         _step_timings['signal_scan'] = round(_time.time() - _t_stage, 2)
 
         # Stage 3: Wizard A — arc classification (incremental)
-        _wa_step, _wa_duration = run_wizard_a_step(customer_id, _changed_account_ids, mode)
+        _wa_step, _wa_duration, _invariant_summary = run_wizard_a_step(customer_id, _changed_account_ids, mode)
         if _wa_step:
             steps_completed.append(_wa_step)
         _step_timings['wizard_a'] = _wa_duration
@@ -2374,6 +2386,7 @@ def _process_data_impl(customer_id: int, mode: str = 'auto') -> dict:
                 DC2SKPI.account_id.in_([a.account_id for a in acct_list])).count(),
             'csv_files_processed': csv_files if csv_files else None,
             'steps_completed': steps_completed,
+            'context_graph_audit': _invariant_summary,
             'errors': errors,
             'duration_s': _pipeline_duration,
             'timings': _step_timings,

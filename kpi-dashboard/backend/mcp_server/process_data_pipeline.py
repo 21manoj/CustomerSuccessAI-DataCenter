@@ -284,10 +284,10 @@ def run_wizard_a_step(
     customer_id: int,
     changed_account_ids: Set[int],
     mode: str = 'auto',
-) -> Tuple[Optional[str], float]:
+) -> Tuple[Optional[str], float, Optional[Dict]]:
     """Run Wizard A arc classification for changed accounts, then audit.
 
-    Returns (step_description, duration_seconds).
+    Returns (step_description, duration_seconds, invariant_summary).
     """
     t0 = time.time()
     try:
@@ -306,20 +306,27 @@ def run_wizard_a_step(
         # don't fail the pipeline. Same registry as the ingest-endpoint
         # audit; run here so arc-classifier bugs are visible even when
         # process_data happens without a direct ingest call.
+        #
+        # Item 37c (2026-08-29): log_violations_summary() already computes a
+        # real per-invariant count -- it was just never captured, so every
+        # violation (I3's 100%-reproducing orphan-outcome finding included)
+        # went to a WARN log line nobody reads and nowhere else. Now
+        # returned up the call chain into the process-data response.
+        invariant_summary = None
         try:
             from utils.context_graph_invariants import (
                 run_all_invariants,
                 log_violations_summary,
             )
             violations = run_all_invariants(customer_id)
-            log_violations_summary(violations, customer_id)
+            invariant_summary = log_violations_summary(violations, customer_id)
         except Exception as _inv_err:
             logger.warning("Invariant audit after Wizard A failed (non-fatal): %s", _inv_err)
 
-        return f"wizard_a_{result.get('processed', 0)}_accounts", duration
+        return f"wizard_a_{result.get('processed', 0)}_accounts", duration, invariant_summary
     except Exception as e:
         logger.warning(f"Wizard A failed (non-fatal): {e}", exc_info=True)
-        return None, round(time.time() - t0, 2)
+        return None, round(time.time() - t0, 2), None
 
 
 # ═══════════════════════════════════════════════════════════════
