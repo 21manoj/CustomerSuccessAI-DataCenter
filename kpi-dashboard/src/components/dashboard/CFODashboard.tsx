@@ -713,19 +713,23 @@ const PillarInvestmentChart: React.FC<{ data: PillarInvestment[] }> = ({ data })
 };
 
 /** Investment Timeline - area chart */
-const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[] }> = ({ data }) => {
+const InvestmentTimelineChart: React.FC<{ data: InvestmentTimelinePoint[]; csInvestment: number }> = ({ data, csInvestment }) => {
   const hasRealData = data.some((d) => d.investment > 0 || d.returns > 0);
 
-  // When no real data, show projected 6-month ramp based on Power-of-1
+  // When no real timeline rows exist yet, project a 6-month ramp scaled off
+  // this customer's own real total CS investment -- never a fixed constant,
+  // which would show the same fake ramp regardless of account size.
   const chartData = hasRealData
     ? data.map((d) => ({ month: d.month, Investment: d.investment / 1000, Return: d.returns / 1000 }))
-    : ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'].map((m, i) => {
+    : csInvestment > 0
+    ? ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'].map((m, i) => {
         const ramp = [0.6, 0.8, 1.0, 1.0, 1.0, 1.0]; // ramp-up factor
-        const monthlyInv = 235; // ~$1.4M / 6 months in $K
+        const monthlyInv = (csInvestment / 1000) / 6; // this customer's real spend, in $K
         const inv = Math.round(monthlyInv * ramp[i]);
         const ret = Math.round(inv * (0.5 + i * 0.3)); // returns accelerate over time
         return { month: m, Investment: inv, Return: ret };
-      });
+      })
+    : [];
 
   return (
     <div className="bg-[#1a1f2e] rounded-xl border border-gray-700/50 p-5">
@@ -889,7 +893,7 @@ const ROIScalingSection: React.FC<{
                 {tier.roi}%
               </p>
               <p className="text-[10px] text-gray-500 mt-1">
-                {i === 0 ? 'Current portfolio' : i === 1 ? 'Fixed cost, 5× accounts' : 'Fixed cost, 20× accounts'}
+                {i === 0 ? 'Fixed cost, modeled baseline' : i === 1 ? 'Fixed cost, 5× accounts' : 'Fixed cost, 20× accounts'}
               </p>
               {/* Growth bar */}
               <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mt-2">
@@ -2152,7 +2156,7 @@ const CFODashboard: React.FC = () => {
               { label: 'CS % of ARR', value: `${csPercent}% *` },
               { label: 'Rev per CS Dollar', value: `$${revPerDollar} *` },
               { label: 'Payback Period', value: `${paybackMonths} months *` },
-              { label: 'NRR Impact / Playbook', value: `+${((nrr - 100) / Math.max(scalingProjs[0]?.accounts || 15, 1)).toFixed(2)}%`, accent: 'cyan' },
+              { label: 'NRR Impact (Modeled)', value: `+${Math.max(nrr - 100, 0).toFixed(1)}%`, accent: 'cyan' },
               { label: '* Power-of-1 benchmark estimates', value: '', accent: 'gray' },
             ],
             accounts: (json.accounts || []).map((a: any) => ({
@@ -2364,9 +2368,9 @@ const CFODashboard: React.FC = () => {
               <div className="flex items-center gap-6">
                 {(() => {
                   const accts = d.accounts;
-                  const healthy = accts.filter(a => a.health_score >= 70);
-                  const atRisk = accts.filter(a => a.health_score >= 50 && a.health_score < 70);
-                  const critical = accts.filter(a => a.health_score < 50);
+                  const healthy = accts.filter(a => a.classification === 'healthy');
+                  const atRisk = accts.filter(a => a.classification === 'at_risk');
+                  const critical = accts.filter(a => a.classification === 'critical');
                   const buckets = [
                     { count: healthy.length, arr: healthy.reduce((s, a) => s + a.arr, 0), color: '#22c55e', label: 'Healthy' },
                     { count: atRisk.length, arr: atRisk.reduce((s, a) => s + a.arr, 0), color: '#eab308', label: 'At Risk' },
@@ -2388,7 +2392,7 @@ const CFODashboard: React.FC = () => {
               <div className="text-right">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide">Portfolio Pulse</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {d.accounts.filter(a => a.health_score >= 70).length} healthy, {d.accounts.filter(a => a.health_score < 50).length} need intervention
+                  {d.accounts.filter(a => a.classification === 'healthy').length} healthy, {d.accounts.filter(a => a.classification === 'critical').length} need intervention
                 </p>
               </div>
             </div>
@@ -2811,7 +2815,7 @@ const CFODashboard: React.FC = () => {
                 {/* Pillar Investment + Investment Timeline */}
                 <div className="grid grid-cols-2 gap-4">
                   <PillarInvestmentChart data={d.pillar_investments} />
-                  <InvestmentTimelineChart data={d.investment_timeline} />
+                  <InvestmentTimelineChart data={d.investment_timeline} csInvestment={d.cs_investment} />
                 </div>
 
                 {/* ROI Scaling Analysis */}

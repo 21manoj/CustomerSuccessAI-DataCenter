@@ -220,6 +220,36 @@ def _get_latest_health_scores(customer_id, account_ids):
     return {s.account_id: s for s in scores}
 
 
+def _compute_renewals_at_risk(accounts, latest_health):
+    """Accounts with a contract renewal/end date within the next 90 days.
+
+    Shared by CRO and CFO dashboards -- a renewal window is the same fact
+    regardless of which persona is looking at it.
+    """
+    renewals_at_risk = []
+    for acct in accounts:
+        meta = acct.profile_metadata if isinstance(acct.profile_metadata, dict) else {}
+        rd = meta.get('renewal_date') or meta.get('contract_end')
+        if not rd:
+            continue
+        try:
+            rdate = datetime.strptime(str(rd)[:10], '%Y-%m-%d').date()
+            days_until = (rdate - datetime.utcnow().date()).days
+            if 0 <= days_until <= 90:
+                hs_obj = latest_health.get(acct.account_id)
+                h = float(hs_obj.health_score) if hs_obj and hs_obj.health_score else 0
+                renewals_at_risk.append({
+                    'account_name': acct.account_name,
+                    'arr': float(acct.revenue or 0),
+                    'days_until': days_until,
+                    'health_score': round(h, 1),
+                })
+        except (ValueError, TypeError):
+            pass
+    renewals_at_risk.sort(key=lambda x: x['days_until'])
+    return renewals_at_risk
+
+
 def _get_previous_health_scores(customer_id, account_ids):
     """Get the second-most-recent health score per account (for trend comparison)."""
     if not account_ids:
@@ -1114,25 +1144,7 @@ def cro_dashboard():
                 }
 
             # Renewals at risk (within 90 days)
-            for acct in accounts:
-                meta = acct.profile_metadata if isinstance(acct.profile_metadata, dict) else {}
-                rd = meta.get('renewal_date') or meta.get('contract_end')
-                if rd:
-                    try:
-                        rdate = datetime.strptime(str(rd)[:10], '%Y-%m-%d').date()
-                        days_until = (rdate - datetime.utcnow().date()).days
-                        if 0 <= days_until <= 90:
-                            hs_obj = latest_health.get(acct.account_id)
-                            h = float(hs_obj.health_score) if hs_obj and hs_obj.health_score else 0
-                            renewals_at_risk.append({
-                                'account_name': acct.account_name,
-                                'arr': float(acct.revenue or 0),
-                                'days_until': days_until,
-                                'health_score': round(h, 1),
-                            })
-                    except (ValueError, TypeError):
-                        pass
-            renewals_at_risk.sort(key=lambda x: x['days_until'])
+            renewals_at_risk = _compute_renewals_at_risk(accounts, latest_health)
 
         except Exception as nrr_err:
             logger.warning(f"NRR forecast enrichment failed (non-fatal): {nrr_err}")
@@ -1604,10 +1616,14 @@ def cfo_dashboard():
         # ── PREDICTOR v3 PORTFOLIO NRR: forward point forecast ──
         predictor_v3_portfolio_nrr = _compute_predictor_v3_portfolio_nrr(accounts)
 
+        # ── Renewals at risk (within 90 days) — same fact CRO dashboard shows ──
+        renewals_at_risk = _compute_renewals_at_risk(accounts, latest_scores)
+
         return jsonify({
             'status': 'success',
             'total_arr': round(total_arr, 2),
             'account_count': len(accounts),
+            'renewals_at_risk': renewals_at_risk,
             # ── PROOF: actual playbook economics ──
             'proof_data': proof_data,
             # ── ROW A: historical actuals from customer's uploaded data ──
