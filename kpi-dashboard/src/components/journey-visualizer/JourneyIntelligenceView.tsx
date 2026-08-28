@@ -81,6 +81,7 @@ interface OutcomeEvent {
   bucket: string | null;
   confidence: number | null;
   tier: number | null;
+  evidence: string | null;
 }
 
 interface DecisionEvent {
@@ -89,6 +90,7 @@ interface DecisionEvent {
   subtype: string | null;
   title: string | null;
   confidence: number | null;
+  evidence: string | null;
 }
 
 // ── Layer toggle state (Apr 25 2026) ──
@@ -711,7 +713,7 @@ const JourneyIntelligenceView: React.FC = () => {
                 return (
                   <g key={`outcome-${i}`}>
                     <circle cx={x} cy={y} r={4} fill={fill} stroke="#0a0a0a" strokeWidth={1.2} opacity={0.95} style={{ cursor: 'pointer' }}>
-                      <title>{`Outcome · ${new Date(o.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n${o.subtype || 'outcome'} (${o.bucket || 'unknown'})\n${o.revenue_impact >= 0 ? '+' : ''}$${(o.revenue_impact/1000).toFixed(0)}K`}</title>
+                      <title>{`Outcome · ${new Date(o.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n${o.subtype || 'outcome'} (${o.bucket || 'unknown'})\n${o.revenue_impact >= 0 ? '+' : ''}$${(o.revenue_impact/1000).toFixed(0)}K${o.evidence ? `\n\n${o.evidence}` : ''}`}</title>
                     </circle>
                   </g>
                 );
@@ -728,7 +730,7 @@ const JourneyIntelligenceView: React.FC = () => {
                     <polygon
                       points={`${x},${yTop} ${x + 8},${yTop + 4} ${x + 8},${yTop + 10} ${x},${yTop + 6}`}
                       fill={COLOR_DECISION} opacity={0.9} style={{ cursor: 'pointer' }}>
-                      <title>{`Decision · ${new Date(d.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n${d.subtype || 'unknown'}\n${d.title || ''}`}</title>
+                      <title>{`Decision · ${new Date(d.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n${d.subtype || 'unknown'}\n${d.title || ''}${d.evidence ? `\n\n${d.evidence}` : ''}`}</title>
                     </polygon>
                   </g>
                 );

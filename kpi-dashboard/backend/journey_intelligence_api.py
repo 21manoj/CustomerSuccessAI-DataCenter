@@ -417,6 +417,7 @@ def _fetch_outcome_layer(customer_id, account_id):
             'bucket': bucket,
             'confidence': (float(n.confidence) if n.confidence is not None else None),
             'tier': n.tier,
+            'evidence': (n.properties or {}).get('evidence'),
         })
     return out
 
@@ -444,6 +445,7 @@ def _fetch_decision_layer(customer_id, account_id):
             'subtype': n.node_subtype,
             'title': (n.title[:80] if n.title else None),
             'confidence': (float(n.confidence) if n.confidence is not None else None),
+            'evidence': (n.properties or {}).get('evidence'),
         })
     return out
 
