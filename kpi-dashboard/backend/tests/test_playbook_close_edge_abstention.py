@@ -61,16 +61,27 @@ def test_close_linker_writes_no_edges():
 
 def test_typed_confidence_literals_gone_from_close_path():
     """The two typed constants themselves (1.0 RESULTED_IN / 0.7 LED_TO)
-    must not exist as confidence= keywords in this file's close path."""
+    must not exist as confidence= keywords on an edge-construction call in
+    this file's close path.
+
+    Scoped to ContextEdge/upsert_edge/add_edge calls specifically (same
+    functions test_close_linker_writes_no_edges checks), not every call in
+    the function — WS-2 2f's playbook-close OUTCOME-node clamp fix
+    (2026-08-27) legitimately passes confidence=1.0 into
+    clamp_unearned_confidence() as the node's pre-clamp starting value,
+    which is an unrelated, correct usage this test must not flag.
+    """
     fn = _function_node("_write_context_graph_outcome")
     typed = [
         (n.lineno, kw.value.value)
         for n in ast.walk(fn)
         if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Name)
+        and n.func.id in ("ContextEdge", "upsert_edge", "add_edge")
         for kw in getattr(n, "keywords", [])
         if kw.arg == "confidence" and isinstance(kw.value, ast.Constant)
     ]
-    assert not typed, f"typed confidence constants back in the close path: {typed}"
+    assert not typed, f"typed confidence constants back in an edge-construction call: {typed}"
 
 
 def _db_url():

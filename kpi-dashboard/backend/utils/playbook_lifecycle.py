@@ -429,6 +429,35 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
         if old_nodes:
             db.session.flush()
 
+        # WS-2 2f (I3' extension, playbook-close blind spot, 2026-08-27):
+        # these three nodes were the same bypass class as the fixed
+        # outcomes.csv writer (item 30) -- raw ContextNode() construction
+        # skips upsert_node()'s I3' clamp entirely, so every playbook-close
+        # OUTCOME claimed full confidence=1.0/tier=1 (the model/hardcoded
+        # defaults) with no evidence, unconditionally, confirmed live on
+        # every existing playbook_outcome row. Unlike outcomes.csv, there IS
+        # a genuine, non-fabricated evidentiary basis here -- the tracked
+        # PlaybookExecutionV2 record itself -- so this stamps real evidence
+        # text derived from it, plus a source_ref pointer to the execution
+        # row, rather than just applying the clamp to an evidence-free node.
+        def _fmt(v, spec='.1f'):
+            # health_at_close/health_delta can be None for some outcomes
+            # (e.g. 'timeout') -- the old plain-dict common_props never
+            # formatted these, so this must not raise where that didn't.
+            try:
+                return format(float(v), spec)
+            except (TypeError, ValueError):
+                return 'unknown'
+
+        _evidence = (
+            f"Playbook {execution.playbook_id} closed as '{outcome}': "
+            f"health {_fmt(execution.health_at_trigger)} -> "
+            f"{_fmt(execution.health_at_close)} "
+            f"(delta {_fmt(execution.health_delta, '+.1f')}), "
+            f"cost ${full_cost:,.0f}"
+        )
+        _source_ref = f'playbook_execution:{execution.execution_id}'
+
         common_props = {
             'execution_id': execution.execution_id,
             'playbook_id': execution.playbook_id,
@@ -438,8 +467,22 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
             'health_delta': execution.health_delta,
             'total_cost': round(full_cost, 2),
             'roi_x': execution.realized_roi_pct,
+            'evidence': _evidence,
         }
         ts = occurred_at or datetime.utcnow()
+
+        # Route through the same I3' clamp upsert_node() applies, as
+        # defense-in-depth: the real evidence above should already earn
+        # full confidence, but if execution's health fields are ever
+        # missing/malformed (empty evidence string), this still correctly
+        # downgrades rather than silently keeping the hardcoded tier=1.
+        from utils.context_graph_invariants import clamp_unearned_confidence
+        _conf, _clamp_props, _tier, _ = clamp_unearned_confidence(
+            node_type='OUTCOME', source_platform='playbook_execution',
+            source_ref=_source_ref, confidence=1.0,
+            properties=common_props, tier=1,
+        )
+        common_props = _clamp_props
 
         # ── Create separate OUTCOME nodes for protected and expanded ──
         # This ensures the CG page shows correct buckets per account.
@@ -453,9 +496,10 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                 revenue_impact=revenue_protected,
                 revenue_impact_type='revenue_protected',
                 properties={**common_props, 'revenue_protected': revenue_protected},
-                tier=1, occurred_at=ts,
+                tier=_tier, confidence=_conf, occurred_at=ts,
                 source_platform='playbook_execution',
                 source_event_id=f'close:{execution.execution_id}:protected',
+                source_ref=_source_ref,
             )
             db.session.add(node)
             db.session.flush()
@@ -469,9 +513,10 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                 revenue_impact=revenue_expanded,
                 revenue_impact_type='expansion_closed',
                 properties={**common_props, 'revenue_expanded': revenue_expanded},
-                tier=1, occurred_at=ts,
+                tier=_tier, confidence=_conf, occurred_at=ts,
                 source_platform='playbook_execution',
                 source_event_id=f'close:{execution.execution_id}:expanded',
+                source_ref=_source_ref,
             )
             db.session.add(node)
             db.session.flush()
@@ -488,9 +533,10 @@ def _write_context_graph_outcome(execution, customer_id, outcome, revenue_protec
                 revenue_impact=0,
                 revenue_impact_type=ri_type,
                 properties=common_props,
-                tier=1, occurred_at=ts,
+                tier=_tier, confidence=_conf, occurred_at=ts,
                 source_platform='playbook_execution',
                 source_event_id=f'close:{execution.execution_id}',
+                source_ref=_source_ref,
             )
             db.session.add(outcome_node)
             db.session.flush()
