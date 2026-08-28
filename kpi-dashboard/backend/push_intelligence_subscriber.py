@@ -257,6 +257,59 @@ def evaluate_playbook_triggers_for_customer(customer_id: int) -> list:
     return results
 
 
+def retry_deferred_evaluation_after_arc_classification(customer_id: int, account_id: int) -> None:
+    """Call once, synchronously, right after Wizard A sets Account.arc_type /
+    arc_confidence for an account -- catches up any playbook-trigger
+    evaluation that deferred (returned None from
+    evaluate_playbook_trigger_for_account) because a HEALTH_SCORES_UPDATED
+    event fired before arc classification existed for this account.
+
+    Confirmed via the actual pipeline order in _process_data_impl that this
+    firing-before-classification is the structurally normal case, not rare
+    (calculate_health_scores -> publish_health_events happens ~280 lines
+    before run_wizard_a sets the real value) -- so without this retry, the
+    original triggering event is silently lost, not delayed, since nothing
+    else re-publishes a HEALTH_SCORES_UPDATED event for this account until
+    some unrelated future health recompute (state-of-play.md item 32).
+
+    Deliberately bypasses ArcPlaybookSubscriber's event/cooldown machinery
+    (handle_event) rather than re-publishing a HEALTH_SCORES_UPDATED event:
+    that cooldown (600s default) gets set the moment the ORIGINAL event was
+    received, whether or not it produced a real decision, so a re-published
+    event fired seconds later in the same pipeline run would very likely be
+    silently swallowed by the same cooldown it's trying to work around. This
+    is a one-time synchronous catch-up at the exact moment real data first
+    exists, not a live event to rate-limit.
+
+    Applies the same feature-flag and health-classification gates
+    handle_event does, so behavior stays consistent between the two paths.
+    Non-fatal by design -- never raises into the caller's per-account loop.
+    """
+    try:
+        import utils.push_intelligence_config as pic
+        if not pic.layer_b_enabled() or not pic.auto_trigger_on_arc():
+            return
+
+        from extensions import db
+        latest = db.session.execute(db.text(
+            "SELECT health_score FROM health_scores "
+            "WHERE account_id = :aid ORDER BY measurement_month DESC LIMIT 1"
+        ), {"aid": account_id}).fetchone()
+        if not latest or latest[0] is None:
+            return
+        health_score = float(latest[0])
+
+        from utils.health_thresholds import classify
+        if classify(health_score) == 'healthy':
+            return
+
+        evaluate_playbook_trigger_for_account(customer_id, account_id, health_score)
+    except Exception as e:
+        logger.debug(
+            f"Deferred arc-playbook retry skipped for account {account_id}: {e}"
+        )
+
+
 def evaluate_playbook_trigger_for_account(
     customer_id: int,
     account_id: int,

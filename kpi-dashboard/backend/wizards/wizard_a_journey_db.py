@@ -82,6 +82,18 @@ def run_wizard_a(customer_id: int, account_ids: set = None) -> dict:
             account.arc_confidence = confidence
             db.session.commit()
 
+            # Catch up any playbook-trigger evaluation that deferred because
+            # it fired before arc classification existed (state-of-play.md
+            # item 32) -- the HEALTH_SCORES_UPDATED event published earlier
+            # in _process_data_impl is otherwise lost, not retried, since
+            # nothing else re-fires it for this account.
+            from push_intelligence_subscriber import (
+                retry_deferred_evaluation_after_arc_classification,
+            )
+            retry_deferred_evaluation_after_arc_classification(
+                customer_id, account.account_id,
+            )
+
             # Generate DECISION nodes from arc templates (4-CSV gap fix)
             # Must run BEFORE generate_edges so edge generator can resolve decision:N refs
             decisions_created = generate_decision_nodes(
