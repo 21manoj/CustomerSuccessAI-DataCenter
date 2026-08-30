@@ -223,20 +223,23 @@ Found and/or fixed during a live EC2 verification pass on two fresh tenants (cus
 | `state-of-play.md` | **start here** |
 | `due-diligence-checklist.md` | walking a tenant end to end by hand |
 | `tracer-app-prompt.md` | building the audit harness |
-| `fix-load-generator-prompt.md` | refactoring the generator *(supersedes `synthetic-worldgen-prompt.md`)* |
+| `04-generator-and-harness/fix-load-generator-prompt-v2.md` | refactoring the generator — **current**, supersedes `_superseded/fix-load-generator-prompt.md` (v1, moved 2026-08 — its own architecture survived into v2, only the *why*/emitted-fields changed). Companion to `generator-ground-truth-spec.md`, which it amends (§1/§4/§5). |
 | `generator-ground-truth-spec.md` | the `ground_truth.json` schema |
 | `vertical-registry-architecture.md` | the registry refactor — **complete**: (a)-(c) and (e)-(f) shipped and tested, (d) deliberately paused as backlog; see Track B |
 | `vertical-coupling-audit.md` | original findings — items 1–4 now fixed |
 | `ws1-ws2-prompts.md` | edge provenance; WS-2's backfill half is cut (data disposable) |
 | `fci-spike-prompt.md` | blocked on the generator — don't run it yet |
 | `verify-three-findings.md` | F1/F2/F3 verification brief, unrelated to verticals |
-| `edge-provenance-plan.md` | superseded by `ws1-ws2-prompts.md` |
-| `causal_discovery_proto.py` · `cspulse_pipeline_sim.py` | teaching/reference code — `cspulse_pipeline_sim.py` is the reference implementation 2g's supersession rule was built from |
+| `05-guards-sweep/inventory.md` | item 23's gate-by-gate inventory (FIRING/DEAD/NEVER-OBSERVED/FAIL-OPEN) — read before assuming any validator/allow-list actually excludes anything; the standard is "proven to fire," not "runs" |
+| `06-dashboard-label-audit/findings.md` | item 36's full dashboard label-accuracy audit (~173 fields, CFO/CRO/CEO/CSM) — the item 36 row in this doc is the headline summary only, this file has the per-field detail for the 30 CRO/CEO/CSM issues not yet fixed |
+| `reference-code/causal_discovery_proto.py` · `reference-code/cspulse_pipeline_sim.py` | teaching/reference code — `cspulse_pipeline_sim.py` is the reference implementation 2g's supersession rule was built from |
+| `reference-code/causal_schema_graphs.md` | ground-truth vs. hand-authored-template causal schema diagrams (Mermaid) — the "what the generator should actually be modeling" reference behind the v2 rewrite prompt |
 | `wizard-a-provenance.html` | the current-vs-target diagram |
 | `03-edge-provenance/ws2/adjudication_matrix.md` | the actual WS-2 tier matrix (SIGNED v3/v4) — read before touching evidence_tier/supersession logic |
 | `03-edge-provenance/ws2/node_evidence_gap.md` | node-side evidence gap notes, feeds into item 25/2f |
 | `ws2/item26_two_models_decision.md` · `ws2/bucket_divergence_decision.md` | **historical** — working notes behind item 26/27's already-shipped Model C decision (`581be26ba`, 2026-08-24). Their own headers read like an open decision; they are not — check items 26/27 above first. |
 | `../../WS2_2F_2G_SCOPING.md` (repo root `docs/`) | full 2f/2g engineering detail — decisions, citations, open questions — behind the Track C summary above |
+| `_superseded/` (`edge-provenance-plan.md`, `fix-load-generator-prompt.md` v1, `synthetic-worldgen-prompt.md`, `DO-NOT-EXECUTE.txt`) | explicitly retired — the directory's own `DO-NOT-EXECUTE.txt` is the warning label; kept for history only, each superseded by a row above |
 
 ---
 
